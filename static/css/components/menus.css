@@ -1,0 +1,164 @@
+/* Menu Styles */
+
+/* More Menu */
+.more-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+    min-width: 150px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+}
+
+.more-menu.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Grid View More Menu */
+.grid:not(.list-view):not(.compact-view) .more-menu {
+    top: 30px;
+    right: 10px;
+    z-index: 5;
+}
+
+/* List View More Menu */
+.grid.list-view .more-menu {
+    position: absolute;
+    top: 40px;
+    right: 10px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+    min-width: 150px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+}
+
+.grid.list-view .more-menu.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.grid.list-view .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 15px;
+    color: #666;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.grid.list-view .menu-item:hover {
+    background-color: #f5f5f5;
+}
+
+.grid.list-view .menu-item.delete {
+    color: #f44336;
+}
+
+.grid.list-view .menu-item i {
+    font-size: 18px;
+}
+
+/* Compact View More Menu */
+.grid.compact-view .more-menu {
+    position: absolute;
+    top: 30px;
+    right: 5px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+    min-width: 150px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+}
+
+.grid.compact-view .more-menu.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Menu Items */
+.menu-item {
+    padding: 8px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #666;
+    transition: background-color 0.3s ease;
+}
+
+.menu-item:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.menu-item.delete {
+    color: #dc3545;
+}
+
+.menu-item.delete:hover {
+    background-color: #ffebee;
+}
+
+/* Sort Menu */
+.sort-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+    min-width: 150px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+}
+
+.sort-menu.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.sort-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    color: #666;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.sort-item i {
+    font-size: 18px;
+}
+
+.sort-item:hover {
+    background-color: #f5f5f5;
+}
+
+.sort-item.active {
+    background-color: #e3f2fd;
+    color: #2196F3;
+} 

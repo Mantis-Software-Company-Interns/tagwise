@@ -1,0 +1,136 @@
+/* Temel değişkenler ve reset */
+:root {
+    --primary-color: #4A90E2;
+    --secondary-color: #2C3E50;
+    --background-color: #F5F6FA;
+    --error-color: #E74C3C;
+    --success-color: #2ECC71;
+    --text-color: #2C3E50;
+    --border-radius: 8px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: var(--background-color);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+}
+
+/* Container eklenmeli */
+.container {
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Logo Stili */
+.logo {
+    margin-bottom: 2rem;
+    width: 200px;
+}
+
+.logo img {
+    width: 100%;
+    height: auto;
+}
+
+/* Form Stilleri */
+.form {
+    background: white;
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+    display: none;
+}
+
+.form.active {
+    display: block;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+/* Tab Stilleri */
+.tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    width: 100%;
+    max-width: 400px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 0.8rem;
+    border: none;
+    background: white;
+    color: var(--text-color);
+    font-weight: 600;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.tab-btn.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.tab-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    opacity: 0.9;
+}
+
+/* Input ve Buton Stilleri */
+input {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid #ddd;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 1rem;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.submit-btn:hover {
+    background: #357ABD;
+} 

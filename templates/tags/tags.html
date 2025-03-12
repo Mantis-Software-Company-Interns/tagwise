@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}TagWise - Tags{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/tags/tags.css' %}">
+{% endblock %}
+
+{% block search_placeholder %}Search tags...{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <span>Tags</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="tags-container">
+    <div class="tags-header">
+        <h1>Tags</h1>
+        <div class="header-actions">
+            <button class="filter-btn active" data-filter="all">
+                <i class="material-icons">view_module</i>
+                <span>All</span>
+            </button>
+            <button class="filter-btn" data-filter="recent">
+                <i class="material-icons">access_time</i>
+                <span>Recent</span>
+            </button>
+            <button class="add-url-btn" id="addUrlBtn">
+                <i class="material-icons">add_link</i>
+                <span>Add URL</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Recent Tags Section (Initially Hidden) -->
+    <div class="recent-tags-section" style="display: none;">
+        <div class="section-header">
+            <h2>Recently Added Tags</h2>
+            <p>Tags from your recently added bookmarks</p>
+        </div>
+        <div class="tags-grid recent-grid">
+            {% if recent_tags %}
+                {% for tag in recent_tags %}
+                <a href="{% url 'tagwiseapp:tagged_bookmarks' %}?tag={{ tag.name|urlencode }}" class="tag-card" data-tag="{{ tag.name }}">
+                    <span class="tag-name">{{ tag.name }}</span>
+                    <span class="tag-count">{{ tag.bookmark_count }}</span>
+                </a>
+                {% endfor %}
+            {% else %}
+                <div class="empty-recent">
+                    <i class="material-icons">access_time</i>
+                    <h3>No Recent Tags</h3>
+                    <p>Add a new bookmark to create tags</p>
+                    <button class="add-url-btn">
+                        <i class="material-icons">add_link</i>
+                        <span>Add URL</span>
+                    </button>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- All Tags Section -->
+    <div class="all-tags-section">
+        {% if tags %}
+            {% regroup tags by group as tag_groups %}
+            {% for group in tag_groups %}
+                <div class="tag-group">
+                    <h3>{{ group.grouper|default:"General" }}</h3>
+                    <div class="tags-grid">
+                        {% for tag in group.list %}
+                        <a href="{% url 'tagwiseapp:tagged_bookmarks' %}?tag={{ tag.name|urlencode }}" class="tag-card" data-tag="{{ tag.name }}">
+                            <span class="tag-name">{{ tag.name }}</span>
+                            <span class="tag-count">{{ tag.bookmark_count }}</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="material-icons">local_offer</i>
+                <h3>No Tags Yet</h3>
+                <p>Start organizing your bookmarks by adding tags.</p>
+                <button class="add-url-btn" id="addFirstUrlBtn">
+                    <i class="material-icons">add_link</i>
+                    <span>Add Your First Bookmark</span>
+                </button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Tagged-Bookmarks Overlay -->
+<div class="tagged-bookmarks-overlay" id="taggedBookmarksOverlay">
+    <div class="overlay-backdrop"></div>
+    <div class="overlay-container">
+        <div class="overlay-content">
+            <header class="overlay-header">
+                <div class="header-left">
+                    <button class="back-btn">
+                        <i class="material-icons">arrow_back</i>
+                    </button>
+                    <div class="tag-info">
+                        <i class="material-icons">local_offer</i>
+                        <h2 id="currentTag">javascript</h2>
+                        <span class="bookmark-count">45 bookmarks</span>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="search-container">
+                        <i class="material-icons">search</i>
+                        <input type="text" placeholder="Search in bookmarks...">
+                    </div>
+                </div>
+            </header>
+
+            <div class="overlay-body">
+                <aside class="related-tags-sidebar">
+                    <h3>Related Tags</h3>
+                    <div class="related-tags-list" id="relatedTags">
+                        <!-- Related tags will be populated here -->
+                    </div>
+                </aside>
+
+                <main class="bookmarks-content">
+                    <div class="bookmarks-grid" id="taggedBookmarksGrid">
+                        <!-- Bookmarks will be populated here -->
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/components/tags/tags.js' %}"></script>
+{% endblock %} 

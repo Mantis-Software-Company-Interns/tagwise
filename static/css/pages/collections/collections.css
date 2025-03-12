@@ -1,0 +1,432 @@
+.collections-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.collection-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.collection-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.new-collection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border: 2px dashed #2196F3;
+    background: #f8f9fa;
+}
+
+.new-collection i {
+    font-size: 48px;
+    color: #2196F3;
+    margin-bottom: 15px;
+}
+
+.new-collection h3 {
+    color: #2196F3;
+    margin: 0 0 10px 0;
+}
+
+.new-collection p {
+    color: #666;
+    margin: 0;
+}
+
+.collection-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.collection-header i {
+    font-size: 24px;
+    color: #2196F3;
+}
+
+.collection-header h3 {
+    font-size: 18px;
+    color: #333;
+    margin: 0;
+}
+
+.collection-description {
+    color: #666;
+    margin: 0 0 20px 0;
+    line-height: 1.5;
+}
+
+.collection-stats {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+    color: #666;
+    font-size: 14px;
+}
+
+.collection-stats span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.collection-stats i {
+    font-size: 16px;
+}
+
+/* Dark Mode Styles */
+body.dark-mode .collection-card {
+    background: #2d2d2d;
+}
+
+body.dark-mode .new-collection {
+    background: #1e1e1e;
+    border-color: #3d3d3d;
+}
+
+body.dark-mode .collection-header h3 {
+    color: #fff;
+}
+
+body.dark-mode .collection-description {
+    color: #bbb;
+}
+
+body.dark-mode .collection-stats {
+    border-color: #3d3d3d;
+    color: #bbb;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .collections-grid {
+        grid-template-columns: 1fr;
+        padding: 15px;
+    }
+}
+
+/* New Collection Modal Styles */
+.large-modal {
+    width: 90%;
+    max-width: 1200px;
+    height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.collection-creator {
+    display: flex;
+    gap: 20px;
+    flex: 1;
+    overflow: hidden;
+}
+
+.collection-form {
+    width: 300px;
+    padding: 20px;
+    border-right: 1px solid var(--border-color);
+}
+
+.icon-selector {
+    position: relative;
+}
+
+.selected-icon {
+    width: 56px;
+    height: 56px;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--card-bg);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.selected-icon:hover {
+    border-color: var(--primary-color);
+    background: var(--hover-bg);
+}
+
+.selected-icon i {
+    font-size: 28px;
+    color: var(--primary-color);
+}
+
+.icon-grid {
+    padding: 12px;
+    border-radius: 12px;
+    gap: 12px;
+}
+
+.icon-grid i {
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 24px;
+    color: var(--text-color);
+}
+
+.collection-bookmarks {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    overflow: hidden;
+}
+
+.bookmarks-search {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 12px 16px;
+    transition: all 0.2s ease;
+}
+
+.bookmarks-search:focus-within {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.1);
+}
+
+.bookmarks-search input {
+    border: none;
+    background: transparent;
+    color: var(--text-color);
+    font-size: 14px;
+    width: 100%;
+}
+
+.bookmarks-search input:focus {
+    outline: none;
+}
+
+.bookmarks-search i {
+    color: var(--text-secondary);
+}
+
+.bookmarks-container {
+    display: flex;
+    gap: 20px;
+    flex: 1;
+    overflow: hidden;
+}
+
+.available-bookmarks,
+.selected-bookmarks {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.bookmarks-list {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--secondary-bg);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.bookmark-item {
+    padding: 16px;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    background: var(--card-bg);
+    transition: all 0.2s ease;
+}
+
+.bookmark-item:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.bookmark-item img {
+    width: 48px;
+    height: 32px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.bookmark-info {
+    flex: 1;
+}
+
+.bookmark-info h4 {
+    margin: 0;
+    font-size: 14px;
+}
+
+.bookmark-info p {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.empty-state {
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 32px;
+}
+
+.empty-state i {
+    color: var(--text-secondary);
+    opacity: 0.5;
+}
+
+.empty-state p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin: 8px 0 0;
+}
+
+.dragging {
+    opacity: 0.5;
+}
+
+.drag-over {
+    background: var(--hover-bg);
+}
+
+.modal-footer {
+    padding: 24px;
+    gap: 16px;
+}
+
+.cancel-btn {
+    padding: 12px 24px;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text-color);
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cancel-btn:hover {
+    background: var(--hover-bg);
+    border-color: var(--text-color);
+}
+
+.save-collection-btn {
+    padding: 12px 32px;
+    border: none;
+    border-radius: 12px;
+    background: var(--primary-color);
+    color: var(--text-color);
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.save-collection-btn::after {
+    content: '';
+    width: 24px;
+    height: 24px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z'/%3E%3C/svg%3E") no-repeat center;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.2s ease;
+}
+
+.save-collection-btn:hover {
+    background: var(--primary-color-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.2);
+}
+
+.save-collection-btn:hover::after {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Section Headers */
+.available-bookmarks h3,
+.selected-bookmarks h3 {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-color);
+    margin: 0 0 16px 0;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+/* Modern Form Elements */
+.collection-form .form-group {
+    margin-bottom: 24px;
+}
+
+.collection-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-color);
+    font-size: 14px;
+}
+
+.collection-form input[type="text"],
+.collection-form textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--input-bg);
+    color: var(--text-color);
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.collection-form input[type="text"]:focus,
+.collection-form textarea:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.1);
+}
+
+/* Dark Mode Adjustments */
+body.dark-mode .collection-form input[type="text"],
+body.dark-mode .collection-form textarea {
+    background: var(--dark-input-bg);
+    border-color: var(--dark-border-color);
+}
+
+body.dark-mode .selected-icon {
+    background: var(--dark-card-bg);
+}
+
+body.dark-mode .bookmarks-search {
+    background: var(--dark-card-bg);
+}
+
+body.dark-mode .cancel-btn:hover {
+    background: var(--dark-hover-bg);
+}
+
+/* Add to your CSS variables */
+:root {
+    --primary-rgb: 64, 126, 255; /* Your primary color in RGB format */
+    --primary-color-dark: #2961ff;
+    --input-bg: #f5f5f5;
+    --dark-input-bg: #2d2d2d;
+    --hover-bg: #f0f0f0;
+    --dark-hover-bg: #363636;
+} 

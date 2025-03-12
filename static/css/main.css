@@ -1,0 +1,29 @@
+/* TagWise Main CSS */
+/* This file imports all modular CSS files */
+
+/* Base Styles */
+@import url('base/reset.css');
+
+/* Layout */
+@import url('layouts/container.css');
+@import url('layouts/sidebar.css');
+@import url('layouts/grid.css');
+
+/* Components */
+@import url('components/cards.css');
+@import url('components/buttons.css');
+@import url('components/modals.css');
+@import url('components/tags.css');
+@import url('components/menus.css');
+@import url('components/chatbot.css');
+@import url('components/breadcrumb.css');
+
+/* Themes */
+@import url('themes/dark-mode.css');
+
+/* Utilities */
+@import url('utilities/animations.css');
+@import url('utilities/helpers.css');
+
+/* Responsive */
+@import url('responsive/media-queries.css');

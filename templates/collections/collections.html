@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}TagWise - Collections{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/collections/collections.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="collections-grid">
+    <!-- Create New Collection Card -->
+    <div class="collection-card new-collection">
+        <i class="material-icons">add_circle_outline</i>
+        <h3>Create New Collection</h3>
+        <p>Organize your bookmarks into a new collection</p>
+    </div>
+
+    <!-- User Collections -->
+    {% if collections %}
+        {% for collection in collections %}
+        <div class="collection-card" data-id="{{ collection.id }}">
+            <div class="collection-header">
+                <i class="material-icons">{{ collection.icon }}</i>
+                <h3>{{ collection.name }}</h3>
+            </div>
+            <p class="collection-description">{{ collection.description }}</p>
+            <div class="collection-stats">
+                <span><i class="material-icons">bookmark</i> {{ collection.bookmarks.count }} bookmarks</span>
+                <span><i class="material-icons">access_time</i> Updated {{ collection.updated_at|timesince }} ago</span>
+            </div>
+        </div>
+        {% endfor %}
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- New Collection Modal -->
+<div class="modal" id="newCollectionModal">
+    <div class="modal-content large-modal">
+        <div class="modal-header">
+            <h2>Create New Collection</h2>
+            <button class="close-btn">
+                <i class="material-icons">close</i>
+            </button>
+        </div>
+        <div class="modal-body collection-creator">
+            <div class="collection-form">
+                <div class="form-group">
+                    <label for="collectionName">Collection Name</label>
+                    <input type="text" id="collectionName" required>
+                </div>
+                <div class="form-group">
+                    <label for="collectionDescription">Description</label>
+                    <textarea id="collectionDescription" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="collectionIcon">Icon</label>
+                    <div class="icon-selector">
+                        <button class="selected-icon">
+                            <i class="material-icons" id="selectedIcon">collections_bookmark</i>
+                        </button>
+                        <div class="icon-grid">
+                            <i class="material-icons">collections_bookmark</i>
+                            <i class="material-icons">code</i>
+                            <i class="material-icons">book</i>
+                            <i class="material-icons">article</i>
+                            <i class="material-icons">school</i>
+                            <i class="material-icons">work</i>
+                            <i class="material-icons">favorite</i>
+                            <i class="material-icons">star</i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="collection-bookmarks">
+                <div class="bookmarks-search">
+                    <i class="material-icons">search</i>
+                    <input type="text" placeholder="Search bookmarks to add...">
+                </div>
+                <div class="bookmarks-container">
+                    <div class="available-bookmarks">
+                        <h3>Available Bookmarks</h3>
+                        <div class="bookmarks-list" id="availableBookmarks">
+                            {% if bookmarks %}
+                                {% for bookmark in bookmarks %}
+                                <div class="bookmark-item" draggable="true" data-id="{{ bookmark.id }}">
+                                    <div class="bookmark-info">
+                                        <h4>{{ bookmark.title }}</h4>
+                                        <p>{{ bookmark.url }}</p>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-state">
+                                    <p>No bookmarks available</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="selected-bookmarks">
+                        <h3>Collection Bookmarks</h3>
+                        <div class="bookmarks-list" id="selectedBookmarks">
+                            <div class="empty-state">
+                                <i class="material-icons">drag_indicator</i>
+                                <p>Drag bookmarks here</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="cancel-btn">Cancel</button>
+            <button class="save-collection-btn">Create Collection</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/components/collections/collections.js' %}"></script>
+{% endblock %} 

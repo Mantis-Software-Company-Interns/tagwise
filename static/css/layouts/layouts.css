@@ -1,0 +1,4 @@
+/* Layout-specific styles */
+.grid.list-view { /* ... */ }
+.grid.compact-view { /* ... */ }
+.grid:not(.list-view):not(.compact-view) { /* ... */ } 

@@ -1,0 +1,183 @@
+/* Button Styles */
+
+/* Add URL Button */
+.add-url-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.add-url-btn:hover {
+    background-color: #1976D2;
+}
+
+.add-url-btn i {
+    font-size: 20px;
+}
+
+/* Layout Buttons */
+.layout-options {
+    display: flex;
+    background: #f5f5f5;
+    padding: 4px;
+    border-radius: 8px;
+    gap: 4px;
+}
+
+.layout-btn {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+}
+
+.layout-btn.active {
+    background-color: white;
+    color: #2196F3;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.layout-btn:hover {
+    background-color: #f5f5f5;
+    color: #2196F3;
+}
+
+.layout-btn.active:hover {
+    background-color: white;
+}
+
+.layout-btn i {
+    font-size: 24px;
+}
+
+/* Sort Button */
+.sort-btn {
+    position: relative;
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Theme Toggle */
+.theme-toggle {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.theme-toggle:hover {
+    background-color: #f5f5f5;
+    color: #2196F3;
+}
+
+.theme-toggle i {
+    font-size: 24px;
+}
+
+/* More Button */
+.more-btn {
+    position: relative;
+    z-index: 10;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+    color: #666;
+}
+
+.more-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Expand Button */
+.expand-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    color: #666;
+    position: absolute;
+    left: 15px;
+    bottom: 12px;
+}
+
+.bookmark-card:hover .expand-btn {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.expand-btn:hover {
+    color: #2196F3;
+    transform: scale(1.1);
+}
+
+.expand-btn i {
+    font-size: 20px;
+    transition: transform 0.3s ease;
+}
+
+/* Modal Buttons */
+.cancel-btn,
+.save-btn,
+.submit-url-btn {
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.cancel-btn {
+    background-color: #f5f5f5;
+    color: #666;
+}
+
+.save-btn {
+    background-color: #2196F3;
+    color: white;
+}
+
+.cancel-btn:hover {
+    background-color: #eee;
+}
+
+.save-btn:hover {
+    background-color: #1976D2;
+} 

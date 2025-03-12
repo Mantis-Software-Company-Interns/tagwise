@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}TagWise - Subcategories{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/categories/subcategories.css' %}">
+{% endblock %}
+
+{% block search_placeholder %}Search subcategories...{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{% url 'tagwiseapp:categories' %}">Categories</a>
+    <i class="material-icons">chevron_right</i>
+    <span id="currentCategory">{{ category.name }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="subcategories-grid" id="subcategoriesGrid">
+    {% if subcategories %}
+        {% for subcategory in subcategories %}
+        <div class="subcategory-card" data-url="{% url 'tagwiseapp:topics' %}?category={{ category.name|urlencode }}&subcategory={{ subcategory.name|urlencode }}">
+            <div class="subcategory-header">
+                <i class="material-icons">folder</i>
+                <h3>{{ subcategory.name }}</h3>
+            </div>
+            <div class="topics">
+                {% with bookmarks=subcategory.sub_bookmarks.all|slice:":3" %}
+                    {% for bookmark in bookmarks %}
+                    <span class="topic">{{ bookmark.title|truncatechars:20 }}</span>
+                    {% endfor %}
+                    {% if subcategory.sub_bookmarks.count > 3 %}
+                    <span class="topic-more">+{{ subcategory.sub_bookmarks.count|add:"-3" }}</span>
+                    {% endif %}
+                {% endwith %}
+            </div>
+            <div class="subcategory-stats">
+                <div class="stat">
+                    <span class="stat-value">{{ subcategory.sub_bookmarks.count }}</span>
+                    <span class="stat-label">Bookmarks</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <i class="material-icons">category</i>
+            <h3>No Subcategories Yet</h3>
+            <p>This category doesn't have any subcategories yet.</p>
+            <button class="add-bookmark-btn" id="addBookmarkBtn">
+                <i class="material-icons">add_link</i>
+                <span>Add a Bookmark</span>
+            </button>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/components/categories/subcategories.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add click event to subcategory cards
+        document.querySelectorAll('.subcategory-card').forEach(function(card) {
+            card.addEventListener('click', function() {
+                window.location.href = this.getAttribute('data-url');
+            });
+        });
+
+        // Add click event to add bookmark button
+        const addBookmarkBtn = document.getElementById('addBookmarkBtn');
+        if (addBookmarkBtn) {
+            addBookmarkBtn.addEventListener('click', function() {
+                window.location.href = "{% url 'tagwiseapp:index' %}";
+            });
+        }
+    });
+</script>
+{% endblock %} 

@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}TagWise - Categories{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/categories/categories.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="categories-container">
+    <div class="categories-header">
+        <h1>Categories</h1>
+        <div class="header-actions">
+            <button class="filter-btn active" data-filter="all">
+                <i class="material-icons">view_module</i>
+                <span>All</span>
+            </button>
+            <button class="filter-btn" data-filter="recent">
+                <i class="material-icons">access_time</i>
+                <span>Recent</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Recent Categories Section (Initially Hidden) -->
+    <div class="recent-categories-section" style="display: none;">
+        <div class="section-header">
+            <h2>Recently Added Categories</h2>
+            <p>Categories from your recently added bookmarks</p>
+        </div>
+        <div class="categories-grid recent-grid">
+            {% if recent_categories %}
+                {% for category in recent_categories %}
+                <div class="category-card recent-card" data-category="{{ category.name }}">
+                    <div class="category-header">
+                        <i class="material-icons">{{ category.icon|default:"folder" }}</i>
+                        <h3>{{ category.name }}</h3>
+                        <span class="new-badge">New</span>
+                    </div>
+                    <div class="subcategories">
+                        {% for subcategory in category.children.all|slice:":3" %}
+                        <a href="{% url 'tagwiseapp:topics' %}?category={{ category.name|urlencode }}&subcategory={{ subcategory.name|urlencode }}" class="subcategory">{{ subcategory.name }}</a>
+                        {% endfor %}
+                        {% if category.children.count > 3 %}
+                        <a href="{% url 'tagwiseapp:subcategories' %}?category={{ category.name|urlencode }}" class="subcategory more">+{{ category.children.count|add:"-3" }} more</a>
+                        {% endif %}
+                    </div>
+                    <div class="category-stats">
+                        <div class="stat">
+                            <span class="stat-value">{{ category.main_bookmarks.count }}</span>
+                            <span class="stat-label">Bookmarks</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">{{ category.children.count }}</span>
+                            <span class="stat-label">Subcategories</span>
+                        </div>
+                    </div>
+                    <a href="{% url 'tagwiseapp:subcategories' %}?category={{ category.name|urlencode }}" class="view-all-link">
+                        <span>View All</span>
+                        <i class="material-icons">arrow_forward</i>
+                    </a>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-recent">
+                    <i class="material-icons">access_time</i>
+                    <h3>No Recent Categories</h3>
+                    <p>Add a new bookmark to create categories</p>
+                    <button class="add-url-btn">
+                        <i class="material-icons">add_link</i>
+                        <span>Add URL</span>
+                    </button>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- All Categories Section -->
+    <div class="all-categories-section">
+        <div class="categories-grid">
+            {% if categories %}
+                {% for category in categories %}
+                <div class="category-card" data-category="{{ category.name }}">
+                    <div class="category-header">
+                        <i class="material-icons">{{ category.icon|default:"folder" }}</i>
+                        <h3>{{ category.name }}</h3>
+                    </div>
+                    <div class="subcategories">
+                        {% for subcategory in category.children.all|slice:":3" %}
+                        <a href="{% url 'tagwiseapp:topics' %}?category={{ category.name|urlencode }}&subcategory={{ subcategory.name|urlencode }}" class="subcategory">{{ subcategory.name }}</a>
+                        {% endfor %}
+                        {% if category.children.count > 3 %}
+                        <a href="{% url 'tagwiseapp:subcategories' %}?category={{ category.name|urlencode }}" class="subcategory more">+{{ category.children.count|add:"-3" }} more</a>
+                        {% endif %}
+                    </div>
+                    <div class="category-stats">
+                        <div class="stat">
+                            <span class="stat-value">{{ category.main_bookmarks.count }}</span>
+                            <span class="stat-label">Bookmarks</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">{{ category.children.count }}</span>
+                            <span class="stat-label">Subcategories</span>
+                        </div>
+                    </div>
+                    <a href="{% url 'tagwiseapp:subcategories' %}?category={{ category.name|urlencode }}" class="view-all-link">
+                        <span>View All</span>
+                        <i class="material-icons">arrow_forward</i>
+                    </a>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <i class="material-icons">category</i>
+                    <h3>No Categories Yet</h3>
+                    <p>Start organizing your bookmarks by creating categories.</p>
+                    <button class="add-category-btn" id="openEmptyCategoryModal">
+                        <i class="material-icons">add</i>
+                        <span>Add Your First Category</span>
+                    </button>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Import Categories Modal -->
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/components/categories/categories.js' %}"></script>
+{% endblock %} 

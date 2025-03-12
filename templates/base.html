@@ -1,0 +1,145 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}TagWise{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <link rel="stylesheet" href="{% static 'css/pages/url-analyzer/url-analyzer.css' %}">
+    <link rel="stylesheet" href="{% static 'css/pages/admin/admin.css' %}">
+    {% block extra_css %}{% endblock %}
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <a href="{% url 'tagwiseapp:index' %}">
+                    <img src="{% static 'images/TAGWISE.svg' %}" alt="TagWise Logo">
+                </a>
+            </div>
+            <nav>
+                <ul>
+                    <li {% if request.resolver_match.url_name == 'index' %}class="active"{% endif %}>
+                        <a href="{% url 'tagwiseapp:index' %}">
+                            <i class="material-icons">home</i>
+                            Home
+                        </a>
+                    </li>
+                    <li {% if request.resolver_match.url_name == 'categories' or request.resolver_match.url_name == 'subcategories' or request.resolver_match.url_name == 'topics' %}class="active"{% endif %}>
+                        <a href="{% url 'tagwiseapp:categories' %}">
+                            <i class="material-icons">category</i>
+                            Categories
+                        </a>
+                    </li>
+                    <li {% if request.resolver_match.url_name == 'tags' or request.resolver_match.url_name == 'tagged_bookmarks' %}class="active"{% endif %}>
+                        <a href="{% url 'tagwiseapp:tags' %}">
+                            <i class="material-icons">local_offer</i>
+                            Tags
+                        </a>
+                    </li>
+                    <li {% if request.resolver_match.url_name == 'collections' %}class="active"{% endif %}>
+                        <a href="{% url 'tagwiseapp:collections' %}">
+                            <i class="material-icons">collections_bookmark</i>
+                            Collections
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="top-bar">
+                <div class="left-section">
+                    <div class="search-container">
+                        <i class="material-icons">search</i>
+                        <input type="text" placeholder="{% block search_placeholder %}Search...{% endblock %}">
+                    </div>
+                    {% block breadcrumb %}{% endblock %}
+                    {% block extra_top_bar_left %}{% endblock %}
+                </div>
+                <div class="profile">
+                    {% block extra_top_bar_right %}{% endblock %}
+                    <button class="theme-toggle">
+                        <i class="material-icons">light_mode</i>
+                    </button>
+                    <img src="{% static 'images/profile.jpg' %}" alt="Profile">
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Chatbot -->
+    <div class="chatbot-container">
+        <button class="chatbot-toggle">
+            <i class="material-icons">chat</i>
+        </button>
+        <div class="chatbot-panel">
+            <div class="chatbot-header">
+                <h3>TagWise Assistant</h3>
+                <button class="close-chat">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+            <div class="chatbot-messages">
+                <div class="message bot">
+                    <i class="material-icons bot-icon">smart_toy</i>
+                    <div class="message-content">
+                        Hello! I can help you search through your bookmarks. What are you looking for?
+                    </div>
+                </div>
+            </div>
+            <div class="chatbot-input">
+                <input type="text" placeholder="Type your message...">
+                <button class="send-message">
+                    <i class="material-icons">send</i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {% block modals %}{% endblock %}
+
+    <!-- Core Scripts -->
+    <!-- Utilities -->
+    <script src="{% static 'js/utils/date-formatter.js' %}"></script>
+    <script src="{% static 'js/utils/navigation.js' %}"></script>
+    <script src="{% static 'js/utils/tag-utils.js' %}"></script>
+    <script src="{% static 'js/utils/category-utils.js' %}"></script>
+    
+    <!-- UI Components -->
+    <script src="{% static 'js/ui/layout.js' %}"></script>
+    <script src="{% static 'js/ui/theme.js' %}"></script>
+    
+    <!-- Modals -->
+    <script src="{% static 'js/components/modals/details-modal.js' %}"></script>
+    <script src="{% static 'js/components/modals/edit-modal.js' %}"></script>
+    <script src="{% static 'js/components/modals/modal-manager.js' %}"></script>
+    
+    <!-- Bookmarks -->
+    <script src="{% static 'js/components/bookmarks/bookmark-actions.js' %}"></script>
+    <script src="{% static 'js/components/bookmarks/bookmark-manager.js' %}"></script>
+    
+    <!-- Tags -->
+    <script src="{% static 'js/components/tags/tag-manager.js' %}"></script>
+    
+    <!-- Categories -->
+    <script src="{% static 'js/components/categories/category-manager.js' %}"></script>
+    
+    <!-- Url-Analyzer -->
+    <script src="{% static 'js/components/url-analyzer/url-analyzer.js' %}"></script>
+    
+    <!-- Core App -->
+    <script src="{% static 'js/core/app.js' %}"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html> 

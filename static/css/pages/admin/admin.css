@@ -1,0 +1,143 @@
+/* Admin Panel Styles */
+.admin-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.admin-container h1 {
+    margin-bottom: 20px;
+    color: #333;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
+
+/* Messages */
+.messages {
+    margin-bottom: 20px;
+}
+
+.message {
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Dashboard */
+.admin-dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.dashboard-card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 20px;
+    text-align: center;
+}
+
+.dashboard-card h3 {
+    margin-top: 0;
+    color: #555;
+    font-size: 16px;
+}
+
+.stat {
+    font-size: 36px;
+    font-weight: bold;
+    color: #333;
+    margin: 10px 0;
+}
+
+.orphan-stat {
+    font-size: 14px;
+    color: #dc3545;
+}
+
+/* Admin Actions */
+.admin-actions {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.admin-actions h2 {
+    margin-top: 0;
+    color: #333;
+    font-size: 18px;
+    margin-bottom: 15px;
+}
+
+.clean-btn {
+    display: inline-flex;
+    align-items: center;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.clean-btn:hover {
+    background-color: #c82333;
+}
+
+.clean-btn i {
+    margin-right: 8px;
+}
+
+.help-text {
+    margin-top: 10px;
+    color: #6c757d;
+    font-size: 14px;
+}
+
+/* Dark Mode */
+.dark-mode .admin-container h1 {
+    color: #f8f9fa;
+    border-bottom-color: #343a40;
+}
+
+.dark-mode .dashboard-card {
+    background-color: #343a40;
+}
+
+.dark-mode .dashboard-card h3 {
+    color: #adb5bd;
+}
+
+.dark-mode .stat {
+    color: #f8f9fa;
+}
+
+.dark-mode .admin-actions {
+    background-color: #343a40;
+}
+
+.dark-mode .admin-actions h2 {
+    color: #f8f9fa;
+}
+
+.dark-mode .help-text {
+    color: #adb5bd;
+} 

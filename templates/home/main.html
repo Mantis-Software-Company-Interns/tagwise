@@ -1,0 +1,316 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}TagWise - Home{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/home/main.css' %}">
+{% endblock %}
+
+{% block extra_top_bar_left %}
+<button class="add-url-btn">
+    <i class="material-icons">add_link</i>
+    <span>Add URL</span>
+</button>
+{% endblock %}
+
+{% block extra_top_bar_right %}
+<div class="layout-options">
+    <button class="layout-btn active" data-layout="card">
+        <i class="material-icons">grid_view</i>
+    </button>
+    <button class="layout-btn" data-layout="list">
+        <i class="material-icons">view_list</i>
+    </button>
+</div>
+<button class="sort-btn">
+    <i class="material-icons">sort</i>
+    <div class="sort-menu">
+        <div class="sort-item active" data-sort="newest">
+            <i class="material-icons">arrow_upward</i>Newest First
+        </div>
+        <div class="sort-item" data-sort="oldest">
+            <i class="material-icons">arrow_downward</i>Oldest First
+        </div>
+    </div>
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="grid">
+    {% if bookmarks %}
+        {% for bookmark in bookmarks %}
+        <div class="grid-item bookmark-card" data-main-categories="{% for cat in bookmark.main_categories.all %}{{ cat.name }}{% if not forloop.last %},{% endif %}{% endfor %}" data-id="{{ bookmark.id }}">
+            <div class="card-header">
+                <button class="more-btn">
+                    <i class="material-icons">more_vert</i>
+                </button>
+                <div class="more-menu">
+                    <div class="menu-item edit-bookmark"><i class="material-icons">edit</i>Edit</div>
+                    <div class="menu-item"><i class="material-icons">star</i>Favorite</div>
+                    <div class="menu-item"><i class="material-icons">archive</i>Archive</div>
+                    <div class="menu-item"><i class="material-icons">local_offer</i>Edit Tags</div>
+                    <div class="menu-item delete"><i class="material-icons">delete</i>Delete</div>
+                </div>
+            </div>
+            <a href="{{ bookmark.url }}" target="_blank" class="thumbnail-link">
+                <div class="thumbnail-container">
+                    <img src="{% if bookmark.thumbnail %}{{ bookmark.thumbnail }}{% else %}{% static 'images/default-thumbnail.png' %}{% endif %}" alt="{{ bookmark.title }}" class="thumbnail">
+                    <div class="subcategory-container">
+                        {% for subcategory in bookmark.subcategories.all %}
+                        <a href="{% url 'tagwiseapp:topics' %}?subcategory={{ subcategory.name|urlencode }}" class="subcategory-tab">{{ subcategory.name }}</a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </a>
+            <div class="card-content">
+                <a href="{{ bookmark.url }}" target="_blank" class="title-link">
+                    <h3 class="title">{{ bookmark.title }}</h3>
+                </a>
+                <p class="description">{{ bookmark.description }}</p>
+                <div class="tags">
+                    {% for tag in bookmark.tags.all %}
+                    <a href="{% url 'tagwiseapp:tagged_bookmarks' %}?tag={{ tag.name|urlencode }}" class="tag">{{ tag.name }}</a>
+                    {% endfor %}
+                </div>
+                <div class="card-footer">
+                    <button class="expand-btn">
+                        <i class="material-icons">info_outline</i>
+                    </button>
+                    <div class="date">{{ bookmark.created_at|date:"Y-m-d H:i" }}</div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <i class="material-icons">bookmark_border</i>
+            <h3>No bookmarks yet</h3>
+            <p>Start adding your favorite websites to organize and access them easily.</p>
+            <button class="add-url-btn">
+                <i class="material-icons">add_link</i>
+                <span>Add Your First URL</span>
+            </button>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- URL Modal -->
+<div class="modal" id="urlModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add New URL</h2>
+            <button class="close-btn">
+                <i class="material-icons">close</i>
+            </button>
+        </div>
+        <div class="modal-body">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="url">URL</label>
+                <input type="url" id="url" placeholder="https://" required>
+            </div>
+            <div class="loading-container" style="display: none;">
+                <div class="spinner"></div>
+                <p>Analyzing URL...</p>
+            </div>
+            <button class="submit-url-btn">Analyze URL</button>
+        </div>
+    </div>
+</div>
+
+<!-- URL Review Modal -->
+<div class="modal" id="urlReviewModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Review Bookmark</h2>
+            <button class="close-btn">
+                <i class="material-icons">close</i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="reviewTitle">Title</label>
+                <input type="text" id="reviewTitle" placeholder="Enter title">
+            </div>
+            <div class="form-group">
+                <label for="reviewDescription">Description</label>
+                <textarea id="reviewDescription" rows="3" placeholder="Enter description"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Categories</label>
+                <div class="categories-container">
+                    <!-- Kategori grupları listesi -->
+                    <div class="category-groups-container">
+                        <label>Categories & Subcategories (AI Matched)</label>
+                        <div id="categoryGroupsList" class="category-groups-list"></div>
+                    </div>
+                    
+                    <!-- Yeni kategori grubu ekleme -->
+                    <div class="add-category-group">
+                        <div class="category-group-inputs">
+                            <div class="input-group">
+                                <label for="newMainCategory">Category</label>
+                                <input type="text" id="newMainCategory" placeholder="Add category">
+                            </div>
+                            <div class="input-group">
+                                <label for="newSubcategory">Subcategory</label>
+                                <input type="text" id="newSubcategory" placeholder="Add subcategory">
+                            </div>
+                            <button class="add-category-group-btn" id="addCategoryGroupBtn">
+                                <i class="material-icons">add</i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Tags</label>
+                <div class="tags-container">
+                    <div class="tags-input">
+                        <input type="text" id="newTag" placeholder="Add new tag">
+                        <button class="add-tag-btn" id="addNewTagBtn">
+                            <i class="material-icons">add</i>
+                        </button>
+                    </div>
+                    <div class="tags-list-container">
+                        <label>Tags (AI Matched)</label>
+                        <div class="tags-list" id="reviewTagsList"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-review-btn">Cancel</button>
+                <button class="save-bookmark-btn">Save Bookmark</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Details Modal -->
+<div class="details-modal" id="detailsModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Bookmark Details</h2>
+            <button class="close-modal-btn">
+                <i class="material-icons">close</i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="details-grid">
+                <div class="detail-section">
+                    <h3>General Information</h3>
+                    <div class="info-group">
+                        <label>Added Date:</label>
+                        <span class="bookmark-date"></span>
+                    </div>
+                    <div class="info-group">
+                        <label>Categories:</label>
+                        <div class="bookmark-categories"></div>
+                    </div>
+                    <div class="info-group">
+                        <label>Subcategories:</label>
+                        <div class="bookmark-subcategories"></div>
+                    </div>
+                </div>
+                
+                <div class="detail-section">
+                    <h3>Content</h3>
+                    <div class="info-group">
+                        <label>Title:</label>
+                        <h4 class="bookmark-title"></h4>
+                    </div>
+                    <div class="info-group">
+                        <label>Description:</label>
+                        <p class="bookmark-description"></p>
+                    </div>
+                    <div class="info-group">
+                        <label>Tags:</label>
+                        <div class="bookmark-tags"></div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Preview</h3>
+                    <div class="bookmark-preview">
+                        <img class="preview-image" alt="Preview">
+                        <a class="visit-link" target="_blank">
+                            <i class="material-icons">open_in_new</i>
+                            Visit Website
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal" id="editModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Edit Bookmark</h2>
+            <button class="close-btn">
+                <i class="material-icons">close</i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="editBookmarkId">
+            <div class="form-group">
+                <label for="editTitle">Title</label>
+                <input type="text" id="editTitle" placeholder="Enter title">
+            </div>
+            <div class="form-group">
+                <label for="editDescription">Description</label>
+                <textarea id="editDescription" rows="3" placeholder="Enter description"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Categories</label>
+                <div class="categories-container">
+                    <!-- Kategori grupları listesi -->
+                    <div id="editCategoryGroupsList" class="category-groups-list"></div>
+                    
+                    <!-- Yeni kategori grubu ekleme -->
+                    <div class="add-category-group">
+                        <div class="category-group-inputs">
+                            <div class="input-group">
+                                <label for="editMainCategory">Category</label>
+                                <input type="text" id="editMainCategory" placeholder="Add category">
+                            </div>
+                            <div class="input-group">
+                                <label for="editSubcategory">Subcategory</label>
+                                <input type="text" id="editSubcategory" placeholder="Add subcategory">
+                            </div>
+                            <button class="add-category-group-btn" id="editAddCategoryGroupBtn">
+                                <i class="material-icons">add</i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Tags</label>
+                <div class="tags-container">
+                    <div class="tags-input">
+                        <input type="text" id="tagInput" placeholder="Add tag">
+                        <button class="add-tag-btn">
+                            <i class="material-icons">add</i>
+                        </button>
+                    </div>
+                    <div class="tags-list" id="tagsList"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn">Cancel</button>
+                <button class="save-btn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Home page specific scripts are now included in base.html -->
+{% endblock %} 

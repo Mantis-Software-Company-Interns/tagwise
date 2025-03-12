@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}TagWise - Topics{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/topics/topics.css' %}">
+{% endblock %}
+
+{% block search_placeholder %}Search topics...{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{% url 'tagwiseapp:categories' %}">Categories</a>
+    <i class="material-icons">chevron_right</i>
+    <a href="{% url 'tagwiseapp:subcategories' %}?category={{ category }}" id="categoryLink">{{ category }}</a>
+    <i class="material-icons">chevron_right</i>
+    <span id="currentSubcategory">{{ subcategory }}</span>
+</div>
+{% endblock %}
+
+{% block extra_top_bar_left %}
+<button class="add-url-btn">
+    <i class="material-icons">add_link</i>
+    <span>Add URL</span>
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="subcategories-nav" id="subcategoriesNav">
+    <!-- Subcategories will be populated here -->
+</div>
+<div class="topics-grid" id="topicsGrid">
+    <!-- Topics will be populated here -->
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- URL Modal -->
+<div class="modal" id="urlModal">
+    <!-- ... existing modal content ... -->
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/components/topics/topics.js' %}"></script>
+{% endblock %} 

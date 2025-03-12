@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}TagWise - Tagged Bookmarks{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/bookmarks/tagged_bookmarks.css' %}">
+{% endblock %}
+
+{% block search_placeholder %}Search bookmarks...{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{% url 'tagwiseapp:tags' %}">Tags</a>
+    <i class="material-icons">chevron_right</i>
+    <span id="currentTag">{{ tag }}</span>
+</div>
+{% endblock %}
+
+{% block extra_top_bar_left %}
+<button class="add-url-btn">
+    <i class="material-icons">add_link</i>
+    <span>Add URL</span>
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="related-tags" id="relatedTags">
+    <!-- Related tags will be populated here -->
+</div>
+<div class="grid" id="bookmarksGrid">
+    <!-- Bookmarks will be populated here -->
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- URL Modal -->
+<div class="modal" id="urlModal">
+    <!-- ... existing modal content ... -->
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/components/bookmarks/tagged-bookmarks.js' %}"></script>
+{% endblock %} 

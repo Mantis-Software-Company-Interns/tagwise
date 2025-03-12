@@ -1,0 +1,18 @@
+.compact-view .compact-view-title {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.compact-view .compact-view-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8em;
+  color: var(--text-muted);
+}
+
+.compact-view .compact-view-date {
+  margin: 0;
+  padding: 0;
+} 

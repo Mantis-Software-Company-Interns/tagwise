@@ -1,0 +1,347 @@
+/* Loading spinner */
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-top: 4px solid #3498db;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Hata mesajları */
+.no-data-message {
+    padding: 10px;
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    font-size: 13px;
+    width: 100%;
+}
+
+.dark-mode .no-data-message {
+    color: #aaa;
+}
+
+/* Review modal styles */
+.subcategory-tag {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    margin: 2px;
+    font-size: 12px;
+    position: relative;
+    padding-right: 24px; /* Silme butonu için yer aç */
+}
+
+.dark-mode .subcategory-tag {
+    background: #444;
+    color: #fff;
+}
+
+.tag {
+    position: relative;
+    padding-right: 24px; /* Silme butonu için yer aç */
+}
+
+/* Silme butonları */
+.remove-subcategory,
+.remove-tag,
+.remove-category-group {
+    position: absolute;
+    right: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px !important;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.remove-subcategory:hover,
+.remove-tag:hover,
+.remove-category-group:hover {
+    opacity: 1;
+    color: #e74c3c;
+}
+
+/* Kategori grupları */
+.category-groups-container {
+    margin-top: 15px;
+}
+
+.category-groups-container label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 13px;
+    color: #666;
+    font-style: italic;
+}
+
+.dark-mode .category-groups-container label {
+    color: #aaa;
+}
+
+.category-groups-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+    min-height: 40px;
+    padding: 10px;
+    border: 1px dashed #ddd;
+    border-radius: 4px;
+    background-color: rgba(0,0,0,0.02);
+}
+
+.dark-mode .category-groups-list {
+    border-color: #555;
+    background-color: rgba(255,255,255,0.05);
+}
+
+.category-group {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    position: relative;
+    padding-right: 30px; /* Silme butonu için yer aç */
+}
+
+.dark-mode .category-group {
+    background-color: #333;
+}
+
+.category-group-content {
+    display: flex;
+    align-items: center;
+}
+
+.main-category-label {
+    font-weight: 500;
+    color: #2196F3;
+}
+
+.dark-mode .main-category-label {
+    color: #64B5F6;
+}
+
+.subcategory-label {
+    margin-left: 8px;
+    color: #666;
+}
+
+.dark-mode .subcategory-label {
+    color: #aaa;
+}
+
+.subcategory-label::before {
+    content: "›";
+    margin: 0 5px;
+    color: #999;
+}
+
+/* Yeni kategori grubu ekleme */
+.add-category-group {
+    margin-top: 15px;
+}
+
+.category-group-inputs {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.input-group {
+    flex: 1;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 12px;
+    color: #666;
+}
+
+.dark-mode .input-group label {
+    color: #aaa;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.dark-mode .input-group input {
+    background-color: #333;
+    border-color: #555;
+    color: #fff;
+}
+
+.add-category-group-btn {
+    background-color: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+    height: 38px;
+}
+
+.add-category-group-btn:hover {
+    background-color: #0b7dda;
+}
+
+.add-category-group-btn i {
+    font-size: 20px;
+}
+
+/* Etiket listesi */
+.tags-list-container {
+    margin-top: 15px;
+}
+
+.tags-list-container label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 13px;
+    color: #666;
+    font-style: italic;
+}
+
+.dark-mode .tags-list-container label {
+    color: #aaa;
+}
+
+#reviewTagsList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 10px;
+    min-height: 40px;
+    padding: 5px;
+    border: 1px dashed #ddd;
+    border-radius: 4px;
+    background-color: rgba(0,0,0,0.02);
+}
+
+.dark-mode #reviewTagsList {
+    border-color: #555;
+    background-color: rgba(255,255,255,0.05);
+}
+
+/* Etiket input alanı */
+.tags-input {
+    display: flex;
+    margin-top: 10px;
+}
+
+.tags-input input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px 0 0 4px;
+    font-size: 14px;
+}
+
+.dark-mode .tags-input input {
+    background-color: #333;
+    border-color: #555;
+    color: #fff;
+}
+
+.add-tag-btn {
+    background-color: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 0 4px 4px 0;
+    padding: 0 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.add-tag-btn:hover {
+    background-color: #0b7dda;
+}
+
+.add-tag-btn i {
+    font-size: 20px;
+}
+
+/* Main category input styles */
+#reviewMainCategory {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+.dark-mode #reviewMainCategory {
+    background-color: #333;
+    border-color: #555;
+    color: #fff;
+}
+
+.main-category-select {
+    margin-bottom: 15px;
+}
+
+.main-category-select label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #555;
+}
+
+.dark-mode .main-category-select label {
+    color: #ccc;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.cancel-review-btn {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.dark-mode .cancel-review-btn {
+    background-color: #444;
+    color: #fff;
+}
+
+.save-bookmark-btn {
+    background-color: #4CAF50;
+    color: white;
+} 

@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Admin Panel - TagWise{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <h1>Admin Panel</h1>
+    
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="message {{ message.tags }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div class="admin-dashboard">
+        <div class="dashboard-card">
+            <h3>Bookmarks</h3>
+            <div class="stat">{{ total_bookmarks }}</div>
+        </div>
+        <div class="dashboard-card">
+            <h3>Tags</h3>
+            <div class="stat">{{ total_tags }}</div>
+            <div class="orphan-stat">Orphan: {{ orphan_tags }}</div>
+        </div>
+        <div class="dashboard-card">
+            <h3>Categories</h3>
+            <div class="stat">{{ total_categories }}</div>
+            <div class="orphan-stat">Orphan: {{ orphan_categories }}</div>
+        </div>
+    </div>
+    
+    <div class="admin-actions">
+        <h2>Maintenance</h2>
+        <form method="post" action="{% url 'tagwiseapp:admin_panel' %}">
+            {% csrf_token %}
+            <button type="submit" name="clean_orphans" class="clean-btn">
+                <i class="material-icons">cleaning_services</i>
+                Clean Orphan Data
+            </button>
+            <p class="help-text">This will remove all tags and categories that are not associated with any bookmarks.</p>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/Admin/admin.js' %}"></script>
+{% endblock %} 

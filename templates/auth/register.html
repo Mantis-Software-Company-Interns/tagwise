@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Register - TagWise{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <h2>Create an Account</h2>
+        
+        {% if error %}
+        <div class="error-message">
+            {{ error }}
+        </div>
+        {% endif %}
+        
+        <form method="post" action="{% url 'tagwiseapp:register' %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div class="form-group">
+                <label for="password2">Confirm Password</label>
+                <input type="password" id="password2" name="password2" required>
+            </div>
+            <button type="submit" class="auth-btn">Register</button>
+        </form>
+        
+        <div class="auth-links">
+            <p>Already have an account? <a href="{% url 'tagwiseapp:login' %}">Login</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %} 
