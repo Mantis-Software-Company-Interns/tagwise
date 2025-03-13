@@ -324,10 +324,22 @@ body.dark-mode .cancel-review-btn {
     color: #e2e8f0;
 }
 
+
+/* Categories Page Styles */
+body.dark-mode .categories-container h1 {
+    color: #e2e8f0;
+}
+
+
 /* Tags Page Styles */
 body.dark-mode .tag-group h3 {
     color: #e2e8f0;
 }
+
+body.dark-mode .tags-container h1 {
+    color: #ffffff; /* Tags başlığının rengi */
+}
+
 
 body.dark-mode .tag-card {
     background: #1e293b;
@@ -398,6 +410,10 @@ body.dark-mode .new-collection {
 
 body.dark-mode .collection-header h3 {
     color: #e2e8f0;
+}
+
+body.dark-mode .collection-card.new-collection h3 {
+    color: #2196F3; /* Artı işaretiyle aynı mavi */
 }
 
 body.dark-mode .collection-description {
