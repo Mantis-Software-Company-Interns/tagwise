@@ -29,7 +29,7 @@
 }
 
 /* Dark mode styles */
-body.dark-mode .breadcrumb {
+/*body.dark-mode .breadcrumb {
     color: #94a3b8;
 }
 
@@ -47,4 +47,4 @@ body.dark-mode .breadcrumb i {
 
 body.dark-mode .breadcrumb span {
     color: #e2e8f0;
-} 
+}

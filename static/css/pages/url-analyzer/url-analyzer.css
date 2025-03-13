@@ -24,33 +24,21 @@
 
 /* Hata mesajları */
 .no-data-message {
-    padding: 10px;
     text-align: center;
-    color: #666;
-    font-style: italic;
-    font-size: 13px;
-    width: 100%;
-}
-
-.dark-mode .no-data-message {
-    color: #aaa;
+    padding: 2rem;
+    font-size: 1.2rem;
+    color: #333;
 }
 
 /* Review modal styles */
 .subcategory-tag {
     display: inline-block;
-    padding: 4px 8px;
-    background: #f0f0f0;
+    padding: 0.25rem 0.5rem;
+    margin: 0.25rem;
     border-radius: 4px;
-    margin: 2px;
-    font-size: 12px;
-    position: relative;
-    padding-right: 24px; /* Silme butonu için yer aç */
-}
-
-.dark-mode .subcategory-tag {
-    background: #444;
-    color: #fff;
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 0.875rem;
 }
 
 .tag {
@@ -86,45 +74,25 @@
 
 .category-groups-container label {
     display: block;
-    margin-bottom: 5px;
-    font-size: 13px;
-    color: #666;
-    font-style: italic;
-}
-
-.dark-mode .category-groups-container label {
-    color: #aaa;
+    margin-bottom: 0.5rem;
+    color: #334155;
+    font-weight: 500;
 }
 
 .category-groups-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 10px;
-    min-height: 40px;
-    padding: 10px;
-    border: 1px dashed #ddd;
-    border-radius: 4px;
-    background-color: rgba(0,0,0,0.02);
-}
-
-.dark-mode .category-groups-list {
-    border-color: #555;
-    background-color: rgba(255,255,255,0.05);
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
 }
 
 .category-group {
-    display: flex;
-    align-items: center;
-    padding: 8px 12px;
-    background-color: #f9f9f9;
-    border-radius: 4px;
-    position: relative;
-    padding-right: 30px; /* Silme butonu için yer aç */
-}
-
-.dark-mode .category-group {
-    background-color: #333;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1rem;
 }
 
 .category-group-content {
@@ -133,21 +101,14 @@
 }
 
 .main-category-label {
-    font-weight: 500;
-    color: #2196F3;
-}
-
-.dark-mode .main-category-label {
-    color: #64B5F6;
+    color: #334155;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
 }
 
 .subcategory-label {
-    margin-left: 8px;
-    color: #666;
-}
-
-.dark-mode .subcategory-label {
-    color: #aaa;
+    color: #64748b;
+    font-size: 0.875rem;
 }
 
 .subcategory-label::before {
@@ -173,27 +134,18 @@
 
 .input-group label {
     display: block;
-    margin-bottom: 5px;
-    font-size: 12px;
-    color: #666;
-}
-
-.dark-mode .input-group label {
-    color: #aaa;
+    margin-bottom: 0.5rem;
+    color: #334155;
+    font-weight: 500;
 }
 
 .input-group input {
     width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #ddd;
+    padding: 0.5rem;
+    border: 1px solid #e2e8f0;
     border-radius: 4px;
-    font-size: 14px;
-}
-
-.dark-mode .input-group input {
-    background-color: #333;
-    border-color: #555;
-    color: #fff;
+    background: white;
+    color: #334155;
 }
 
 .add-category-group-btn {
@@ -225,31 +177,18 @@
 
 .tags-list-container label {
     display: block;
-    margin-bottom: 5px;
-    font-size: 13px;
-    color: #666;
-    font-style: italic;
-}
-
-.dark-mode .tags-list-container label {
-    color: #aaa;
+    margin-bottom: 0.5rem;
+    color: #334155;
+    font-weight: 500;
 }
 
 #reviewTagsList {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    margin-top: 10px;
-    min-height: 40px;
-    padding: 5px;
-    border: 1px dashed #ddd;
-    border-radius: 4px;
-    background-color: rgba(0,0,0,0.02);
-}
-
-.dark-mode #reviewTagsList {
-    border-color: #555;
-    background-color: rgba(255,255,255,0.05);
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    min-height: 100px;
 }
 
 /* Etiket input alanı */
@@ -259,17 +198,12 @@
 }
 
 .tags-input input {
-    flex: 1;
-    padding: 8px 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px 0 0 4px;
-    font-size: 14px;
-}
-
-.dark-mode .tags-input input {
-    background-color: #333;
-    border-color: #555;
-    color: #fff;
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    background: white;
+    color: #334155;
 }
 
 .add-tag-btn {
@@ -296,17 +230,11 @@
 /* Main category input styles */
 #reviewMainCategory {
     width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #ddd;
+    padding: 0.5rem;
+    border: 1px solid #e2e8f0;
     border-radius: 4px;
-    font-size: 14px;
-    margin-top: 5px;
-}
-
-.dark-mode #reviewMainCategory {
-    background-color: #333;
-    border-color: #555;
-    color: #fff;
+    background: white;
+    color: #334155;
 }
 
 .main-category-select {
@@ -315,13 +243,9 @@
 
 .main-category-select label {
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: 0.5rem;
+    color: #334155;
     font-weight: 500;
-    color: #555;
-}
-
-.dark-mode .main-category-select label {
-    color: #ccc;
 }
 
 .modal-footer {
@@ -332,13 +256,13 @@
 }
 
 .cancel-review-btn {
-    background-color: #f0f0f0;
-    color: #333;
-}
-
-.dark-mode .cancel-review-btn {
-    background-color: #444;
-    color: #fff;
+    background: #e2e8f0;
+    color: #334155;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 
 .save-bookmark-btn {

@@ -7,26 +7,23 @@
 
 .collection-card {
     background: white;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    transition: all 0.3s ease;
-    cursor: pointer;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: all 0.2s;
 }
 
 .collection-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    background: #f8fafc;
+    transform: translateY(-2px);
 }
 
 .new-collection {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    border: 2px dashed #2196F3;
-    background: #f8f9fa;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: all 0.2s;
 }
 
 .new-collection i {
@@ -36,13 +33,16 @@
 }
 
 .new-collection h3 {
-    color: #2196F3;
+    color: #334155;
+    font-size: 1.25rem;
+    font-weight: 600;
     margin: 0 0 10px 0;
 }
 
 .new-collection p {
-    color: #666;
-    margin: 0;
+    color: #64748b;
+    font-size: 0.875rem;
+    margin: 0.5rem 0;
 }
 
 .collection-header {
@@ -58,24 +58,20 @@
 }
 
 .collection-header h3 {
-    font-size: 18px;
-    color: #333;
-    margin: 0;
+    color: #334155;
+    font-size: 1.25rem;
+    font-weight: 600;
 }
 
 .collection-description {
-    color: #666;
-    margin: 0 0 20px 0;
-    line-height: 1.5;
+    color: #64748b;
+    font-size: 0.875rem;
+    margin: 0.5rem 0;
 }
 
 .collection-stats {
-    display: flex;
-    justify-content: space-between;
-    padding-top: 15px;
-    border-top: 1px solid #eee;
-    color: #666;
-    font-size: 14px;
+    color: #64748b;
+    font-size: 0.875rem;
 }
 
 .collection-stats span {
@@ -86,29 +82,6 @@
 
 .collection-stats i {
     font-size: 16px;
-}
-
-/* Dark Mode Styles */
-body.dark-mode .collection-card {
-    background: #2d2d2d;
-}
-
-body.dark-mode .new-collection {
-    background: #1e1e1e;
-    border-color: #3d3d3d;
-}
-
-body.dark-mode .collection-header h3 {
-    color: #fff;
-}
-
-body.dark-mode .collection-description {
-    color: #bbb;
-}
-
-body.dark-mode .collection-stats {
-    border-color: #3d3d3d;
-    color: #bbb;
 }
 
 /* Responsive Design */
@@ -150,7 +123,7 @@ body.dark-mode .collection-stats {
     height: 56px;
     border: 2px solid var(--border-color);
     border-radius: 12px;
-    background: var(--card-bg);
+    background: white;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
@@ -190,7 +163,7 @@ body.dark-mode .collection-stats {
 }
 
 .bookmarks-search {
-    background: var(--card-bg);
+    background: white;
     border: 2px solid var(--border-color);
     border-radius: 12px;
     padding: 12px 16px;
@@ -319,8 +292,7 @@ body.dark-mode .collection-stats {
 }
 
 .cancel-btn:hover {
-    background: var(--hover-bg);
-    border-color: var(--text-color);
+    background: #f1f5f9;
 }
 
 .save-collection-btn {
@@ -387,10 +359,10 @@ body.dark-mode .collection-stats {
 .collection-form textarea {
     width: 100%;
     padding: 12px 16px;
-    border: 2px solid var(--border-color);
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
-    background: var(--input-bg);
-    color: var(--text-color);
+    background: white;
+    color: #334155;
     font-size: 14px;
     transition: all 0.2s ease;
 }
@@ -400,25 +372,6 @@ body.dark-mode .collection-stats {
     border-color: var(--primary-color);
     outline: none;
     box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.1);
-}
-
-/* Dark Mode Adjustments */
-body.dark-mode .collection-form input[type="text"],
-body.dark-mode .collection-form textarea {
-    background: var(--dark-input-bg);
-    border-color: var(--dark-border-color);
-}
-
-body.dark-mode .selected-icon {
-    background: var(--dark-card-bg);
-}
-
-body.dark-mode .bookmarks-search {
-    background: var(--dark-card-bg);
-}
-
-body.dark-mode .cancel-btn:hover {
-    background: var(--dark-hover-bg);
 }
 
 /* Add to your CSS variables */

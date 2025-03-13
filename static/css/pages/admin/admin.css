@@ -1,3 +1,5 @@
+
+
 /* Admin Panel Styles */
 .admin-container {
     padding: 20px;
@@ -113,7 +115,7 @@
 }
 
 /* Dark Mode */
-.dark-mode .admin-container h1 {
+/*.dark-mode .admin-container h1 {
     color: #f8f9fa;
     border-bottom-color: #343a40;
 }
@@ -140,4 +142,4 @@
 
 .dark-mode .help-text {
     color: #adb5bd;
-} 
+} */

@@ -1,3 +1,6 @@
+
+
+
 /* Categories Container */
 .categories-container {
     padding: 24px;
@@ -721,7 +724,7 @@
 }
 
 /* Dark Mode Styles */
-body.dark-mode .category-card {
+/*body.dark-mode .category-card {
     background: var(--dark-card-bg, #1e2a38);
     border-color: rgba(255, 255, 255, 0.05);
 }
@@ -876,7 +879,7 @@ body.dark-mode .cancel-btn {
 
 body.dark-mode .cancel-btn:hover {
     background: rgba(255, 255, 255, 0.1);
-}
+}*/
 
 /* Responsive Styles */
 @media (max-width: 768px) {
