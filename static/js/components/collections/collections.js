@@ -62,7 +62,7 @@ function setupCollectionCardClicks() {
         card.addEventListener('click', () => {
             const collectionId = card.dataset.id;
             // Redirect to collection detail page or open a modal with collection details
-            window.location.href = `/collections/${collectionId}/`;
+            window.location.href = `/tagwise/collections/${collectionId}/`;
         });
     });
 }
@@ -161,7 +161,7 @@ function saveCollection() {
     };
 
     // Make API call
-    fetch('/api/create-collection/', {
+    fetch('/tagwise/api/create-collection/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

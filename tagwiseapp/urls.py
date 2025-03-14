@@ -24,4 +24,8 @@ urlpatterns = [
     path('admin-panel/', views.admin_panel, name='admin_panel'),
     path('api/delete-bookmark/', views.delete_bookmark, name='delete_bookmark'),
     path('api/create-collection/', views.create_collection, name='create_collection'),
+    path('api/update-collection/', views.update_collection, name='update_collection'),
+    path('api/delete-collection/', views.delete_collection, name='delete_collection'),
+    path('api/add-bookmarks-to-collection/', views.add_bookmarks_to_collection, name='add_bookmarks_to_collection'),
+    path('api/remove-bookmark-from-collection/', views.remove_bookmark_from_collection, name='remove_bookmark_from_collection'),
 ] 

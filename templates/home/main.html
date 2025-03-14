@@ -131,58 +131,67 @@
             </button>
         </div>
         <div class="modal-body">
-            <div class="form-group">
-                <label for="reviewTitle">Title</label>
-                <input type="text" id="reviewTitle" placeholder="Enter title">
-            </div>
-            <div class="form-group">
-                <label for="reviewDescription">Description</label>
-                <textarea id="reviewDescription" rows="3" placeholder="Enter description"></textarea>
-            </div>
-            <div class="form-group">
-                <label>Categories</label>
-                <div class="categories-container">
-                    <!-- Kategori grupları listesi -->
-                    <div class="category-groups-container">
-                        <label>Categories & Subcategories (AI Matched)</label>
-                        <div id="categoryGroupsList" class="category-groups-list"></div>
-                    </div>
-                    
-                    <!-- Yeni kategori grubu ekleme -->
-                    <div class="add-category-group">
-                        <div class="category-group-inputs">
-                            <div class="input-group">
-                                <label for="newMainCategory">Category</label>
-                                <input type="text" id="newMainCategory" placeholder="Add category">
+            <form id="urlForm">
+                <div class="loading-container review-loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Re-analyzing URL...</p>
+                </div>
+                <!-- Gizli URL input alanı -->
+                <input type="hidden" id="reviewUrl">
+                <div class="form-group">
+                    <label for="reviewTitle">Title</label>
+                    <input type="text" id="reviewTitle" placeholder="Enter title">
+                </div>
+                <div class="form-group">
+                    <label for="reviewDescription">Description</label>
+                    <textarea id="reviewDescription" rows="3" placeholder="Enter description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Categories</label>
+                    <div class="categories-container">
+                        <!-- Kategori grupları listesi -->
+                        <div class="category-groups-container">
+                            <label>Categories & Subcategories (AI Matched)</label>
+                            <div id="categoryGroupsList" class="category-groups-list"></div>
+                        </div>
+                        
+                        <!-- Yeni kategori grubu ekleme -->
+                        <div class="add-category-group">
+                            <div class="category-group-inputs">
+                                <div class="input-group">
+                                    <label for="newMainCategory">Category</label>
+                                    <input type="text" id="newMainCategory" placeholder="Add category">
+                                </div>
+                                <div class="input-group">
+                                    <label for="newSubcategory">Subcategory</label>
+                                    <input type="text" id="newSubcategory" placeholder="Add subcategory">
+                                </div>
+                                <button class="add-category-group-btn" id="addCategoryGroupBtn">
+                                    <i class="material-icons">add</i>
+                                </button>
                             </div>
-                            <div class="input-group">
-                                <label for="newSubcategory">Subcategory</label>
-                                <input type="text" id="newSubcategory" placeholder="Add subcategory">
-                            </div>
-                            <button class="add-category-group-btn" id="addCategoryGroupBtn">
-                                <i class="material-icons">add</i>
-                            </button>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="form-group">
-                <label>Tags</label>
-                <div class="tags-container">
-                    <div class="tags-input">
-                        <input type="text" id="newTag" placeholder="Add new tag">
-                        <button class="add-tag-btn" id="addNewTagBtn">
-                            <i class="material-icons">add</i>
-                        </button>
+                <div class="form-group">
+                    <label>Tags</label>
+                    <div class="tags-container">
+                        <div class="tags-input">
+                            <input type="text" id="newTag" placeholder="Add new tag">
+                            <button class="add-tag-btn" id="addNewTagBtn">
+                                <i class="material-icons">add</i>
+                            </button>
+                        </div>
+                        <div class="tags-list-container">
+                            <label>Tags (AI Matched)</label>
+                            <div class="tags-list" id="reviewTagsList"></div>
+                        </div>
                     </div>
-                    <div class="tags-list-container">
-                        <label>Tags (AI Matched)</label>
-                        <div class="tags-list" id="reviewTagsList"></div>
-                    </div>
-                </div>
+                </form>
             </div>
             <div class="modal-footer">
                 <button class="cancel-review-btn">Cancel</button>
+                <button class="retry-analysis-btn">Retry Analysis</button>
                 <button class="save-bookmark-btn">Save Bookmark</button>
             </div>
         </div>

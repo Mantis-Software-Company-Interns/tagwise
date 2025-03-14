@@ -13,35 +13,144 @@
 <div class="breadcrumb">
     <a href="{% url 'tagwiseapp:categories' %}">Categories</a>
     <i class="material-icons">chevron_right</i>
-    <a href="{% url 'tagwiseapp:subcategories' %}?category={{ category }}" id="categoryLink">{{ category }}</a>
+    <a href="{% url 'tagwiseapp:subcategories' %}?category={{ category.name|urlencode }}" id="categoryLink">{{ category.name }}</a>
     <i class="material-icons">chevron_right</i>
-    <span id="currentSubcategory">{{ subcategory }}</span>
+    <span id="currentSubcategory">{{ subcategory.name }}</span>
 </div>
 {% endblock %}
 
 {% block extra_top_bar_left %}
-<button class="add-url-btn">
+<button class="add-url-btn" id="addUrlBtn">
     <i class="material-icons">add_link</i>
     <span>Add URL</span>
 </button>
 {% endblock %}
 
 {% block content %}
-<div class="subcategories-nav" id="subcategoriesNav">
-    <!-- Subcategories will be populated here -->
+<div class="subcategories-nav">
+    {% if related_subcategories %}
+        {% for related in related_subcategories %}
+        <a href="{% url 'tagwiseapp:topics' %}?category={{ category.name|urlencode }}&subcategory={{ related.name|urlencode }}" 
+           class="subcategory-nav-item {% if related.id == subcategory.id %}active{% endif %}">
+            {{ related.name }}
+        </a>
+        {% endfor %}
+    {% endif %}
 </div>
-<div class="topics-grid" id="topicsGrid">
-    <!-- Topics will be populated here -->
+
+<div class="topics-grid">
+    {% if bookmarks %}
+        {% for bookmark in bookmarks %}
+        <div class="bookmark-card">
+            <div class="bookmark-header">
+                <h3>{{ bookmark.title }}</h3>
+                <div class="bookmark-actions">
+                    <a href="{{ bookmark.url }}" target="_blank" class="visit-link">
+                        <i class="material-icons">open_in_new</i>
+                    </a>
+                    <button class="bookmark-menu-btn" data-id="{{ bookmark.id }}">
+                        <i class="material-icons">more_vert</i>
+                    </button>
+                </div>
+            </div>
+            <p class="bookmark-description">{{ bookmark.description|truncatechars:150 }}</p>
+            <div class="bookmark-tags">
+                {% for tag in bookmark.tags.all %}
+                <a href="{% url 'tagwiseapp:tagged_bookmarks' %}?tag={{ tag.name|urlencode }}" class="tag">{{ tag.name }}</a>
+                {% endfor %}
+            </div>
+            <div class="bookmark-footer">
+                <span class="bookmark-date">{{ bookmark.created_at|date:"M d, Y" }}</span>
+                <a href="{{ bookmark.url }}" target="_blank" class="bookmark-url">{{ bookmark.url|truncatechars:30 }}</a>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <i class="material-icons">bookmark_border</i>
+            <h3>No Bookmarks Yet</h3>
+            <p>This subcategory doesn't have any bookmarks yet.</p>
+            <button class="add-url-btn" id="emptyAddUrlBtn">
+                <i class="material-icons">add_link</i>
+                <span>Add Your First Bookmark</span>
+            </button>
+        </div>
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block modals %}
 <!-- URL Modal -->
 <div class="modal" id="urlModal">
-    <!-- ... existing modal content ... -->
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add New URL</h2>
+            <button class="close-btn"><i class="material-icons">close</i></button>
+        </div>
+        <div class="modal-body">
+            <form id="urlForm">
+                <div class="form-group">
+                    <label for="url">Enter URL</label>
+                    <input type="url" id="url" name="url" placeholder="https://example.com" required>
+                </div>
+                <button type="submit" class="submit-btn">
+                    <i class="material-icons">add_link</i>
+                    <span>Add URL</span>
+                </button>
+            </form>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'js/components/topics/topics.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add URL button functionality
+        const addUrlBtn = document.getElementById('addUrlBtn');
+        const emptyAddUrlBtn = document.getElementById('emptyAddUrlBtn');
+        const urlModal = document.getElementById('urlModal');
+        const closeBtn = urlModal.querySelector('.close-btn');
+        
+        function openUrlModal() {
+            urlModal.classList.add('active');
+            document.getElementById('url').focus();
+        }
+        
+        if (addUrlBtn) {
+            addUrlBtn.addEventListener('click', openUrlModal);
+        }
+        
+        if (emptyAddUrlBtn) {
+            emptyAddUrlBtn.addEventListener('click', openUrlModal);
+        }
+        
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function() {
+                urlModal.classList.remove('active');
+            });
+        }
+        
+        // Close modal when clicking outside
+        urlModal.addEventListener('click', function(e) {
+            if (e.target === urlModal) {
+                urlModal.classList.remove('active');
+            }
+        });
+        
+        // URL form submission
+        const urlForm = document.getElementById('urlForm');
+        if (urlForm) {
+            urlForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const url = document.getElementById('url').value.trim();
+                if (url) {
+                    // Redirect to the main page with the URL in the query string
+                    window.location.href = "{% url 'tagwiseapp:index' %}?url=" + encodeURIComponent(url);
+                }
+            });
+        }
+    });
+</script>
 {% endblock %} 

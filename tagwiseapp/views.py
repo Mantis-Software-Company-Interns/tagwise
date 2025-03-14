@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 import json
-from .reader import fetch_html, extract_content, categorize_with_gemini
+from .reader import fetch_html, extract_content, categorize_with_gemini, capture_screenshot, analyze_screenshot_with_gemini
 from .models import Bookmark, Category, Tag, Collection
 from django.db import models
 from collections import Counter
@@ -68,10 +68,6 @@ def index(request):
         'main_categories': main_categories
     })
 
-def categories(request):
-    print("categories")
-    return render(request, 'Categories/categories.html')
-
 def tags(request):
     # Get all tags with bookmark count
     tags = Tag.objects.annotate(bookmark_count=models.Count('bookmark'))
@@ -107,37 +103,53 @@ def tags(request):
     })
 
 @login_required(login_url='tagwiseapp:login')
-def collections(request):
-    # Get user's collections
-    user_collections = Collection.objects.filter(user=request.user).order_by('-updated_at')
-    
-    # Get user's bookmarks for the collection creation modal
-    user_bookmarks = Bookmark.objects.filter(user=request.user).order_by('-created_at')
-    
+def collections_view(request):
+    """Kullanıcının koleksiyonlarını görüntüler."""
+    collections = Collection.objects.filter(user=request.user).order_by('-created_at')
     return render(request, 'collections/collections.html', {
-        'collections': user_collections,
-        'bookmarks': user_bookmarks
+        'collections': collections
     })
 
-def subcategories(request):
-    print("subcategories")
-    return render(request, 'Categories/Subcategories/subcategories.html')
-
+@login_required(login_url='tagwiseapp:login')
 def topics(request):
     category_name = request.GET.get('category')
     subcategory_name = request.GET.get('subcategory')
     
-    if subcategory_name:
-        subcategory = Category.objects.filter(name=subcategory_name).first()
-        if subcategory:
-            bookmarks = Bookmark.objects.filter(user=request.user, subcategories=subcategory).order_by('-created_at')
-            return render(request, 'topics/topics.html', {'subcategory': subcategory, 'bookmarks': bookmarks})
+    if not category_name or not subcategory_name:
+        return redirect('tagwiseapp:categories')
     
-    return redirect('tagwiseapp:categories')
+    category = Category.objects.filter(name=category_name).first()
+    subcategory = Category.objects.filter(name=subcategory_name, parent=category).first()
+    
+    if not category or not subcategory:
+        return redirect('tagwiseapp:categories')
+    
+    # Get bookmarks for this subcategory
+    bookmarks = Bookmark.objects.filter(
+        user=request.user, 
+        subcategories=subcategory
+    ).order_by('-created_at')
+    
+    # Get other subcategories in the same category for navigation
+    related_subcategories = Category.objects.filter(parent=category)
+    
+    return render(request, 'topics/topics.html', {
+        'category': category,
+        'subcategory': subcategory,
+        'bookmarks': bookmarks,
+        'related_subcategories': related_subcategories
+    })
 
+@login_required(login_url='tagwiseapp:login')
 def tagged_bookmarks(request):
-    print("tagged_bookmarks")
-    return render(request, 'Tagged-Bookmarks/tagged-bookmarks.html')
+    tag_name = request.GET.get('tag')
+    if tag_name:
+        tag = Tag.objects.filter(name=tag_name).first()
+        if tag:
+            bookmarks = Bookmark.objects.filter(user=request.user, tags=tag).order_by('-created_at')
+            return render(request, 'bookmarks/tagged_bookmarks.html', {'tag': tag, 'bookmarks': bookmarks})
+    
+    return redirect('tagwiseapp:tags')
 
 @csrf_exempt
 @login_required(login_url='tagwiseapp:login')
@@ -161,96 +173,63 @@ def analyze_url(request):
             # Fetch HTML content
             print("HTML içeriği alınıyor...")
             html = fetch_html(url)
-            if not html:
-                return JsonResponse({'error': 'HTML içeriği alınamadı. URL doğru mu?'}, status=400)
+            content = None
+            category_json = None
+            screenshot_used = False
             
-            print("HTML içeriği alındı, içerik çıkarılıyor...")
-            # Extract main content
-            content = extract_content(html)
-            if not content:
-                return JsonResponse({'error': 'İçerik çıkarılamadı'}, status=400)
+            if html:
+                print("HTML içeriği alındı, içerik çıkarılıyor...")
+                # Extract main content
+                content = extract_content(html)
             
-            print("İçerik çıkarıldı, kategorize ediliyor...")
-            # Categorize content
-            category_json = categorize_with_gemini(content, url)
+            # HTML içeriği alınamadıysa veya içerik çıkarılamazsa, Selenium ile ekran görüntüsü al
+            if not html or not content or len(content.strip()) < 50:
+                print("HTML içeriği alınamadı veya içerik yetersiz, Selenium ile ekran görüntüsü alınıyor...")
+                screenshot_base64 = capture_screenshot(url)
+                
+                if screenshot_base64:
+                    # Ekran görüntüsünü Gemini ile analiz et ve kategorize et
+                    # Bu fonksiyon artık doğrudan kategorize edilmiş JSON döndürüyor
+                    category_json = analyze_screenshot_with_gemini(screenshot_base64, url)
+                    screenshot_used = True
+            
+            # Eğer ekran görüntüsü analizi yapılmadıysa veya başarısız olduysa, HTML içeriğini kategorize et
+            if not category_json and content:
+                print("İçerik çıkarıldı, kategorize ediliyor...")
+                # Categorize content
+                category_json = categorize_with_gemini(content, url)
+            
+            if not content and not category_json:
+                return JsonResponse({'error': 'İçerik alınamadı veya analiz edilemedi'}, status=400)
             
             print(f"Kategori JSON: {category_json}")
             
-            # Parse the JSON string to a Python dictionary
+            # Parse JSON string to dict
             try:
-                # Gemini'nin döndürdüğü JSON formatını işle
-                # Bazen birden fazla JSON objesi dönebilir
-                category_data = []
-                
-                # JSON formatını kontrol et
-                if category_json.startswith('{') and category_json.endswith('}'):
-                    # Tek bir JSON objesi
-                    parsed_json = json.loads(category_json)
-                    if 'categories' in parsed_json:
-                        category_data = parsed_json.get('categories', [])
+                if isinstance(category_json, str):
+                    result = json.loads(category_json)
                 else:
-                    # Birden fazla JSON objesi olabilir
-                    import re
-                    json_matches = re.findall(r'\{[\s\S]*?"categories"[\s\S]*?\}', category_json)
-                    
-                    if json_matches:
-                        for json_str in json_matches:
-                            try:
-                                parsed_json = json.loads(json_str)
-                                if 'categories' in parsed_json:
-                                    category_data.extend(parsed_json.get('categories', []))
-                            except json.JSONDecodeError:
-                                continue
+                    result = category_json
                 
-                print(f"İşlenen kategori verisi: {category_data}")
+                # Add screenshot_used flag to result
+                if isinstance(result, dict):
+                    result['screenshot_used'] = screenshot_used
                 
-                if not category_data:
-                    print("Kategori verisi bulunamadı, ham yanıtı gönderiyoruz")
-                    # Kategori verisi bulunamadıysa, ham yanıtı gönder
-                    category_data = {"raw_response": category_json}
-            except json.JSONDecodeError as e:
-                print(f"JSON ayrıştırma hatası: {e}")
-                # JSON ayrıştırma hatası durumunda ham yanıtı gönder
-                category_data = {"raw_response": category_json}
-            
-            # Extract title from HTML
-            from bs4 import BeautifulSoup
-            soup = BeautifulSoup(html, 'html.parser')
-            title = soup.title.string if soup.title else ""
-            
-            # Extract description from meta tags
-            description = ""
-            meta_desc = soup.find('meta', attrs={'name': 'description'})
-            if meta_desc:
-                description = meta_desc.get('content', '')
-            
-            # Get all available main categories
-            main_categories = list(Category.objects.filter(parent=None).values_list('name', flat=True))
-            
-            # NOT: Varsayılan kategorileri otomatik oluşturmayı kaldırdık
-            # Kategoriler artık sadece bookmark eklendiğinde, gerçekten kullanıldıklarında oluşturulacak
-            
-            # Prepare response
-            response_data = {
-                'url': url,
-                'title': title,
-                'description': description,
-                'categories': category_data,
-                'available_main_categories': main_categories,
-                'success': True,
-                'raw_response': category_json  # Ham yanıtı da ekle
-            }
-            
-            print("İşlem başarılı, yanıt gönderiliyor")
-            return JsonResponse(response_data)
-            
+                return JsonResponse(result)
+            except json.JSONDecodeError:
+                # If JSON parsing fails, return the raw string
+                return JsonResponse({
+                    'raw_result': category_json,
+                    'screenshot_used': screenshot_used
+                })
+                
         except Exception as e:
+            print(f"Hata: {e}")
             import traceback
-            print("Hata oluştu:")
-            print(traceback.format_exc())  # Detaylı hata mesajını konsola yazdır
+            print(traceback.format_exc())
             return JsonResponse({'error': str(e)}, status=500)
     
-    return JsonResponse({'error': 'Sadece POST metodu kabul edilir'}, status=405)
+    return JsonResponse({'error': 'Sadece POST istekleri kabul edilir'}, status=405)
 
 @csrf_protect
 @login_required(login_url='tagwiseapp:login')
@@ -431,17 +410,6 @@ def subcategories(request):
             return render(request, 'categories/subcategories.html', {'category': category, 'subcategories': subcategories})
     
     return redirect('tagwiseapp:categories')
-
-@login_required(login_url='tagwiseapp:login')
-def tagged_bookmarks(request):
-    tag_name = request.GET.get('tag')
-    if tag_name:
-        tag = Tag.objects.filter(name=tag_name).first()
-        if tag:
-            bookmarks = Bookmark.objects.filter(user=request.user, tags=tag).order_by('-created_at')
-            return render(request, 'bookmarks/tagged_bookmarks.html', {'tag': tag, 'bookmarks': bookmarks})
-    
-    return redirect('tagwiseapp:tags')
 
 @login_required(login_url='tagwiseapp:login')
 def collections(request):
@@ -816,9 +784,177 @@ def collection_detail(request, collection_id):
         # Get bookmarks in this collection
         bookmarks = collection.bookmarks.all().order_by('-created_at')
         
+        # Get all user bookmarks for the add bookmark modal
+        # Exclude bookmarks already in the collection
+        all_bookmarks = Bookmark.objects.filter(user=request.user).exclude(
+            id__in=bookmarks.values_list('id', flat=True)
+        ).order_by('-created_at')
+        
+        # Print for debugging
+        print(f"Collection: {collection.name}, Bookmarks count: {bookmarks.count()}, Available bookmarks: {all_bookmarks.count()}")
+        
         return render(request, 'collections/collection_detail.html', {
             'collection': collection,
-            'bookmarks': bookmarks
+            'bookmarks': bookmarks,
+            'all_bookmarks': all_bookmarks
         })
     except Collection.DoesNotExist:
         return redirect('tagwiseapp:collections')
+
+@csrf_protect
+@login_required(login_url='tagwiseapp:login')
+def update_collection(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # Extract data
+            collection_id = data.get('id')
+            name = data.get('name')
+            description = data.get('description', '')
+            icon = data.get('icon', 'collections_bookmark')
+            
+            # Validate required fields
+            if not collection_id or not name:
+                return JsonResponse({'error': 'Collection ID and name are required'}, status=400)
+            
+            # Get the collection
+            try:
+                collection = Collection.objects.get(id=collection_id, user=request.user)
+            except Collection.DoesNotExist:
+                return JsonResponse({'error': 'Collection not found'}, status=404)
+            
+            # Update the collection
+            collection.name = name
+            collection.description = description
+            collection.icon = icon
+            collection.save()
+            
+            # Return success response with updated collection data
+            return JsonResponse({
+                'success': True,
+                'collection': {
+                    'id': collection.id,
+                    'name': collection.name,
+                    'description': collection.description,
+                    'icon': collection.icon,
+                    'bookmark_count': collection.bookmarks.count(),
+                    'updated_at': collection.updated_at.isoformat()
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
+
+@csrf_protect
+@login_required(login_url='tagwiseapp:login')
+def delete_collection(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # Extract collection ID
+            collection_id = data.get('id')
+            
+            # Validate required fields
+            if not collection_id:
+                return JsonResponse({'error': 'Collection ID is required'}, status=400)
+            
+            # Get the collection
+            try:
+                collection = Collection.objects.get(id=collection_id, user=request.user)
+            except Collection.DoesNotExist:
+                return JsonResponse({'error': 'Collection not found'}, status=404)
+            
+            # Delete the collection
+            collection.delete()
+            
+            # Return success response
+            return JsonResponse({
+                'success': True,
+                'message': 'Collection deleted successfully'
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
+
+@csrf_protect
+@login_required(login_url='tagwiseapp:login')
+def add_bookmarks_to_collection(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # Extract data
+            collection_id = data.get('collection_id')
+            bookmark_ids = data.get('bookmark_ids', [])
+            
+            # Validate required fields
+            if not collection_id or not bookmark_ids:
+                return JsonResponse({'error': 'Collection ID and bookmark IDs are required'}, status=400)
+            
+            # Get the collection
+            try:
+                collection = Collection.objects.get(id=collection_id, user=request.user)
+            except Collection.DoesNotExist:
+                return JsonResponse({'error': 'Collection not found'}, status=404)
+            
+            # Get the bookmarks
+            bookmarks = Bookmark.objects.filter(id__in=bookmark_ids, user=request.user)
+            
+            # Add bookmarks to the collection
+            collection.bookmarks.add(*bookmarks)
+            
+            # Return success response
+            return JsonResponse({
+                'success': True,
+                'message': f'{bookmarks.count()} bookmarks added to collection',
+                'bookmark_count': collection.bookmarks.count()
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
+
+@csrf_protect
+@login_required(login_url='tagwiseapp:login')
+def remove_bookmark_from_collection(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # Extract data
+            collection_id = data.get('collection_id')
+            bookmark_id = data.get('bookmark_id')
+            
+            # Validate required fields
+            if not collection_id or not bookmark_id:
+                return JsonResponse({'error': 'Collection ID and bookmark ID are required'}, status=400)
+            
+            # Get the collection
+            try:
+                collection = Collection.objects.get(id=collection_id, user=request.user)
+            except Collection.DoesNotExist:
+                return JsonResponse({'error': 'Collection not found'}, status=404)
+            
+            # Get the bookmark
+            try:
+                bookmark = Bookmark.objects.get(id=bookmark_id, user=request.user)
+            except Bookmark.DoesNotExist:
+                return JsonResponse({'error': 'Bookmark not found'}, status=404)
+            
+            # Remove bookmark from the collection
+            collection.bookmarks.remove(bookmark)
+            
+            # Return success response
+            return JsonResponse({
+                'success': True,
+                'message': 'Bookmark removed from collection',
+                'bookmark_count': collection.bookmarks.count()
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Only POST method is allowed'}, status=405)

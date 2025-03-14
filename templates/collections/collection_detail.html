@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}TagWise - {{ collection.name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/collections/collection_detail.css' %}">
+{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{% url 'tagwiseapp:collections' %}">Collections</a>
+    <i class="material-icons">chevron_right</i>
+    <span>{{ collection.name }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="collection-header">
+    <div class="collection-info">
+        <div class="collection-icon">
+            <i class="material-icons">{{ collection.icon }}</i>
+        </div>
+        <div class="collection-details">
+            <h1>{{ collection.name }}</h1>
+            <p class="collection-description">{{ collection.description }}</p>
+            <div class="collection-meta">
+                <span><i class="material-icons">bookmark</i> {{ bookmarks.count }} bookmarks</span>
+                <span><i class="material-icons">access_time</i> Updated {{ collection.updated_at|timesince }} ago</span>
+            </div>
+        </div>
+    </div>
+    <div class="collection-actions">
+        <button class="edit-collection-btn" id="editCollectionBtn">
+            <i class="material-icons">edit</i>
+            <span>Edit Collection</span>
+        </button>
+        <button class="delete-collection-btn" id="deleteCollectionBtn">
+            <i class="material-icons">delete</i>
+            <span>Delete</span>
+        </button>
+    </div>
+</div>
+
+<div class="bookmarks-container">
+    <div class="bookmarks-header">
+        <h2>Bookmarks</h2>
+        {% if bookmarks.count > 0 %}
+        <button class="add-bookmark-btn" id="addBookmarkBtn">
+            <i class="material-icons">add_link</i>
+            <span>Add Bookmark</span>
+        </button>
+        {% endif %}
+    </div>
+    
+    {% if bookmarks.count > 0 %}
+    <div class="bookmarks-grid">
+        {% for bookmark in bookmarks %}
+        <div class="bookmark-card" data-id="{{ bookmark.id }}">
+            <div class="bookmark-header">
+                <div class="bookmark-icon">
+                    <img src="{{ bookmark.favicon }}" alt="Favicon" onerror="this.src='{% static 'images/default-favicon.png' %}'">
+                </div>
+                <button class="bookmark-menu-btn" data-id="{{ bookmark.id }}">
+                    <i class="material-icons">more_vert</i>
+                </button>
+            </div>
+            <div class="bookmark-content">
+                <h3 class="bookmark-title">{{ bookmark.title }}</h3>
+                <p class="bookmark-url">{{ bookmark.url }}</p>
+                <div class="bookmark-meta">
+                    <span class="bookmark-date">Added {{ bookmark.created_at|date:"M d, Y" }}</span>
+                </div>
+            </div>
+            <a href="{{ bookmark.url }}" class="bookmark-link" target="_blank" rel="noopener noreferrer"></a>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="material-icons">bookmark_border</i>
+        <h3>No Bookmarks Yet</h3>
+        <p>This collection doesn't have any bookmarks yet.</p>
+        <button class="add-bookmark-btn" id="emptyAddBookmarkBtn">
+            <i class="material-icons">add_link</i>
+            <span>Add Your First Bookmark</span>
+        </button>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Edit Collection Modal -->
+<div class="modal" id="editCollectionModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Edit Collection</h2>
+            <button class="close-btn"><i class="material-icons">close</i></button>
+        </div>
+        <div class="modal-body">
+            <form id="editCollectionForm">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="editCollectionName">Collection Name</label>
+                    <input type="text" id="editCollectionName" value="{{ collection.name }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editCollectionDescription">Description (optional)</label>
+                    <textarea id="editCollectionDescription">{{ collection.description }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label>Icon</label>
+                    <div class="icon-selector">
+                        <div class="selected-icon">
+                            <i class="material-icons" id="selectedEditIcon">{{ collection.icon }}</i>
+                            <span>Select Icon</span>
+                        </div>
+                        <div class="icon-grid">
+                            <i class="material-icons">collections_bookmark</i>
+                            <i class="material-icons">folder</i>
+                            <i class="material-icons">work</i>
+                            <i class="material-icons">school</i>
+                            <i class="material-icons">code</i>
+                            <i class="material-icons">book</i>
+                            <i class="material-icons">article</i>
+                            <i class="material-icons">science</i>
+                            <i class="material-icons">psychology</i>
+                            <i class="material-icons">public</i>
+                            <i class="material-icons">travel_explore</i>
+                            <i class="material-icons">restaurant</i>
+                            <i class="material-icons">fitness_center</i>
+                            <i class="material-icons">sports_esports</i>
+                            <i class="material-icons">movie</i>
+                            <i class="material-icons">music_note</i>
+                            <i class="material-icons">shopping_cart</i>
+                            <i class="material-icons">attach_money</i>
+                            <i class="material-icons">favorite</i>
+                            <i class="material-icons">star</i>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="cancel-btn">Cancel</button>
+            <button class="save-btn" type="submit" form="editCollectionForm">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Bookmark Modal -->
+<div class="modal" id="addBookmarkModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add Bookmarks to Collection</h2>
+            <button class="close-btn"><i class="material-icons">close</i></button>
+        </div>
+        <div class="modal-body">
+            {% csrf_token %}
+            <div class="search-container">
+                <div class="search-input">
+                    <i class="material-icons">search</i>
+                    <input type="text" id="bookmarkSearch" placeholder="Search your bookmarks...">
+                </div>
+            </div>
+            <div class="available-bookmarks">
+                <h3>Select bookmarks to add</h3>
+                {% if all_bookmarks %}
+                <div class="available-bookmarks-grid">
+                    {% for bookmark in all_bookmarks %}
+                    <div class="bookmark-item" data-id="{{ bookmark.id }}">
+                        <div class="bookmark-checkbox">
+                            <input type="checkbox" id="bookmark-{{ bookmark.id }}" value="{{ bookmark.id }}">
+                            <label for="bookmark-{{ bookmark.id }}"></label>
+                        </div>
+                        <div class="bookmark-info">
+                            <h4>{{ bookmark.title }}</h4>
+                            <p>{{ bookmark.url }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-bookmarks">
+                    <p>You don't have any bookmarks to add to this collection.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="cancel-btn">Cancel</button>
+            <button class="add-selected-btn">Add Selected</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal" id="deleteConfirmModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Delete Collection</h2>
+            <button class="close-btn"><i class="material-icons">close</i></button>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to delete the collection "{{ collection.name }}"?</p>
+            <p class="warning">This action cannot be undone. The bookmarks will not be deleted, only removed from this collection.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="cancel-btn">Cancel</button>
+            <button class="delete-confirm-btn">Delete Collection</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/components/collections/collection_detail.js' %}"></script>
+{% endblock %} 

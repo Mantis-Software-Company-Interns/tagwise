@@ -46,6 +46,7 @@
             </button>
         </div>
         <div class="modal-body collection-creator">
+            {% csrf_token %}
             <div class="collection-form">
                 <div class="form-group">
                     <label for="collectionName">Collection Name</label>

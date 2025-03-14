@@ -27,3 +27,44 @@
 
 /* Responsive */
 @import url('responsive/media-queries.css');
+
+:root {
+    /* Main colors */
+    --primary-color: #2196F3;
+    --primary-color-light: rgba(33, 150, 243, 0.1);
+    --primary-color-dark: #1976D2;
+    --primary-rgb: 33, 150, 243;
+    
+    /* Status colors */
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+    
+    /* Text colors */
+    --text-color: #2c3e50;
+    --text-secondary: #64748b;
+    --text-tertiary: #94a3b8;
+    
+    /* Background colors */
+    --bg-color: #f8f9fa;
+    --card-bg: #ffffff;
+    --secondary-bg: #f5f7fa;
+    --hover-bg: #e9ecef;
+    
+    /* Border colors */
+    --border-color: rgba(0, 0, 0, 0.08);
+    
+    /* Tag colors */
+    --tag-bg: rgba(33, 150, 243, 0.08);
+    
+    /* Dark mode colors */
+    --dark-bg: #121212;
+    --dark-card-bg: #1e1e1e;
+    --dark-secondary-bg: #2d2d2d;
+    --dark-hover-bg: #3d3d3d;
+    --dark-border-color: rgba(255, 255, 255, 0.1);
+    --dark-text-color: #e0e0e0;
+    --dark-text-secondary: #a0a0a0;
+    --dark-text-tertiary: #707070;
+}

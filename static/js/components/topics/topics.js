@@ -1,106 +1,204 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // URL'den kategori ve alt kategori parametrelerini al
-    const urlParams = new URLSearchParams(window.location.search);
-    const category = urlParams.get('category');
-    const subcategory = urlParams.get('subcategory');
+    // Initialize bookmark menu functionality
+    initializeBookmarkMenus();
     
-    if (category && subcategory) {
-        // Breadcrumb'ı güncelle
-        document.getElementById('categoryLink').textContent = category;
-        document.getElementById('categoryLink').href = `categories.html?category=${category}`;
-        document.getElementById('currentSubcategory').textContent = subcategory;
-        
-        // İlgili bookmarkları yükle
-        loadTopicBookmarks(category, subcategory);
-    }
+    // Initialize URL modal
+    initializeUrlModal();
 });
 
-function loadTopicBookmarks(category, subcategory) {
-    const grid = document.querySelector('.grid');
-    
-    // Örnek veri (gerçek uygulamada API'den gelecek)
-    const bookmarks = [
-        {
-            title: 'React Performance Optimization Tips',
-            url: 'https://react.dev/learn/performance',
-            description: 'Learn advanced techniques for optimizing React applications...',
-            thumbnail: 'images/react.png',
-            date: '2024-03-14',
-            mainCategory: 'Development',
-            subcategories: ['React', 'Frontend'],
-            tags: ['react', 'performance', 'optimization', 'hooks']
-        },
-        // Diğer bookmarklar...
-    ];
-    
-    // Sadece seçili kategori ve alt kategoriye ait bookmarkları filtrele
-    const filteredBookmarks = bookmarks.filter(bookmark => 
-        bookmark.mainCategory.toLowerCase() === category.toLowerCase() &&
-        bookmark.subcategories.some(sub => sub.toLowerCase() === subcategory.toLowerCase())
-    );
-    
-    // Bookmarkları grid'e ekle
-    grid.innerHTML = filteredBookmarks.map(bookmark => `
-        <div class="grid-item bookmark-card" data-main-category="${bookmark.mainCategory}">
-            <div class="card-header">
-                <button class="more-btn">
-                    <i class="material-icons">more_vert</i>
-                </button>
-                <div class="more-menu">
-                    <div class="menu-item"><i class="material-icons">edit</i>Edit</div>
-                    <div class="menu-item"><i class="material-icons">star</i>Favorite</div>
-                    <div class="menu-item"><i class="material-icons">archive</i>Archive</div>
-                    <div class="menu-item"><i class="material-icons">local_offer</i>Edit Tags</div>
-                    <div class="menu-item delete"><i class="material-icons">delete</i>Delete</div>
-                </div>
-            </div>
-            <a href="${bookmark.url}" target="_blank" class="thumbnail-link">
-                <div class="thumbnail-container">
-                    <img src="${bookmark.thumbnail}" alt="Thumbnail" class="thumbnail">
-                    <div class="subcategory-container">
-                        ${bookmark.subcategories.map(sub => 
-                            `<a href="topics.html?category=${bookmark.mainCategory}&subcategory=${sub}" 
-                                class="subcategory-tab">${sub}</a>`
-                        ).join('')}
-                    </div>
-                </div>
-            </a>
-            <div class="card-content">
-                <a href="${bookmark.url}" target="_blank" class="title-link">
-                    <h3 class="title">${bookmark.title}</h3>
-                </a>
-                <p class="description">${bookmark.description}</p>
-                <div class="tags">
-                    ${bookmark.tags.map(tag => 
-                        `<a href="tagged-bookmarks.html?tag=${tag}" class="tag">${tag}</a>`
-                    ).join('')}
-                </div>
-                <div class="card-footer">
-                    <button class="expand-btn">
-                        <i class="material-icons">info_outline</i>
-                    </button>
-                    <div class="date">${bookmark.date}</div>
-                </div>
-            </div>
-        </div>
-    `).join('');
-    
-    // Event listener'ları yeniden ekle
-    setupCardEventListeners();
-}
-
-function setupCardEventListeners() {
-    // Expand butonları için event listener
-    document.querySelectorAll('.expand-btn').forEach(btn => {
+function initializeBookmarkMenus() {
+    // Add click event to bookmark menu buttons
+    document.querySelectorAll('.bookmark-menu-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const card = e.target.closest('.bookmark-card');
-            if (card) {
-                updateModalContent(card);
-                document.getElementById('detailsModal').classList.add('active');
-            }
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Create menu element
+            const menu = document.createElement('div');
+            menu.className = 'bookmark-menu';
+            
+            // Get bookmark ID
+            const bookmarkId = btn.getAttribute('data-id');
+            
+            // Add menu items
+            menu.innerHTML = `
+                <a href="#" class="menu-item edit-bookmark" data-id="${bookmarkId}">
+                    <i class="material-icons">edit</i>
+                    <span>Edit</span>
+                </a>
+                <a href="#" class="menu-item delete-bookmark" data-id="${bookmarkId}">
+                    <i class="material-icons">delete</i>
+                    <span>Delete</span>
+                </a>
+            `;
+            
+            // Position menu
+            const rect = btn.getBoundingClientRect();
+            menu.style.top = `${rect.bottom + window.scrollY}px`;
+            menu.style.right = `${window.innerWidth - rect.right}px`;
+            
+            // Add to document
+            document.body.appendChild(menu);
+            
+            // Add click event to edit menu item
+            menu.querySelector('.edit-bookmark').addEventListener('click', (e) => {
+                e.preventDefault();
+                // Redirect to edit page
+                window.location.href = `/tagwise/?edit=${bookmarkId}`;
+            });
+            
+            // Add click event to delete menu item
+            menu.querySelector('.delete-bookmark').addEventListener('click', (e) => {
+                e.preventDefault();
+                if (confirm('Are you sure you want to delete this bookmark?')) {
+                    deleteBookmark(bookmarkId);
+                }
+            });
+            
+            // Close menu when clicking outside
+            const closeMenu = (e) => {
+                if (!menu.contains(e.target) && e.target !== btn) {
+                    menu.remove();
+                    document.removeEventListener('click', closeMenu);
+                }
+            };
+            
+            // Add event listener with a slight delay to prevent immediate closing
+            setTimeout(() => {
+                document.addEventListener('click', closeMenu);
+            }, 10);
         });
     });
+}
+
+function deleteBookmark(bookmarkId) {
+    // Get CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
     
-    // More menü butonları için event listener
-    // ... diğer event listener'lar
+    // Send delete request
+    fetch('/tagwise/api/delete-bookmark/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ id: bookmarkId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove bookmark card from DOM
+            const card = document.querySelector(`.bookmark-card[data-id="${bookmarkId}"]`);
+            if (card) {
+                card.remove();
+            }
+            
+            // Show success message
+            showNotification('Bookmark deleted successfully', 'success');
+            
+            // If no bookmarks left, show empty state
+            const bookmarkCards = document.querySelectorAll('.bookmark-card');
+            if (bookmarkCards.length === 0) {
+                const topicsGrid = document.querySelector('.topics-grid');
+                topicsGrid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="material-icons">bookmark_border</i>
+                        <h3>No Bookmarks Left</h3>
+                        <p>This subcategory doesn't have any bookmarks yet.</p>
+                        <button class="add-url-btn" id="emptyAddUrlBtn">
+                            <i class="material-icons">add_link</i>
+                            <span>Add Your First Bookmark</span>
+                </button>
+                    </div>
+                `;
+                
+                // Reinitialize URL modal for the new button
+                document.getElementById('emptyAddUrlBtn').addEventListener('click', () => {
+                    document.getElementById('urlModal').classList.add('active');
+                });
+            }
+        } else {
+            showNotification('Error deleting bookmark: ' + (data.error || 'Unknown error'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error deleting bookmark', 'error');
+    });
+}
+
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <i class="material-icons">${type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info'}</i>
+        <span>${message}</span>
+    `;
+    
+    // Add to document
+    document.body.appendChild(notification);
+    
+    // Show notification
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+    
+    // Hide and remove after 3 seconds
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, 3000);
+}
+
+function initializeUrlModal() {
+    // Add URL button functionality
+    const addUrlBtn = document.getElementById('addUrlBtn');
+    const emptyAddUrlBtn = document.getElementById('emptyAddUrlBtn');
+    const urlModal = document.getElementById('urlModal');
+    
+    if (!urlModal) return;
+    
+    const closeBtn = urlModal.querySelector('.close-btn');
+    
+    function openUrlModal() {
+        urlModal.classList.add('active');
+        document.getElementById('url').focus();
+    }
+    
+    if (addUrlBtn) {
+        addUrlBtn.addEventListener('click', openUrlModal);
+    }
+    
+    if (emptyAddUrlBtn) {
+        emptyAddUrlBtn.addEventListener('click', openUrlModal);
+    }
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            urlModal.classList.remove('active');
+        });
+    }
+    
+    // Close modal when clicking outside
+    urlModal.addEventListener('click', function(e) {
+        if (e.target === urlModal) {
+            urlModal.classList.remove('active');
+        }
+    });
+    
+    // URL form submission
+    const urlForm = document.getElementById('urlForm');
+    if (urlForm) {
+        urlForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const url = document.getElementById('url').value.trim();
+            if (url) {
+                // Redirect to the main page with the URL in the query string
+                window.location.href = `/tagwise/?url=${encodeURIComponent(url)}`;
+            }
+        });
+    }
 } 

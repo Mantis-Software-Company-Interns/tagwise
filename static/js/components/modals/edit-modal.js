@@ -7,6 +7,7 @@ const EditModal = {
     },
     
     setupEditFunctionality() {
+        console.log("Edit modal setup");
         const editModal = document.getElementById('editModal');
         if (!editModal) return;
         

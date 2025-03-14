@@ -4,6 +4,7 @@
 const ThemeManager = {
     initialize() {
         this.initializeDarkMode();
+        this.initializeSearchEasterEgg();
     },
 
     initializeDarkMode() {
@@ -37,6 +38,22 @@ const ThemeManager = {
                 if (this.themeClickCount >= 5) {
                     this.createCatRain();
                     this.themeClickCount = 0;
+                }
+            });
+        }
+    },
+
+    initializeSearchEasterEgg() {
+        // Get the main search input in the top bar
+        const searchInput = document.querySelector('.search-container input');
+        
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase().trim();
+                
+                // Check if the search term is "loki"
+                if (searchTerm === 'loki') {
+                    this.createCatRain();
                 }
             });
         }
