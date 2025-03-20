@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}TagWise - Subcategories{% endblock %}
+{% block title %}TagWise - Alt Kategoriler{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/pages/categories/subcategories.css' %}">
@@ -11,71 +11,108 @@
 
 {% block breadcrumb %}
 <div class="breadcrumb">
-    <a href="{% url 'tagwiseapp:categories' %}">Categories</a>
+    <a href="{% url 'tagwiseapp:categories' %}">Kategoriler</a>
     <i class="material-icons">chevron_right</i>
     <span id="currentCategory">{{ category.name }}</span>
 </div>
 {% endblock %}
 
+{% block extra_top_bar_right %}
+<button class="add-url-btn" id="addUrlBtn">
+    <i class="material-icons">add</i>
+    <span>URL Ekle</span>
+</button>
+{% endblock %}
+
 {% block content %}
-<div class="subcategories-grid" id="subcategoriesGrid">
-    {% if subcategories %}
-        {% for subcategory in subcategories %}
-        <div class="subcategory-card" data-url="{% url 'tagwiseapp:topics' %}?category={{ category.name|urlencode }}&subcategory={{ subcategory.name|urlencode }}">
-            <div class="subcategory-header">
-                <i class="material-icons">folder</i>
-                <h3>{{ subcategory.name }}</h3>
-            </div>
-            <div class="topics">
-                {% with bookmarks=subcategory.sub_bookmarks.all|slice:":3" %}
-                    {% for bookmark in bookmarks %}
-                    <span class="topic">{{ bookmark.title|truncatechars:20 }}</span>
-                    {% endfor %}
-                    {% if subcategory.sub_bookmarks.count > 3 %}
-                    <span class="topic-more">+{{ subcategory.sub_bookmarks.count|add:"-3" }}</span>
-                    {% endif %}
-                {% endwith %}
-            </div>
-            <div class="subcategory-stats">
-                <div class="stat">
-                    <span class="stat-value">{{ subcategory.sub_bookmarks.count }}</span>
-                    <span class="stat-label">Bookmarks</span>
+<div class="main-container">
+    <div class="main-header">
+        <h1>{{ category.name }} Alt Kategorileri</h1>
+        <a href="{% url 'tagwiseapp:categories' %}" class="back-link">
+            <i class="material-icons">arrow_back</i>
+            Tüm Kategorilere Dön
+        </a>
+    </div>
+
+    <div class="subcategories-container">
+        {% if subcategories %}
+            <div class="subcategories-grid" id="subcategoriesGrid">
+                {% for subcategory in subcategories %}
+                <div class="subcategory-card" data-url="{% url 'tagwiseapp:topics' %}?category={{ category.name|urlencode }}&subcategory={{ subcategory.name|urlencode }}">
+                    <div class="subcategory-header">
+                        <div class="subcategory-icon">
+                            <i class="material-icons">folder</i>
+                        </div>
+                        <h3>{{ subcategory.name }}</h3>
+                    </div>
+                    <div class="topics">
+                        {% with bookmarks=subcategory.sub_bookmarks.all|slice:":3" %}
+                            {% for bookmark in bookmarks %}
+                            <div class="topic">
+                                <i class="material-icons">bookmark</i>
+                                <span>{{ bookmark.title|truncatechars:20 }}</span>
+                            </div>
+                            {% endfor %}
+                            {% if subcategory.sub_bookmarks.count > 3 %}
+                            <div class="topic-more">+{{ subcategory.sub_bookmarks.count|add:"-3" }} daha</div>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                    <div class="subcategory-stats">
+                        <div class="stat">
+                            <span class="stat-value">{{ subcategory.sub_bookmarks.count }}</span>
+                            <span class="stat-label">Yer İmi</span>
+                        </div>
+                        <div class="view-all">
+                            <span>Tümünü Görüntüle</span>
+                            <i class="material-icons">arrow_forward</i>
+                        </div>
+                    </div>
                 </div>
+                {% endfor %}
             </div>
-        </div>
-        {% endfor %}
-    {% else %}
-        <div class="empty-state">
-            <i class="material-icons">category</i>
-            <h3>No Subcategories Yet</h3>
-            <p>This category doesn't have any subcategories yet.</p>
-            <button class="add-bookmark-btn" id="addBookmarkBtn">
-                <i class="material-icons">add_link</i>
-                <span>Add a Bookmark</span>
-            </button>
-        </div>
-    {% endif %}
+        {% else %}
+            <div class="empty-state">
+                <i class="material-icons">category</i>
+                <h3>Henüz Alt Kategori Yok</h3>
+                <p>Bu kategoride henüz alt kategori bulunmuyor.</p>
+                <button class="add-url-btn" id="emptyStateAddUrlBtn">
+                    <i class="material-icons">add_link</i>
+                    <span>URL Ekle</span>
+                </button>
+            </div>
+        {% endif %}
+    </div>
 </div>
+{% endblock %}
+
+{% block modals %}
+{% include 'modals/url_modal.html' %}
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'js/components/categories/subcategories.js' %}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Add click event to subcategory cards
+        // Alt kategori kartlarına tıklama olayı
         document.querySelectorAll('.subcategory-card').forEach(function(card) {
             card.addEventListener('click', function() {
                 window.location.href = this.getAttribute('data-url');
             });
         });
 
-        // Add click event to add bookmark button
-        const addBookmarkBtn = document.getElementById('addBookmarkBtn');
-        if (addBookmarkBtn) {
-            addBookmarkBtn.addEventListener('click', function() {
-                window.location.href = "{% url 'tagwiseapp:index' %}";
+        // URL Ekle butonları için modal açma
+        const addUrlButtons = document.querySelectorAll('#addUrlBtn, #emptyStateAddUrlBtn');
+        addUrlButtons.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                if (typeof ModalManager !== 'undefined' && ModalManager.openModal) {
+                    ModalManager.openModal('urlModal');
+                } else {
+                    const urlModal = document.getElementById('urlModal');
+                    if (urlModal) urlModal.style.display = 'flex';
+                }
             });
-        }
+        });
     });
 </script>
 {% endblock %} 

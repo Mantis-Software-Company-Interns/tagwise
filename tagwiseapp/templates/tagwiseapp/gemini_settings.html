@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gemini API Ayarları{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <h1>Gemini API Ayarları</h1>
+    
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="message {{ message.tags }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div class="admin-actions">
+        <div class="action-header">
+            <h2>Temel Ayarlar</h2>
+            <a href="{% url 'tagwiseapp:admin_panel' %}" class="settings-btn">
+                <i class="material-icons">arrow_back</i>
+                <span>Geri Dön</span>
+            </a>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="settings-grid">
+                <div class="settings-section">
+                    <div class="form-group">
+                        <label for="temperature">Temperature (0.0-1.0)</label>
+                        <input type="number" id="temperature" name="temperature" 
+                               value="{{ config.temperature }}" min="0" max="1" step="0.1">
+                        <div class="help-text">Düşük değerler daha tutarlı, yüksek değerler daha yaratıcı yanıtlar üretir.</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="top_p">Top P (0.0-1.0)</label>
+                        <input type="number" id="top_p" name="top_p" 
+                               value="{{ config.top_p }}" min="0" max="1" step="0.05">
+                        <div class="help-text">Nucleus sampling için olasılık eşiği.</div>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <div class="form-group">
+                        <label for="top_k">Top K (1-100)</label>
+                        <input type="number" id="top_k" name="top_k" 
+                               value="{{ config.top_k }}" min="1" max="100" step="1">
+                        <div class="help-text">Her adımda dikkate alınacak en olası token sayısı.</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="max_output_tokens">Max Output Tokens (1-8192)</label>
+                        <input type="number" id="max_output_tokens" name="max_output_tokens" 
+                               value="{{ config.max_output_tokens }}" min="1" max="8192" step="1">
+                        <div class="help-text">Yanıtın maksimum uzunluğu.</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="admin-actions">
+                <h2>Güvenlik Ayarları</h2>
+                
+                <div class="settings-grid">
+                    <div class="settings-section">
+                        <div class="form-group">
+                            <label for="safety_harassment">Taciz İçeriği</label>
+                            <select id="safety_harassment" name="safety_harassment">
+                                {% for value, label in safety_options %}
+                                <option value="{{ value }}" {% if config.safety_settings.harassment == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="safety_hate_speech">Nefret Söylemi</label>
+                            <select id="safety_hate_speech" name="safety_hate_speech">
+                                {% for value, label in safety_options %}
+                                <option value="{{ value }}" {% if config.safety_settings.hate_speech == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <div class="form-group">
+                            <label for="safety_sexually_explicit">Cinsel İçerik</label>
+                            <select id="safety_sexually_explicit" name="safety_sexually_explicit">
+                                {% for value, label in safety_options %}
+                                <option value="{{ value }}" {% if config.safety_settings.sexually_explicit == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="safety_dangerous_content">Tehlikeli İçerik</label>
+                            <select id="safety_dangerous_content" name="safety_dangerous_content">
+                                {% for value, label in safety_options %}
+                                <option value="{{ value }}" {% if config.safety_settings.dangerous == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button type="submit" class="settings-btn">
+                    <i class="material-icons">save</i>
+                    Ayarları Kaydet
+                </button>
+                <button type="submit" name="reset" value="1" class="clean-btn">
+                    <i class="material-icons">restore</i>
+                    Varsayılanlara Sıfırla
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <div class="admin-actions">
+        <h2>Ayarlar Hakkında Bilgi</h2>
+        
+        <div class="settings-info">
+            <div class="info-item">
+                <h3>Temperature Nedir?</h3>
+                <div class="info-content">
+                    <p>Temperature, modelin yanıtlarındaki rastgelelik seviyesini kontrol eder. Düşük değerler (0.0'a yakın) daha tutarlı, belirleyici ve odaklanmış yanıtlar üretirken, yüksek değerler (1.0'a yakın) daha çeşitli, yaratıcı ve beklenmedik yanıtlar üretir.</p>
+                    <ul>
+                        <li><strong>0.0-0.3:</strong> Faktüel, kısa ve doğrudan yanıtlar için</li>
+                        <li><strong>0.3-0.7:</strong> Dengeli yanıtlar için</li>
+                        <li><strong>0.7-1.0:</strong> Yaratıcı ve çeşitli yanıtlar için</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="info-item">
+                <h3>Top P Nedir?</h3>
+                <div class="info-content">
+                    <p>Top P (nucleus sampling), modelin her adımda dikkate alacağı olasılık kümesini kontrol eder. Model, kümülatif olasılığı Top P değerine ulaşana kadar en olası tokenleri seçer.</p>
+                    <ul>
+                        <li><strong>0.1-0.3:</strong> Daha odaklanmış ve tutarlı yanıtlar</li>
+                        <li><strong>0.5-0.7:</strong> Dengeli yanıtlar</li>
+                        <li><strong>0.9-1.0:</strong> Daha çeşitli ve yaratıcı yanıtlar</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="info-item">
+                <h3>Top K Nedir?</h3>
+                <div class="info-content">
+                    <p>Top K, modelin her adımda dikkate alacağı en olası token sayısını belirler. Düşük değerler daha tutarlı, yüksek değerler daha çeşitli yanıtlar üretir.</p>
+                    <ul>
+                        <li><strong>1-10:</strong> Çok odaklanmış ve tutarlı yanıtlar</li>
+                        <li><strong>20-40:</strong> Dengeli yanıtlar</li>
+                        <li><strong>50-100:</strong> Daha çeşitli yanıtlar</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="info-item">
+                <h3>Max Output Tokens Nedir?</h3>
+                <div class="info-content">
+                    <p>Max Output Tokens, modelin üretebileceği maksimum token (kelime parçaları) sayısını belirler. Daha yüksek değerler daha uzun yanıtlar üretir.</p>
+                    <ul>
+                        <li><strong>256-512:</strong> Kısa yanıtlar</li>
+                        <li><strong>1024-2048:</strong> Orta uzunlukta yanıtlar</li>
+                        <li><strong>4096-8192:</strong> Uzun, detaylı yanıtlar</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="info-item">
+                <h3>Güvenlik Ayarları Nedir?</h3>
+                <div class="info-content">
+                    <p>Güvenlik ayarları, modelin belirli içerik türlerini engellemesini sağlar. Dört farklı engelleme seviyesi vardır:</p>
+                    <ul>
+                        <li><strong>Engelleme Yok:</strong> Hiçbir içerik engellenmez</li>
+                        <li><strong>Düşük ve Üzeri Engelle:</strong> Düşük, orta ve yüksek seviyedeki içerikler engellenir</li>
+                        <li><strong>Orta ve Üzeri Engelle:</strong> Orta ve yüksek seviyedeki içerikler engellenir</li>
+                        <li><strong>Sadece Yüksek Engelle:</strong> Sadece yüksek seviyedeki içerikler engellenir</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/Admin/gemini-settings.js' %}"></script>
+{% endblock %} 

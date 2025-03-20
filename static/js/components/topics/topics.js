@@ -1,204 +1,225 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // Initialize bookmark menu functionality
-    initializeBookmarkMenus();
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize bookmark cards
+    initializeBookmarkCards();
     
     // Initialize URL modal
     initializeUrlModal();
+    
+    // Initialize details modal
+    initializeDetailsModal();
+    
+    // Initialize subcategory navigation
+    initializeSubcategoryNav();
 });
 
-function initializeBookmarkMenus() {
-    // Add click event to bookmark menu buttons
-    document.querySelectorAll('.bookmark-menu-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
+function initializeBookmarkCards() {
+    // More menu functionality
+    document.querySelectorAll('.more-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
             e.stopPropagation();
-            
-            // Create menu element
-            const menu = document.createElement('div');
-            menu.className = 'bookmark-menu';
-            
-            // Get bookmark ID
-            const bookmarkId = btn.getAttribute('data-id');
-            
-            // Add menu items
-            menu.innerHTML = `
-                <a href="#" class="menu-item edit-bookmark" data-id="${bookmarkId}">
-                    <i class="material-icons">edit</i>
-                    <span>Edit</span>
-                </a>
-                <a href="#" class="menu-item delete-bookmark" data-id="${bookmarkId}">
-                    <i class="material-icons">delete</i>
-                    <span>Delete</span>
-                </a>
-            `;
-            
-            // Position menu
-            const rect = btn.getBoundingClientRect();
-            menu.style.top = `${rect.bottom + window.scrollY}px`;
-            menu.style.right = `${window.innerWidth - rect.right}px`;
-            
-            // Add to document
-            document.body.appendChild(menu);
-            
-            // Add click event to edit menu item
-            menu.querySelector('.edit-bookmark').addEventListener('click', (e) => {
-                e.preventDefault();
-                // Redirect to edit page
-                window.location.href = `/tagwise/?edit=${bookmarkId}`;
+            const menu = this.nextElementSibling;
+            const allMenus = document.querySelectorAll('.more-menu');
+            allMenus.forEach(m => {
+                if (m !== menu) m.classList.remove('show');
             });
-            
-            // Add click event to delete menu item
-            menu.querySelector('.delete-bookmark').addEventListener('click', (e) => {
-                e.preventDefault();
-                if (confirm('Are you sure you want to delete this bookmark?')) {
-                    deleteBookmark(bookmarkId);
-                }
-            });
-            
-            // Close menu when clicking outside
-            const closeMenu = (e) => {
-                if (!menu.contains(e.target) && e.target !== btn) {
-                    menu.remove();
-                    document.removeEventListener('click', closeMenu);
-                }
-            };
-            
-            // Add event listener with a slight delay to prevent immediate closing
-            setTimeout(() => {
-                document.addEventListener('click', closeMenu);
-            }, 10);
+            menu.classList.toggle('show');
         });
     });
-}
 
-function deleteBookmark(bookmarkId) {
-    // Get CSRF token
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-    
-    // Send delete request
-    fetch('/tagwise/api/delete-bookmark/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken
-        },
-        body: JSON.stringify({ id: bookmarkId })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Remove bookmark card from DOM
-            const card = document.querySelector(`.bookmark-card[data-id="${bookmarkId}"]`);
-            if (card) {
-                card.remove();
-            }
-            
-            // Show success message
-            showNotification('Bookmark deleted successfully', 'success');
-            
-            // If no bookmarks left, show empty state
-            const bookmarkCards = document.querySelectorAll('.bookmark-card');
-            if (bookmarkCards.length === 0) {
-                const topicsGrid = document.querySelector('.topics-grid');
-                topicsGrid.innerHTML = `
-                    <div class="empty-state">
-                        <i class="material-icons">bookmark_border</i>
-                        <h3>No Bookmarks Left</h3>
-                        <p>This subcategory doesn't have any bookmarks yet.</p>
-                        <button class="add-url-btn" id="emptyAddUrlBtn">
-                            <i class="material-icons">add_link</i>
-                            <span>Add Your First Bookmark</span>
-                </button>
-                    </div>
-                `;
-                
-                // Reinitialize URL modal for the new button
-                document.getElementById('emptyAddUrlBtn').addEventListener('click', () => {
-                    document.getElementById('urlModal').classList.add('active');
-                });
-            }
-        } else {
-            showNotification('Error deleting bookmark: ' + (data.error || 'Unknown error'), 'error');
+    // Close more menu when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.more-btn') && !e.target.closest('.more-menu')) {
+            document.querySelectorAll('.more-menu').forEach(menu => {
+                menu.classList.remove('show');
+            });
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Error deleting bookmark', 'error');
     });
-}
 
-function showNotification(message, type = 'info') {
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.innerHTML = `
-        <i class="material-icons">${type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info'}</i>
-        <span>${message}</span>
-    `;
-    
-    // Add to document
-    document.body.appendChild(notification);
-    
-    // Show notification
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 10);
-    
-    // Hide and remove after 3 seconds
-    setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => {
-            notification.remove();
-        }, 300);
-    }, 3000);
+    // Menu item actions
+    document.querySelectorAll('.menu-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const card = this.closest('.bookmark-card');
+            const bookmarkId = card.dataset.id;
+            const action = this.textContent.trim().toLowerCase();
+
+            switch(action) {
+                case 'edit':
+                    // Handle edit action
+                    break;
+                case 'favorite':
+                    // Handle favorite action
+                    break;
+                case 'archive':
+                    // Handle archive action
+                    break;
+                case 'edit tags':
+                    // Handle edit tags action
+                    break;
+                case 'delete':
+                    if (confirm('Are you sure you want to delete this bookmark?')) {
+                        deleteBookmark(bookmarkId);
+                    }
+                    break;
+            }
+        });
+    });
+
+    // Expand button functionality
+    document.querySelectorAll('.expand-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const card = this.closest('.bookmark-card');
+            const bookmarkId = card.dataset.id;
+            showBookmarkDetails(bookmarkId);
+        });
+    });
 }
 
 function initializeUrlModal() {
-    // Add URL button functionality
+    const modal = document.getElementById('urlModal');
     const addUrlBtn = document.getElementById('addUrlBtn');
     const emptyAddUrlBtn = document.getElementById('emptyAddUrlBtn');
-    const urlModal = document.getElementById('urlModal');
-    
-    if (!urlModal) return;
-    
-    const closeBtn = urlModal.querySelector('.close-btn');
-    
-    function openUrlModal() {
-        urlModal.classList.add('active');
-        document.getElementById('url').focus();
+    const closeBtn = modal.querySelector('.close-btn');
+    const urlForm = document.getElementById('urlForm');
+
+    function openModal() {
+        modal.classList.add('show');
     }
-    
-    if (addUrlBtn) {
-        addUrlBtn.addEventListener('click', openUrlModal);
+
+    function closeModal() {
+        modal.classList.remove('show');
     }
-    
-    if (emptyAddUrlBtn) {
-        emptyAddUrlBtn.addEventListener('click', openUrlModal);
-    }
-    
-    if (closeBtn) {
-        closeBtn.addEventListener('click', function() {
-            urlModal.classList.remove('active');
-        });
-    }
-    
-    // Close modal when clicking outside
-    urlModal.addEventListener('click', function(e) {
-        if (e.target === urlModal) {
-            urlModal.classList.remove('active');
+
+    addUrlBtn.addEventListener('click', openModal);
+    emptyAddUrlBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+
+    urlForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const url = document.getElementById('url').value;
+        
+        try {
+            const response = await fetch('/api/bookmarks/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    url: url,
+                    category: getUrlParameter('category'),
+                    subcategory: getUrlParameter('subcategory')
+                })
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const data = await response.json();
+                alert(data.error || 'Failed to add bookmark');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to add bookmark');
         }
     });
-    
-    // URL form submission
-    const urlForm = document.getElementById('urlForm');
-    if (urlForm) {
-        urlForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const url = document.getElementById('url').value.trim();
-            if (url) {
-                // Redirect to the main page with the URL in the query string
-                window.location.href = `/tagwise/?url=${encodeURIComponent(url)}`;
+}
+
+function initializeDetailsModal() {
+    const modal = document.getElementById('detailsModal');
+    const closeBtn = modal.querySelector('.close-modal-btn');
+
+    closeBtn.addEventListener('click', () => {
+        modal.classList.remove('show');
+    });
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('show');
+        }
+    });
+}
+
+function initializeSubcategoryNav() {
+    const navItems = document.querySelectorAll('.subcategory-nav-item');
+    navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            navItems.forEach(nav => nav.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+}
+
+async function showBookmarkDetails(bookmarkId) {
+    try {
+        const response = await fetch(`/api/bookmarks/${bookmarkId}/`);
+        const bookmark = await response.json();
+        
+        const modal = document.getElementById('detailsModal');
+        modal.querySelector('.bookmark-title').textContent = bookmark.title;
+        modal.querySelector('.bookmark-url').href = bookmark.url;
+        modal.querySelector('.bookmark-url').textContent = bookmark.url;
+        modal.querySelector('.bookmark-description').textContent = bookmark.description;
+        modal.querySelector('.bookmark-date').textContent = new Date(bookmark.created_at).toLocaleString();
+        
+        const categoriesContainer = modal.querySelector('.bookmark-categories');
+        categoriesContainer.innerHTML = bookmark.subcategories.map(sub => 
+            `<a href="/topics/?category=${encodeURIComponent(bookmark.category)}&subcategory=${encodeURIComponent(sub.name)}" class="subcategory-tab">${sub.name}</a>`
+        ).join('');
+        
+        const tagsContainer = modal.querySelector('.bookmark-tags');
+        tagsContainer.innerHTML = bookmark.tags.map(tag => 
+            `<a href="/tagged_bookmarks/?tag=${encodeURIComponent(tag.name)}" class="tag">${tag.name}</a>`
+        ).join('');
+        
+        modal.classList.add('show');
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to load bookmark details');
+    }
+}
+
+async function deleteBookmark(bookmarkId) {
+    try {
+        const response = await fetch(`/api/bookmarks/${bookmarkId}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
             }
         });
+
+        if (response.ok) {
+            const card = document.querySelector(`.bookmark-card[data-id="${bookmarkId}"]`);
+            card.remove();
+        } else {
+            alert('Failed to delete bookmark');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to delete bookmark');
     }
+}
+
+// Utility functions
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function getUrlParameter(name) {
+    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+    const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+    const results = regex.exec(location.search);
+    return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
 } 

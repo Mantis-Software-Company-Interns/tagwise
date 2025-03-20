@@ -41,27 +41,49 @@
 <div class="topics-grid">
     {% if bookmarks %}
         {% for bookmark in bookmarks %}
-        <div class="bookmark-card">
-            <div class="bookmark-header">
-                <h3>{{ bookmark.title }}</h3>
-                <div class="bookmark-actions">
-                    <a href="{{ bookmark.url }}" target="_blank" class="visit-link">
-                        <i class="material-icons">open_in_new</i>
-                    </a>
-                    <button class="bookmark-menu-btn" data-id="{{ bookmark.id }}">
-                        <i class="material-icons">more_vert</i>
-                    </button>
+        <div class="bookmark-card" data-id="{{ bookmark.id }}">
+            <div class="card-header">
+                <button class="more-btn">
+                    <i class="material-icons">more_vert</i>
+                </button>
+                <div class="more-menu">
+                    <div class="menu-item edit-bookmark"><i class="material-icons">edit</i>Edit</div>
+                    <div class="menu-item"><i class="material-icons">star</i>Favorite</div>
+                    <div class="menu-item"><i class="material-icons">archive</i>Archive</div>
+                    <div class="menu-item"><i class="material-icons">local_offer</i>Edit Tags</div>
+                    <div class="menu-item delete"><i class="material-icons">delete</i>Delete</div>
                 </div>
             </div>
-            <p class="bookmark-description">{{ bookmark.description|truncatechars:150 }}</p>
-            <div class="bookmark-tags">
-                {% for tag in bookmark.tags.all %}
-                <a href="{% url 'tagwiseapp:tagged_bookmarks' %}?tag={{ tag.name|urlencode }}" class="tag">{{ tag.name }}</a>
-                {% endfor %}
-            </div>
-            <div class="bookmark-footer">
-                <span class="bookmark-date">{{ bookmark.created_at|date:"M d, Y" }}</span>
-                <a href="{{ bookmark.url }}" target="_blank" class="bookmark-url">{{ bookmark.url|truncatechars:30 }}</a>
+            <a href="{{ bookmark.url }}" target="_blank" class="thumbnail-link">
+                <div class="thumbnail-container">
+                    {% if bookmark.screenshot_data %}
+                    <img src="{{ bookmark.screenshot_url }}" alt="{{ bookmark.title }}" class="thumbnail">
+                    {% else %}
+                    <img src="{% static 'images/default-thumbnail.png' %}" alt="{{ bookmark.title }}" class="thumbnail">
+                    {% endif %}
+                    <div class="subcategory-container">
+                        {% for subcategory in bookmark.subcategories.all %}
+                        <a href="{% url 'tagwiseapp:topics' %}?category={{ category.name|urlencode }}&subcategory={{ subcategory.name|urlencode }}" class="subcategory-tab">{{ subcategory.name }}</a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </a>
+            <div class="card-content">
+                <a href="{{ bookmark.url }}" target="_blank" class="title-link">
+                    <h3 class="title">{{ bookmark.title }}</h3>
+                </a>
+                <p class="description">{{ bookmark.description }}</p>
+                <div class="tags">
+                    {% for tag in bookmark.tags.all %}
+                    <a href="{% url 'tagwiseapp:tagged_bookmarks' %}?tag={{ tag.name|urlencode }}" class="tag">{{ tag.name }}</a>
+                    {% endfor %}
+                </div>
+                <div class="card-footer">
+                    <button class="expand-btn">
+                        <i class="material-icons">info_outline</i>
+                    </button>
+                    <div class="date">{{ bookmark.created_at|date:"Y-m-d H:i" }}</div>
+                </div>
             </div>
         </div>
         {% endfor %}
@@ -98,6 +120,52 @@
                     <span>Add URL</span>
                 </button>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Details Modal -->
+<div class="details-modal" id="detailsModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Bookmark Details</h2>
+            <button class="close-modal-btn">
+                <i class="material-icons">close</i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="details-grid">
+                <div class="detail-section">
+                    <h3>General Information</h3>
+                    <div class="info-group">
+                        <label>Title</label>
+                        <p class="bookmark-title"></p>
+                    </div>
+                    <div class="info-group">
+                        <label>URL</label>
+                        <a href="#" class="bookmark-url" target="_blank"></a>
+                    </div>
+                    <div class="info-group">
+                        <label>Description</label>
+                        <p class="bookmark-description"></p>
+                    </div>
+                    <div class="info-group">
+                        <label>Created At</label>
+                        <p class="bookmark-date"></p>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <h3>Categories & Tags</h3>
+                    <div class="info-group">
+                        <label>Categories</label>
+                        <div class="bookmark-categories"></div>
+                    </div>
+                    <div class="info-group">
+                        <label>Tags</label>
+                        <div class="bookmark-tags"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

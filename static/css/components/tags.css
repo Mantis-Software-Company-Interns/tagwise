@@ -131,13 +131,16 @@
 
 /* Subcategory Tabs */
 .subcategory-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
     display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    margin-bottom: 10px;
-    max-width: 100%;
-    overflow-x: auto;
-    padding-bottom: 5px;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px;
+    z-index: 2;
+    background: linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0) 100%);
 }
 
 .subcategory-tab {
@@ -145,8 +148,8 @@
     display: inline-block;
     color: white;
     font-size: 12px;
-    padding: 6px 16px;
-    width: 120px;
+    padding: 4px 14px;
+    width: 110px;
     text-align: center;
     white-space: nowrap;
     overflow: hidden;
@@ -154,6 +157,7 @@
     border-radius: 4px;
     text-decoration: none;
     transition: transform 0.2s, opacity 0.2s;
+    font-weight: 500;
 }
 
 .subcategory-tab:hover {

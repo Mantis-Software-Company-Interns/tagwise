@@ -38,6 +38,64 @@
 <div class="modal" id="urlModal">
     <!-- ... existing modal content ... -->
 </div>
+
+<!-- Details Modal -->
+<div class="details-modal" id="detailsModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Bookmark Details</h2>
+            <button class="close-modal-btn">
+                <i class="material-icons">close</i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="details-grid">
+                <div class="detail-section">
+                    <h3>General Information</h3>
+                    <div class="info-group">
+                        <label>Added Date:</label>
+                        <span class="bookmark-date"></span>
+                    </div>
+                    <div class="info-group">
+                        <label>Categories:</label>
+                        <div class="bookmark-categories"></div>
+                    </div>
+                    <div class="info-group">
+                        <label>Subcategories:</label>
+                        <div class="bookmark-subcategories"></div>
+                    </div>
+                </div>
+                
+                <div class="detail-section">
+                    <h3>Content</h3>
+                    <div class="info-group">
+                        <label>Title:</label>
+                        <h4 class="bookmark-title"></h4>
+                    </div>
+                    <div class="info-group">
+                        <label>Description:</label>
+                        <p class="bookmark-description"></p>
+                    </div>
+                    <div class="info-group">
+                        <label>Tags:</label>
+                        <div class="bookmark-tags"></div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Preview</h3>
+                    <div class="bookmark-preview">
+                        <img class="preview-image" alt="Preview" data-id="">
+                        <a class="visit-link" target="_blank">
+                            <i class="material-icons">open_in_new</i>
+                            Visit Website
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}

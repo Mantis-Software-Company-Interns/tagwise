@@ -1,8 +1,8 @@
 /* Grid Layout Styles */
 .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
     margin-top: 20px;
 }
 
@@ -28,15 +28,19 @@
 
 .grid.list-view .bookmark-card {
     display: grid;
-    grid-template-columns: 120px 1fr auto;
+    grid-template-columns: 300px 1fr auto;
     gap: 15px;
     padding: 15px;
+    align-items: start;
 }
 
 .grid.list-view .thumbnail-container {
     grid-row: span 2;
-    height: 100%;
-    min-height: 160px;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    margin: 0;
+    height: 0;
+    padding-top: 50%;
 }
 
 .grid.list-view .card-content {
@@ -69,19 +73,20 @@
 
 /* Compact View */
 .grid.compact-view {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
 
 .grid.compact-view .bookmark-card {
     display: flex;
     flex-direction: column;
-    height: 200px;
+    height: 220px;
 }
 
 .grid.compact-view .thumbnail-container,
 .grid.compact-view .thumbnail {
-    height: 80px;
-    min-height: 80px;
+    height: auto;
+    min-height: 0;
+    aspect-ratio: 2 / 1;
 }
 
 .grid.compact-view .card-content {
@@ -122,11 +127,27 @@
 
 /* Responsive Grid */
 @media (max-width: 768px) {
+    .grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
     .grid.list-view .bookmark-card {
         grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 12px;
     }
     
     .grid.list-view .thumbnail-container {
         grid-row: auto;
+        width: 100%;
+        aspect-ratio: 2 / 1;
+        margin-bottom: 10px;
+        height: 0;
+        padding-top: 50%;
+    }
+
+    .grid.list-view .card-content {
+        padding: 0;
     }
 } 

@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const categoryName = card.getAttribute('data-category');
                 if (categoryName) {
                     // Use the correct URL pattern for Django
-                    window.location.href = `/tagwise/subcategories/?category=${encodeURIComponent(categoryName)}`;
+                    window.location.href = `/subcategories/?category=${encodeURIComponent(categoryName)}`;
                 }
             });
         });

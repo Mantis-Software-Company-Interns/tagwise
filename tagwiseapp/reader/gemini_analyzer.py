@@ -10,7 +10,10 @@ import google.generativeai as genai
 import json
 from .utils import correct_json_format, ensure_correct_json_structure
 from .category_matcher import match_categories_and_tags, get_existing_categories, get_existing_tags
+from .text_prompt import TEXT_SYSTEM_INSTRUCTION
+from .image_prompt import IMAGE_SYSTEM_INSTRUCTION
 from dotenv import load_dotenv
+import re
 
 # .env dosyasını yükle
 load_dotenv()
@@ -51,74 +54,166 @@ def configure_gemini(api_key=None):
         print(traceback.format_exc())
         return False
 
-def analyze_screenshot_with_gemini(screenshot_base64, url, existing_title=None, existing_description=None):
+def generate_summary_from_screenshot(screenshot_base64, url):
     """
-    Gemini AI ile ekran görüntüsünü analiz eder.
+    Ekran görüntüsünden içerik özeti oluşturur.
     
     Args:
         screenshot_base64 (str): Base64 kodlanmış ekran görüntüsü
+        url (str): Analiz edilen URL
+        
+    Returns:
+        str: İçerik özeti
+    """
+    print("Ekran görüntüsünden özet oluşturuluyor...")
+    
+    try:
+        # Modeli seç - sistem talimatlarını destekleyecek bir sürüm
+        model = genai.GenerativeModel(
+            model_name='gemini-2.0-flash',
+            system_instruction="""
+            Sen bir web sayfası analisti olarak görev yapıyorsun. 
+            Verilen görüntüleri analiz ederek kapsamlı özetler oluşturursun. 
+            Özetlerin, sayfanın ana konusunu, amacını, hedef kitlesini ve önemli bilgileri içermelidir.
+            Özetlerin en az 200, en fazla 500 kelime olmalıdır.
+            """
+        )
+        
+        # Base64 kodlu görüntüyü hazırla
+        image_data = {"mime_type": "image/png", "data": base64.b64decode(screenshot_base64)}
+        
+        # Kullanıcı içeriğini hazırla
+        user_content = f"""
+        Bu bir web sayfasının ekran görüntüsüdür. Lütfen bu sayfanın içeriğini analiz edip kapsamlı bir özet oluştur.
+        
+        URL: {url}
+        """
+        
+        # Gemini'ye istek gönder
+        response = model.generate_content([user_content, image_data])
+        
+        # Yanıtı al
+        summary = response.text.strip()
+        print(f"Ekran görüntüsünden özet oluşturuldu: {summary[:100]}...")
+        
+        return summary
+        
+    except Exception as e:
+        print(f"Ekran görüntüsünden özet oluşturulurken hata: {e}")
+        import traceback
+        print(traceback.format_exc())
+        
+        # Hata durumunda boş özet
+        return f"URL: {url} için ekran görüntüsünden özet oluşturulamadı."
+
+def generate_summary_from_content(content, url):
+    """
+    HTML içeriğinden özet oluşturur.
+    
+    Args:
+        content (str): HTML içeriği
+        url (str): Analiz edilen URL
+        
+    Returns:
+        str: İçerik özeti
+    """
+    print("HTML içeriğinden özet oluşturuluyor...")
+    
+    try:
+        # Modeli seç - sistem talimatlarını destekleyecek bir sürüm
+        model = genai.GenerativeModel(
+            model_name='gemini-2.0-flash',
+            system_instruction="""
+            Sen bir web sayfası analisti olarak görev yapıyorsun. 
+            Verilen HTML içeriğini analiz ederek kapsamlı özetler oluşturursun. 
+            Özetlerin, sayfanın ana konusunu, amacını, hedef kitlesini ve önemli bilgileri içermelidir.
+            Özetlerin en az 200, en fazla 500 kelime olmalıdır.
+            """
+        )
+        
+        # Kullanıcı içeriğini hazırla
+        user_content = f"""
+        Bu bir web sayfasının içeriğidir. Lütfen bu içeriği analiz edip kapsamlı bir özet oluştur.
+        
+        URL: {url}
+        
+        İçerik:
+        {content}
+        """
+        
+        # Gemini'ye istek gönder
+        response = model.generate_content(user_content)
+        
+        # Yanıtı al
+        summary = response.text.strip()
+        print(f"HTML içeriğinden özet oluşturuldu: {summary[:100]}...")
+        
+        return summary
+        
+    except Exception as e:
+        print(f"HTML içeriğinden özet oluşturulurken hata: {e}")
+        import traceback
+        print(traceback.format_exc())
+        
+        # Hata durumunda boş özet
+        return f"URL: {url} için HTML içeriğinden özet oluşturulamadı."
+
+def categorize_summary(summary, url, existing_title=None, existing_description=None):
+    """
+    Özeti kategorize eder.
+    
+    Args:
+        summary (str): İçerik özeti
         url (str): Analiz edilen URL
         existing_title (str, optional): Mevcut başlık
         existing_description (str, optional): Mevcut açıklama
         
     Returns:
-        dict: Analiz sonuçları
+        dict: Kategorize sonuçları
     """
-    print("Ekran görüntüsü Gemini AI ile analiz ediliyor...")
+    print("Özet kategorize ediliyor...")
     
     # Mevcut kategorileri ve etiketleri al
     existing_categories = get_existing_categories()
     existing_tags = get_existing_tags()
     
     try:
-        # Modeli seç - API anahtarı zaten global olarak yapılandırıldı
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Modeli seç - sistem talimatlarını destekleyecek bir sürüm
+        model = genai.GenerativeModel(
+            model_name='gemini-2.0-flash',
+            system_instruction=MULTI_CATEGORY_SYSTEM_INSTRUCTION
+        )
         
-        # Base64 kodlu görüntüyü hazırla
-        image_data = {"mime_type": "image/png", "data": base64.b64decode(screenshot_base64)}
-        
-        # Prompt şablonunu oku
-        prompt_template_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'promptimage.txt')
-        with open(prompt_template_path, 'r', encoding='utf-8') as f:
-            prompt_template = f.read()
-        
-        # Mevcut kategorileri ve etiketleri prompt'a ekle
-        prompt_with_categories = prompt_template + f"""
-
-Mevcut ana kategoriler: {existing_categories['main_categories']}
-
-Mevcut alt kategoriler: {existing_categories['subcategories']}
-
-Mevcut etiketler: {existing_tags}
-
-URL: {url}
-
-Lütfen yanıtını aşağıdaki JSON formatında ver:
-{{
-  "title": "Sayfanın başlığı",
-  "description": "Sayfanın kısa açıklaması",
-  "main_category": "Ana kategori (yukarıdaki mevcut ana kategorilerden birini seç)",
-  "subcategory": "Alt kategori (yukarıdaki mevcut alt kategorilerden birini seç)",
-  "tags": ["etiket1", "etiket2", "etiket3"]
-}}
-"""
-        
-        # Eğer başlık ve açıklama zaten varsa, bunları belirt
-        if existing_title:
-            prompt_with_categories += f"\nSayfanın başlığı: {existing_title}"
-        
-        if existing_description:
-            prompt_with_categories += f"\nSayfanın açıklaması: {existing_description}"
-        
-        # Yapılandırılmış çıktı şeması
-        # Gemini'ye istek gönder
+        # Generation config
         generation_config = {
             "response_mime_type": "application/json",
             "temperature": 0.2
         }
         
+        # Kullanıcı içeriğini hazırla
+        user_content = f"""
+        URL: {url}
+        
+        Mevcut ana kategoriler: {existing_categories['main_categories']}
+        
+        Mevcut alt kategoriler: {existing_categories['subcategories']}
+        
+        Mevcut etiketler: {existing_tags}
+        
+        Sayfa Özeti:
+        {summary}
+        """
+        
+        # Eğer başlık ve açıklama zaten varsa, bunları belirt
+        if existing_title:
+            user_content += f"\nSayfanın başlığı: {existing_title}"
+        
+        if existing_description:
+            user_content += f"\nSayfanın açıklaması: {existing_description}"
+        
+        # Gemini'ye istek gönder
         response = model.generate_content(
-            [prompt_with_categories, image_data],
+            user_content,
             generation_config=generation_config
         )
         
@@ -144,13 +239,95 @@ Lütfen yanıtını aşağıdaki JSON formatında ver:
             print(f"JSON ayrıştırma hatası: {e}")
             print(f"Ham yanıt: {result}")
             
+            # Manuel düzeltme dene - JSON dosyasını doğru bir biçime getirmeye çalış
+            try:
+                # Ana kategori ve alt kategori gibi temel bilgileri çıkarmaya çalış
+                manual_json = {}
+                
+                # Regex ile alanları bul
+                patterns = {
+                    'title': r'"title"\s*:\s*"([^"]*)"',
+                    'description': r'"description"\s*:\s*"([^"]*)"',
+                }
+                
+                for key, pattern in patterns.items():
+                    match = re.search(pattern, result)
+                    if match:
+                        manual_json[key] = match.group(1)
+                
+                # Kategorileri bulmaya çalış - bu daha zorlu olabilir
+                categories_match = re.search(r'"categories"\s*:\s*\[(.*?)\]', result, re.DOTALL)
+                if categories_match:
+                    categories_text = categories_match.group(1)
+                    # Regex ile kategorileri ayıkla
+                    manual_json['categories'] = []
+                    category_items = re.findall(r'{(.*?)}', categories_text, re.DOTALL)
+                    
+                    for item in category_items:
+                        category_item = {}
+                        main_cat_match = re.search(r'"main_category"\s*:\s*"([^"]*)"', item)
+                        if main_cat_match:
+                            category_item['main_category'] = main_cat_match.group(1)
+                        
+                        sub_cat_match = re.search(r'"subcategory"\s*:\s*"([^"]*)"', item)
+                        if sub_cat_match:
+                            category_item['subcategory'] = sub_cat_match.group(1)
+                        
+                        if category_item:
+                            manual_json['categories'].append(category_item)
+                
+                # Etiketleri bulmaya çalış
+                tags_match = re.search(r'"tags"\s*:\s*\[(.*?)\]', result, re.DOTALL)
+                if tags_match:
+                    tags_text = tags_match.group(1)
+                    print(f"Regex ile etiketler bulundu: {tags_text}")
+                    # Etiketleri virgülle ayır ve her bir etiketi tırnak işaretlerinden temizle
+                    tags = [tag.strip().strip('"').strip("'") for tag in tags_text.split(',')]
+                    manual_json['tags'] = [tag for tag in tags if tag]  # Boş etiketleri filtrele
+                    print(f"İşlenen etiketler: {manual_json['tags']}")
+                else:
+                    print("İlk regex ile etiket bulunamadı, alternatif yöntem deneniyor...")
+                    # Alternatif etiket arama yöntemi
+                    alt_tags_match = re.search(r'tags["\s]*:[\s]*\[(.*?)\]', result, re.DOTALL)
+                    if alt_tags_match:
+                        tags_text = alt_tags_match.group(1)
+                        print(f"Alternatif regex ile etiketler bulundu: {tags_text}")
+                        tags = []
+                        for tag in tags_text.split(','):
+                            tag_match = re.search(r'["\'](.*?)["\']', tag)
+                            if tag_match:
+                                tags.append(tag_match.group(1).strip())
+                            elif tag.strip():
+                                tags.append(tag.strip())
+                        manual_json['tags'] = [tag for tag in tags if tag]
+                        print(f"Alternatif yöntemle işlenen etiketler: {manual_json['tags']}")
+                    else:
+                        print("Hiçbir yöntemle etiket bulunamadı! Ham yanıt içeriği:")
+                        print(result[:1000])  # İlk 1000 karakteri yazdır
+                        print("Varsayılan etiketler ekleniyor...")
+                        # Eğer hiçbir etiket bulunamazsa, içerik bazlı otomatik etiketler oluştur
+                        manual_json['tags'] = ["içerik", "web", "analiz", "sayfa"]
+                        print(f"Varsayılan etiketler: {manual_json['tags']}")
+                
+                # Eğer yeterince bilgi çıkarabildiysek, düzeltilmiş JSON'ı kullan
+                if manual_json:
+                    print(f"Manuel olarak düzeltilmiş JSON: {manual_json}")
+                    json_result = ensure_correct_json_structure(manual_json, url, existing_title, existing_description)
+                    json_result = match_categories_and_tags(json_result, existing_categories, existing_tags)
+                    return json_result
+            except Exception as manual_fix_error:
+                print(f"Manuel JSON düzeltme hatası: {manual_fix_error}")
+                import traceback
+                print(traceback.format_exc())
+            
             # Fallback JSON
             fallback_json = ensure_correct_json_structure({}, url, existing_title, existing_description)
+            fallback_json = match_categories_and_tags(fallback_json, existing_categories, existing_tags)
             
             return fallback_json
     
     except Exception as e:
-        print(f"Gemini API hatası: {e}")
+        print(f"Kategorize edilirken hata: {e}")
         import traceback
         print(traceback.format_exc())
         
@@ -158,6 +335,243 @@ Lütfen yanıtını aşağıdaki JSON formatında ver:
         fallback_json = ensure_correct_json_structure({}, url, existing_title, existing_description)
         
         return fallback_json
+
+def analyze_screenshot_with_gemini(screenshot_base64, url, existing_title=None, existing_description=None):
+    """
+    Gemini AI ile ekran görüntüsünü analiz eder.
+    
+    Args:
+        screenshot_base64 (str): Base64 kodlanmış ekran görüntüsü
+        url (str): Analiz edilen URL
+        existing_title (str, optional): Mevcut başlık
+        existing_description (str, optional): Mevcut açıklama
+        
+    Returns:
+        dict: Analiz sonuçları
+    """
+    print("Ekran görüntüsü Gemini AI ile analiz ediliyor...")
+    
+    try:
+        # Mevcut kategorileri ve etiketleri al
+        existing_categories = get_existing_categories()
+        existing_tags = get_existing_tags()
+        
+        # Base64 kodlu görüntüyü hazırla
+        image_data = {"mime_type": "image/png", "data": base64.b64decode(screenshot_base64)}
+        
+        # Modeli seç - sistem talimatlarını destekleyecek bir sürüm
+        model = genai.GenerativeModel(
+            model_name='gemini-2.0-flash',
+            system_instruction=MULTI_CATEGORY_SYSTEM_INSTRUCTION
+        )
+        
+        # Generation config
+        generation_config = {
+            "response_mime_type": "application/json",
+            "temperature": 0.2
+        }
+        
+        # Kullanıcı içeriğini hazırla
+        user_content = f"""
+        URL: {url}
+        
+        Mevcut ana kategoriler: {existing_categories['main_categories']}
+        
+        Mevcut alt kategoriler: {existing_categories['subcategories']}
+        
+        Mevcut etiketler: {existing_tags}
+        """
+        
+        # Eğer başlık ve açıklama zaten varsa, bunları belirt
+        if existing_title:
+            user_content += f"\nSayfanın başlığı: {existing_title}"
+        
+        if existing_description:
+            user_content += f"\nSayfanın açıklaması: {existing_description}"
+        
+        # Gemini'ye istek gönder
+        response = model.generate_content(
+            [user_content, image_data],
+            generation_config=generation_config
+        )
+        
+        # Yanıtı al
+        result = response.text
+        
+        # JSON formatını düzelt
+        result = correct_json_format(result)
+        
+        try:
+            # JSON'ı ayrıştır
+            json_result = json.loads(result)
+            
+            # JSON yapısını düzelt
+            json_result = ensure_correct_json_structure(json_result, url, existing_title, existing_description)
+            
+            # Kategorileri ve etiketleri eşleştir
+            json_result = match_categories_and_tags(json_result, existing_categories, existing_tags)
+            
+            return json_result
+            
+        except json.JSONDecodeError as e:
+            print(f"JSON ayrıştırma hatası: {e}")
+            print(f"Ham yanıt: {result}")
+            
+            # Manuel düzeltme yap
+            # Manuel düzeltme dene - JSON dosyasını doğru bir biçime getirmeye çalış
+            try:
+                # Ana kategori ve alt kategori gibi temel bilgileri çıkarmaya çalış
+                manual_json = {}
+                
+                # Regex ile alanları bul
+                patterns = {
+                    'title': r'"title"\s*:\s*"([^"]*)"',
+                    'description': r'"description"\s*:\s*"([^"]*)"',
+                }
+                
+                for key, pattern in patterns.items():
+                    match = re.search(pattern, result)
+                    if match:
+                        manual_json[key] = match.group(1)
+                
+                # Kategorileri bulmaya çalış - bu daha zorlu olabilir
+                categories_match = re.search(r'"categories"\s*:\s*\[(.*?)\]', result, re.DOTALL)
+                if categories_match:
+                    categories_text = categories_match.group(1)
+                    # Regex ile kategorileri ayıkla
+                    manual_json['categories'] = []
+                    category_items = re.findall(r'{(.*?)}', categories_text, re.DOTALL)
+                    
+                    for item in category_items:
+                        category_item = {}
+                        main_cat_match = re.search(r'"main_category"\s*:\s*"([^"]*)"', item)
+                        if main_cat_match:
+                            category_item['main_category'] = main_cat_match.group(1)
+                        
+                        sub_cat_match = re.search(r'"subcategory"\s*:\s*"([^"]*)"', item)
+                        if sub_cat_match:
+                            category_item['subcategory'] = sub_cat_match.group(1)
+                        
+                        if category_item:
+                            manual_json['categories'].append(category_item)
+                
+                # Etiketleri bulmaya çalış
+                tags_match = re.search(r'"tags"\s*:\s*\[(.*?)\]', result, re.DOTALL)
+                if tags_match:
+                    tags_text = tags_match.group(1)
+                    print(f"Regex ile etiketler bulundu: {tags_text}")
+                    # Etiketleri virgülle ayır ve her bir etiketi tırnak işaretlerinden temizle
+                    tags = [tag.strip().strip('"').strip("'") for tag in tags_text.split(',')]
+                    manual_json['tags'] = [tag for tag in tags if tag]  # Boş etiketleri filtrele
+                    print(f"İşlenen etiketler: {manual_json['tags']}")
+                else:
+                    print("İlk regex ile etiket bulunamadı, alternatif yöntem deneniyor...")
+                    # Alternatif etiket arama yöntemi
+                    alt_tags_match = re.search(r'tags["\s]*:[\s]*\[(.*?)\]', result, re.DOTALL)
+                    if alt_tags_match:
+                        tags_text = alt_tags_match.group(1)
+                        print(f"Alternatif regex ile etiketler bulundu: {tags_text}")
+                        tags = []
+                        for tag in tags_text.split(','):
+                            tag_match = re.search(r'["\'](.*?)["\']', tag)
+                            if tag_match:
+                                tags.append(tag_match.group(1).strip())
+                            elif tag.strip():
+                                tags.append(tag.strip())
+                        manual_json['tags'] = [tag for tag in tags if tag]
+                        print(f"Alternatif yöntemle işlenen etiketler: {manual_json['tags']}")
+                    else:
+                        print("Hiçbir yöntemle etiket bulunamadı! Ham yanıt içeriği:")
+                        print(result[:1000])  # İlk 1000 karakteri yazdır
+                        print("Varsayılan etiketler ekleniyor...")
+                        # Eğer hiçbir etiket bulunamazsa, içerik bazlı otomatik etiketler oluştur
+                        manual_json['tags'] = ["içerik", "web", "analiz", "sayfa"]
+                        print(f"Varsayılan etiketler: {manual_json['tags']}")
+                
+                # Düzeltilmiş JSON'ı kullan
+                if manual_json:
+                    json_result = ensure_correct_json_structure(manual_json, url, existing_title, existing_description)
+                    json_result = match_categories_and_tags(json_result, existing_categories, existing_tags)
+                    return json_result
+                
+            except Exception as manual_fix_error:
+                print(f"Manuel JSON düzeltme hatası: {manual_fix_error}")
+                import traceback
+                print(traceback.format_exc())
+            
+            # Fallback JSON
+            fallback_json = ensure_correct_json_structure({}, url, existing_title, existing_description)
+            fallback_json = match_categories_and_tags(fallback_json, existing_categories, existing_tags)
+            
+            return fallback_json
+            
+    except Exception as e:
+        print(f"Ekran görüntüsü analiz edilirken hata: {e}")
+        import traceback
+        print(traceback.format_exc())
+        
+        # Hata durumunda fallback JSON
+        fallback_json = ensure_correct_json_structure({}, url, existing_title, existing_description)
+        fallback_json = match_categories_and_tags(fallback_json, existing_categories, existing_tags)
+        
+        return fallback_json
+
+# Kategorize işlevi için Gemini sistem talimatlarını birden fazla kategori desteği ile güncelle
+MULTI_CATEGORY_SYSTEM_INSTRUCTION = """
+Sen bir web sayfası içerik analisti olarak görev yapıyorsun. 
+Verilen içeriği analiz ederek başlık, açıklama, kategoriler ve etiketler oluşturursun.
+
+Önemli Kurallar:
+- İçeriği analiz ederek için en uygun kategorileri özgürce atama yap - sistem artık filtreleme YAPMAYACAK.
+- İçerikle ilgili ANALİZ yapıp içeriğe en uygun kategorileri doğrudan ata. İlgililik puanı hesaplayıp filtreleme yapma!
+- İçeriğe doğrudan ilgili olmayan ama tematik olarak bağlantılı kategorileri de dahil et.
+- Her sayfa için EN AZ 1, EN FAZLA 3 kategori çifti önermelisin. 
+- Yazılım şirketleri için "Teknoloji", "Yazılım", "Bilişim" gibi kategoriler kullan.
+- Eğitim siteleri için "Eğitim" ana kategorisini kullan.
+- Haber siteleri için "Haber" veya "Medya" kategorilerini kullan.
+- E-ticaret siteleri için "Alışveriş" veya "E-ticaret" kategorilerini kullan.
+- Kişisel bloglar için "Blog" veya "Kişisel" kategorilerini kullan.
+- Sana verilen mevcut kategori listesine bakmadan ÖZGÜRCE kategori atama yap. Sistem sonradan benzer olanları eşleştirecek.
+- Her kategori için mutlaka bir alt kategori belirle.
+- Alt kategoriler, ana kategorilere uygun olmalıdır. Örneğin "Teknoloji > Web Geliştirme", "Eğitim > Üniversite"
+
+Etiketler Oluşturma Kurallar:
+- Etiketler, sayfanın içeriğindeki özgün ve belirgin anahtar kelimeleri içermelidir - asla genel amaçlı ["içerik", "web", "analiz", "sayfa"] gibi etiketler kullanma!
+- İçerikten çıkarılan en önemli ve belirgin terimleri, ürün veya hizmet adlarını, sektör terimlerini ve özel kavramları etiket olarak kullan.
+- Her sayfa için en az 5, en fazla 10 etiket önermelisin.
+- Etiketler içerikle doğrudan ilgili olmalı ve spesifik terimler içermelidir.
+- Etiketler, sayfanın ana konusunu, sektörünü, sunduğu hizmetleri veya ürünleri yansıtmalıdır.
+- Sayfadaki teknik terimler, önemli kavramlar veya hizmet adları etiket olarak kullanılmalıdır.
+- Etiketler 1-3 kelimeden oluşmalı, çok uzun cümleler olmamalıdır.
+- Her etiket özgün olmalı ve listedeki diğer etiketlerden farklı olmalıdır.
+- Hiçbir koşulda boş veya çok genel etiketler oluşturma.
+
+Yanıtın her zaman JSON formatında olmalıdır ve şu yapıda döndürmelisin:
+{
+  "title": "Sayfanın başlığı",
+  "description": "Sayfanın kısa açıklaması (200-400 karakter)",
+  "categories": [
+    {
+      "main_category": "Ana Kategori 1",
+      "subcategory": "Alt Kategori 1"
+    },
+    {
+      "main_category": "Ana Kategori 2",
+      "subcategory": "Alt Kategori 2"
+    },
+    {
+      "main_category": "Ana Kategori 3",
+      "subcategory": "Alt Kategori 3"
+    }
+  ],
+  "tags": ["ÖzgünEtiket1", "ÖzgünEtiket2", "ÖzgünEtiket3", "ÖzgünEtiket4", "ÖzgünEtiket5"]
+}
+
+ÖNEMLİ: Etiketler kısmını asla ["içerik", "web", "analiz", "sayfa"] gibi genel terimlerle doldurma! 
+Her etiket sayfanın içeriğini doğru ve özgün şekilde yansıtmalıdır. Etiketler asla boş bir liste olmamalıdır!
+
+ÖNEMLİ: İçeriğe uygun kategorileri ata ve filtreleme yapma. Her durumda kategori oluştur.
+"""
 
 def categorize_with_gemini(content, url, existing_title=None, existing_description=None):
     """
@@ -174,69 +588,47 @@ def categorize_with_gemini(content, url, existing_title=None, existing_descripti
     """
     print("İçerik Gemini AI ile kategorize ediliyor...")
     
-    # Mevcut kategorileri ve etiketleri al
-    existing_categories = get_existing_categories()
-    existing_tags = get_existing_tags()
-    
     try:
-        # Modeli seç - API anahtarı zaten global olarak yapılandırıldı
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        # Mevcut kategorileri ve etiketleri al
+        existing_categories = get_existing_categories()
+        existing_tags = get_existing_tags()
         
-        # URL, içerik, mevcut kategorileri ve etiketleri birleştir
-        input_text = f"""URL: {url}
-
-İçerik:
-{content}
-
-"""
-        # Eğer başlık ve açıklama zaten varsa, bunları belirt
-        if existing_title:
-            input_text += f"Sayfanın başlığı: {existing_title}\n"
+        # Modeli seç - sistem talimatlarını destekleyecek bir sürüm
+        model = genai.GenerativeModel(
+            model_name='gemini-2.0-flash',
+            system_instruction=MULTI_CATEGORY_SYSTEM_INSTRUCTION
+        )
         
-        if existing_description:
-            input_text += f"Sayfanın açıklaması: {existing_description}\n"
-        
-        print(f"Gemini'ye gönderilen mevcut kategoriler: {existing_categories['main_categories']}")
-        
-        # Gemini'ye istek gönder
-        prompt_template_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'promptimage.txt')
-        with open(prompt_template_path, 'r', encoding='utf-8') as f:
-            prompt_template = f.read()
-        
-        # Mevcut kategorileri ve etiketleri prompt'a ekle
-        prompt_with_categories = prompt_template + f"""
-
-Mevcut ana kategoriler: {existing_categories['main_categories']}
-
-Mevcut alt kategoriler: {existing_categories['subcategories']}
-
-Mevcut etiketler: {existing_tags}
-
-"""
-        
-        # İçeriği ekle
-        prompt_with_categories += input_text
-        
-        # JSON formatı talimatlarını ekle
-        prompt_with_categories += """
-Lütfen yanıtını aşağıdaki JSON formatında ver:
-{
-  "title": "Sayfanın başlığı",
-  "description": "Sayfanın kısa açıklaması",
-  "main_category": "Ana kategori (yukarıdaki mevcut ana kategorilerden birini seç)",
-  "subcategory": "Alt kategori (yukarıdaki mevcut alt kategorilerden birini seç)",
-  "tags": ["etiket1", "etiket2", "etiket3"]
-}
-"""
-        
-        # Gemini'ye istek gönder
+        # Generation config
         generation_config = {
             "response_mime_type": "application/json",
             "temperature": 0.2
         }
         
+        # Kullanıcı içeriğini hazırla
+        user_content = f"""
+        URL: {url}
+        
+        Mevcut ana kategoriler: {existing_categories['main_categories']}
+        
+        Mevcut alt kategoriler: {existing_categories['subcategories']}
+        
+        Mevcut etiketler: {existing_tags}
+        
+        İçerik:
+        {content}
+        """
+        
+        # Eğer başlık ve açıklama zaten varsa, bunları belirt
+        if existing_title:
+            user_content += f"\nSayfanın başlığı: {existing_title}"
+        
+        if existing_description:
+            user_content += f"\nSayfanın açıklaması: {existing_description}"
+        
+        # Gemini'ye istek gönder
         response = model.generate_content(
-            prompt_with_categories,
+            user_content,
             generation_config=generation_config
         )
         
@@ -262,18 +654,194 @@ Lütfen yanıtını aşağıdaki JSON formatında ver:
             print(f"JSON ayrıştırma hatası: {e}")
             print(f"Ham yanıt: {result}")
             
+            # Manuel düzeltme yap
+            # Manuel düzeltme dene - JSON dosyasını doğru bir biçime getirmeye çalış
+            try:
+                # Ana kategori ve alt kategori gibi temel bilgileri çıkarmaya çalış
+                manual_json = {}
+                
+                # Regex ile alanları bul
+                patterns = {
+                    'title': r'"title"\s*:\s*"([^"]*)"',
+                    'description': r'"description"\s*:\s*"([^"]*)"',
+                }
+                
+                for key, pattern in patterns.items():
+                    match = re.search(pattern, result)
+                    if match:
+                        manual_json[key] = match.group(1)
+                
+                # Kategorileri bulmaya çalış - bu daha zorlu olabilir
+                categories_match = re.search(r'"categories"\s*:\s*\[(.*?)\]', result, re.DOTALL)
+                if categories_match:
+                    categories_text = categories_match.group(1)
+                    # Regex ile kategorileri ayıkla
+                    manual_json['categories'] = []
+                    category_items = re.findall(r'{(.*?)}', categories_text, re.DOTALL)
+                    
+                    for item in category_items:
+                        category_item = {}
+                        main_cat_match = re.search(r'"main_category"\s*:\s*"([^"]*)"', item)
+                        if main_cat_match:
+                            category_item['main_category'] = main_cat_match.group(1)
+                        
+                        sub_cat_match = re.search(r'"subcategory"\s*:\s*"([^"]*)"', item)
+                        if sub_cat_match:
+                            category_item['subcategory'] = sub_cat_match.group(1)
+                        
+                        if category_item:
+                            manual_json['categories'].append(category_item)
+                
+                # Etiketleri bulmaya çalış
+                tags_match = re.search(r'"tags"\s*:\s*\[(.*?)\]', result, re.DOTALL)
+                if tags_match:
+                    tags_text = tags_match.group(1)
+                    print(f"Regex ile etiketler bulundu: {tags_text}")
+                    # Etiketleri virgülle ayır ve her bir etiketi tırnak işaretlerinden temizle
+                    tags = [tag.strip().strip('"').strip("'") for tag in tags_text.split(',')]
+                    manual_json['tags'] = [tag for tag in tags if tag]  # Boş etiketleri filtrele
+                    print(f"İşlenen etiketler: {manual_json['tags']}")
+                else:
+                    print("İlk regex ile etiket bulunamadı, alternatif yöntem deneniyor...")
+                    # Alternatif etiket arama yöntemi
+                    alt_tags_match = re.search(r'tags["\s]*:[\s]*\[(.*?)\]', result, re.DOTALL)
+                    if alt_tags_match:
+                        tags_text = alt_tags_match.group(1)
+                        print(f"Alternatif regex ile etiketler bulundu: {tags_text}")
+                        tags = []
+                        for tag in tags_text.split(','):
+                            tag_match = re.search(r'["\'](.*?)["\']', tag)
+                            if tag_match:
+                                tags.append(tag_match.group(1).strip())
+                            elif tag.strip():
+                                tags.append(tag.strip())
+                        manual_json['tags'] = [tag for tag in tags if tag]
+                        print(f"Alternatif yöntemle işlenen etiketler: {manual_json['tags']}")
+                    else:
+                        print("Hiçbir yöntemle etiket bulunamadı! Ham yanıt içeriği:")
+                        print(result[:1000])  # İlk 1000 karakteri yazdır
+                        print("Varsayılan etiketler ekleniyor...")
+                        # Eğer hiçbir etiket bulunamazsa, içerik bazlı otomatik etiketler oluştur
+                        manual_json['tags'] = ["içerik", "web", "analiz", "sayfa"]
+                        print(f"Varsayılan etiketler: {manual_json['tags']}")
+                
+                # Düzeltilmiş JSON'ı kullan
+                if manual_json:
+                    json_result = ensure_correct_json_structure(manual_json, url, existing_title, existing_description)
+                    json_result = match_categories_and_tags(json_result, existing_categories, existing_tags)
+                    return json_result
+                
+            except Exception as manual_fix_error:
+                print(f"Manuel JSON düzeltme hatası: {manual_fix_error}")
+                import traceback
+                print(traceback.format_exc())
+            
             # Fallback JSON
             fallback_json = ensure_correct_json_structure({}, url, existing_title, existing_description)
+            fallback_json = match_categories_and_tags(fallback_json, existing_categories, existing_tags)
             
             return fallback_json
-    
+            
+        except json.JSONDecodeError as e:
+            print(f"JSON ayrıştırma hatası: {e}")
+            print(f"Ham yanıt: {result}")
+            
+            # Manuel düzeltme yap
+            # Manuel düzeltme dene - JSON dosyasını doğru bir biçime getirmeye çalış
+            try:
+                # Ana kategori ve alt kategori gibi temel bilgileri çıkarmaya çalış
+                manual_json = {}
+                
+                # Regex ile alanları bul
+                patterns = {
+                    'title': r'"title"\s*:\s*"([^"]*)"',
+                    'description': r'"description"\s*:\s*"([^"]*)"',
+                }
+                
+                for key, pattern in patterns.items():
+                    match = re.search(pattern, result)
+                    if match:
+                        manual_json[key] = match.group(1)
+                
+                # Kategorileri bulmaya çalış - bu daha zorlu olabilir
+                categories_match = re.search(r'"categories"\s*:\s*\[(.*?)\]', result, re.DOTALL)
+                if categories_match:
+                    categories_text = categories_match.group(1)
+                    # Regex ile kategorileri ayıkla
+                    manual_json['categories'] = []
+                    category_items = re.findall(r'{(.*?)}', categories_text, re.DOTALL)
+                    
+                    for item in category_items:
+                        category_item = {}
+                        main_cat_match = re.search(r'"main_category"\s*:\s*"([^"]*)"', item)
+                        if main_cat_match:
+                            category_item['main_category'] = main_cat_match.group(1)
+                        
+                        sub_cat_match = re.search(r'"subcategory"\s*:\s*"([^"]*)"', item)
+                        if sub_cat_match:
+                            category_item['subcategory'] = sub_cat_match.group(1)
+                        
+                        if category_item:
+                            manual_json['categories'].append(category_item)
+                
+                # Etiketleri bulmaya çalış
+                tags_match = re.search(r'"tags"\s*:\s*\[(.*?)\]', result, re.DOTALL)
+                if tags_match:
+                    tags_text = tags_match.group(1)
+                    print(f"Regex ile etiketler bulundu: {tags_text}")
+                    # Etiketleri virgülle ayır ve her bir etiketi tırnak işaretlerinden temizle
+                    tags = [tag.strip().strip('"').strip("'") for tag in tags_text.split(',')]
+                    manual_json['tags'] = [tag for tag in tags if tag]  # Boş etiketleri filtrele
+                    print(f"İşlenen etiketler: {manual_json['tags']}")
+                else:
+                    print("İlk regex ile etiket bulunamadı, alternatif yöntem deneniyor...")
+                    # Alternatif etiket arama yöntemi
+                    alt_tags_match = re.search(r'tags["\s]*:[\s]*\[(.*?)\]', result, re.DOTALL)
+                    if alt_tags_match:
+                        tags_text = alt_tags_match.group(1)
+                        print(f"Alternatif regex ile etiketler bulundu: {tags_text}")
+                        tags = []
+                        for tag in tags_text.split(','):
+                            tag_match = re.search(r'["\'](.*?)["\']', tag)
+                            if tag_match:
+                                tags.append(tag_match.group(1).strip())
+                            elif tag.strip():
+                                tags.append(tag.strip())
+                        manual_json['tags'] = [tag for tag in tags if tag]
+                        print(f"Alternatif yöntemle işlenen etiketler: {manual_json['tags']}")
+                    else:
+                        print("Hiçbir yöntemle etiket bulunamadı! Ham yanıt içeriği:")
+                        print(result[:1000])  # İlk 1000 karakteri yazdır
+                        print("Varsayılan etiketler ekleniyor...")
+                        # Eğer hiçbir etiket bulunamazsa, içerik bazlı otomatik etiketler oluştur
+                        manual_json['tags'] = ["içerik", "web", "analiz", "sayfa"]
+                        print(f"Varsayılan etiketler: {manual_json['tags']}")
+                
+                # Düzeltilmiş JSON'ı kullan
+                if manual_json:
+                    json_result = ensure_correct_json_structure(manual_json, url, existing_title, existing_description)
+                    json_result = match_categories_and_tags(json_result, existing_categories, existing_tags)
+                    return json_result
+                
+            except Exception as manual_fix_error:
+                print(f"Manuel JSON düzeltme hatası: {manual_fix_error}")
+                import traceback
+                print(traceback.format_exc())
+            
+            # Fallback JSON
+            fallback_json = ensure_correct_json_structure({}, url, existing_title, existing_description)
+            fallback_json = match_categories_and_tags(fallback_json, existing_categories, existing_tags)
+            
+            return fallback_json
+            
     except Exception as e:
-        print(f"Gemini API hatası: {e}")
+        print(f"İçerik kategorize edilirken hata: {e}")
         import traceback
         print(traceback.format_exc())
         
         # Hata durumunda fallback JSON
         fallback_json = ensure_correct_json_structure({}, url, existing_title, existing_description)
+        fallback_json = match_categories_and_tags(fallback_json, existing_categories, existing_tags)
         
         return fallback_json
 

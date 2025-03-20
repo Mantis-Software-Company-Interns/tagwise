@@ -10,6 +10,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const loadingContainer = document.querySelector('.loading-container');
     const reviewLoadingContainer = document.querySelector('.review-loading');
     const reviewUrl = document.getElementById('reviewUrl');
+    const reviewScreenshotData = document.getElementById('reviewScreenshotData');
+    
+    // Screenshot elements
+    const screenshotPreview = document.getElementById('screenshotPreview');
+    const customScreenshotInput = document.getElementById('customScreenshotInput');
     
     // URL input
     const urlInput = document.getElementById('url');
@@ -363,7 +368,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Gemini yanıtını işle
                 if (data.gemini_response) {
                     try {
-                        let categories;
+                        let categories = [];
                         let geminiData = data.gemini_response;
                         
                         // Eğer string ise ve JSON formatında değilse, düzelt
@@ -383,7 +388,18 @@ document.addEventListener('DOMContentLoaded', function() {
                             
                             try {
                                 const parsedData = JSON.parse(geminiData);
-                                categories = parsedData.categories;
+                                
+                                // Eğer categories array olarak varsa kullan
+                                if (parsedData.categories && Array.isArray(parsedData.categories)) {
+                                    categories = parsedData.categories;
+                                } 
+                                // Eğer main_category ve subcategory varsa, bunları bir kategori olarak ekle
+                                else if (parsedData.main_category) {
+                                    categories = [{
+                                        main_category: parsedData.main_category,
+                                        subcategory: parsedData.subcategory || ""
+                                    }];
+                                }
                             } catch (e) {
                                 console.error("Gemini yanıtı parse hatası:", e);
                                 // Alternatif parse yöntemi
@@ -393,15 +409,58 @@ document.addEventListener('DOMContentLoaded', function() {
                                         categories = JSON.parse(`[${match[1]}]`);
                                     } catch (e2) {
                                         console.error("Alternatif parse hatası:", e2);
+                                        
+                                        // Alternatif olarak main_category ve subcategory'yi ara
+                                        const mainCategoryMatch = geminiData.match(/"main_category"\s*:\s*"([^"]*)"/);
+                                        const subcategoryMatch = geminiData.match(/"subcategory"\s*:\s*"([^"]*)"/);
+                                        
+                                        if (mainCategoryMatch && mainCategoryMatch[1]) {
+                                            const mainCategory = mainCategoryMatch[1];
+                                            const subcategory = subcategoryMatch && subcategoryMatch[1] ? subcategoryMatch[1] : "";
+                                            
+                                            categories = [{
+                                                main_category: mainCategory,
+                                                subcategory: subcategory
+                                            }];
+                                        } else {
+                                            throw new Error("Gemini yanıtı işlenemedi");
+                                        }
+                                    }
+                                } else {
+                                    // Alternatif olarak main_category ve subcategory'yi ara
+                                    const mainCategoryMatch = geminiData.match(/"main_category"\s*:\s*"([^"]*)"/);
+                                    const subcategoryMatch = geminiData.match(/"subcategory"\s*:\s*"([^"]*)"/);
+                                    
+                                    if (mainCategoryMatch && mainCategoryMatch[1]) {
+                                        const mainCategory = mainCategoryMatch[1];
+                                        const subcategory = subcategoryMatch && subcategoryMatch[1] ? subcategoryMatch[1] : "";
+                                        
+                                        categories = [{
+                                            main_category: mainCategory,
+                                            subcategory: subcategory
+                                        }];
+                                    } else {
                                         throw new Error("Gemini yanıtı işlenemedi");
                                     }
                                 }
                             }
-                        } else if (geminiData && geminiData.categories) {
-                            categories = geminiData.categories;
+                        } else if (geminiData && typeof geminiData === 'object') {
+                            // Eğer categories array olarak varsa kullan
+                            if (geminiData.categories && Array.isArray(geminiData.categories)) {
+                                categories = geminiData.categories;
+                            } 
+                            // Eğer main_category ve subcategory varsa, bunları bir kategori olarak ekle
+                            else if (geminiData.main_category) {
+                                categories = [{
+                                    main_category: geminiData.main_category,
+                                    subcategory: geminiData.subcategory || ""
+                                }];
+                            }
                         }
                         
-                        if (!categories || !Array.isArray(categories)) {
+                        console.log("İşlenmiş kategoriler:", categories);
+                        
+                        if (!categories || !Array.isArray(categories) || categories.length === 0) {
                             throw new Error("Geçerli kategori verisi bulunamadı");
                         }
                         
@@ -412,10 +471,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Her kategoriyi işle
                         categories.forEach(category => {
                             console.log("Kategori:", category);
-                            if (category.main_category && category.subcategory) {
+                            if (category.main_category) {
                                 addCategoryGroup(
                                     category.main_category.trim(),
-                                    category.subcategory.trim(),
+                                    (category.subcategory || "").trim(),
                                     categoryGroupsList
                                 );
                                 
@@ -435,6 +494,18 @@ document.addEventListener('DOMContentLoaded', function() {
                                 }
                             }
                         });
+                        
+                        // Eğer ana JSON'da etiketler varsa onları da ekle
+                        if (data.tags && Array.isArray(data.tags)) {
+                            console.log("Ana JSON'dan etiketler işleniyor:", data.tags);
+                            data.tags.forEach(tag => {
+                                if (tag && typeof tag === 'string') {
+                                    addTagElement(tag.trim(), reviewTagsList);
+                                }
+                            });
+                        } else {
+                            console.log("Ana JSON'da etiket dizisi bulunamadı:", data);
+                        }
                         
                         showNotification('URL başarıyla analiz edildi', 'success');
                     } catch (e) {
@@ -490,7 +561,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (reviewTagsList) reviewTagsList.innerHTML = '';
         
         try {
-            let categories;
+            let categories = [];
             let tags = [];
             
             // Veri formatını kontrol et
@@ -504,13 +575,41 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 try {
                     const parsedData = JSON.parse(cleanData);
-                    categories = parsedData.categories;
+                    
+                    // Eğer categories array olarak varsa kullan
+                    if (parsedData.categories && Array.isArray(parsedData.categories)) {
+                        categories = parsedData.categories;
+                    } 
+                    // Eğer main_category ve subcategory varsa, bunları bir kategori olarak ekle
+                    else if (parsedData.main_category) {
+                        categories = [{
+                            main_category: parsedData.main_category,
+                            subcategory: parsedData.subcategory || ""
+                        }];
+                    }
+                    
                     tags = parsedData.tags || [];
                 } catch (e) {
+                    console.error("JSON parse hatası:", e);
+                    
                     // Categories kısmını bulmaya çalış
                     const categoriesMatch = cleanData.match(/"categories"\s*:\s*(\[[\s\S]*?\])/);
                     if (categoriesMatch && categoriesMatch[1]) {
                         categories = JSON.parse(categoriesMatch[1]);
+                    }
+                    
+                    // Alternatif olarak main_category ve subcategory'yi ara
+                    const mainCategoryMatch = cleanData.match(/"main_category"\s*:\s*"([^"]*)"/);
+                    const subcategoryMatch = cleanData.match(/"subcategory"\s*:\s*"([^"]*)"/);
+                    
+                    if (mainCategoryMatch && mainCategoryMatch[1]) {
+                        const mainCategory = mainCategoryMatch[1];
+                        const subcategory = subcategoryMatch && subcategoryMatch[1] ? subcategoryMatch[1] : "";
+                        
+                        categories = [{
+                            main_category: mainCategory,
+                            subcategory: subcategory
+                        }];
                     }
                     
                     // Tags kısmını bulmaya çalış
@@ -521,17 +620,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } else {
                 // Doğrudan JSON nesnesi
-                categories = data.categories;
+                
+                // Eğer categories array olarak varsa kullan
+                if (data.categories && Array.isArray(data.categories)) {
+                    categories = data.categories;
+                } 
+                // Eğer main_category ve subcategory varsa, bunları bir kategori olarak ekle
+                else if (data.main_category) {
+                    categories = [{
+                        main_category: data.main_category,
+                        subcategory: data.subcategory || ""
+                    }];
+                }
+                
                 tags = data.tags || [];
             }
             
+            console.log("İşlenmiş kategoriler:", categories);
+            console.log("İşlenmiş etiketler:", tags);
+            
             // Kategorileri işle
-            if (categories && Array.isArray(categories)) {
+            if (categories && Array.isArray(categories) && categories.length > 0) {
                 categories.forEach(category => {
-                    if (category.main_category && category.subcategory) {
+                    if (category.main_category) {
                         addCategoryGroup(
                             category.main_category.trim(),
-                            category.subcategory.trim(),
+                            (category.subcategory || "").trim(),
                             categoryGroupsList
                         );
                     }
@@ -540,11 +654,25 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Etiketleri doğrudan JSON'dan al
             if (tags && Array.isArray(tags)) {
+                console.log("Etiketler dizisi işleniyor:", tags);
                 tags.forEach(tag => {
                     if (tag && typeof tag === 'string') {
                         addTagElement(tag.trim(), reviewTagsList);
+                    } else {
+                        console.log("Geçersiz etiket formatı:", tag);
                     }
                 });
+            } else if (data.tags && Array.isArray(data.tags)) {
+                console.log("data.tags dizisi işleniyor:", data.tags);
+                data.tags.forEach(tag => {
+                    if (tag && typeof tag === 'string') {
+                        addTagElement(tag.trim(), reviewTagsList);
+                    } else {
+                        console.log("Geçersiz etiket formatı:", tag);
+                    }
+                });
+            } else {
+                console.log("Hiçbir etiket dizisi bulunamadı:", data);
             }
             
             // Eğer hiç kategori veya etiket yoksa hata fırlat
@@ -609,8 +737,13 @@ document.addEventListener('DOMContentLoaded', function() {
         subcategoryLabel.textContent = subcategory;
         
         categoryGroupContent.appendChild(mainCategoryLabel);
-        categoryGroupContent.appendChild(document.createTextNode(' > '));
-        categoryGroupContent.appendChild(subcategoryLabel);
+        
+        // Alt kategori varsa ekle, yoksa sadece ana kategoriyi göster
+        if (subcategory) {
+            categoryGroupContent.appendChild(document.createTextNode(' > '));
+            categoryGroupContent.appendChild(subcategoryLabel);
+        }
+        
         categoryGroup.appendChild(categoryGroupContent);
         
         // Silme butonu ekle
@@ -656,111 +789,159 @@ document.addEventListener('DOMContentLoaded', function() {
         container.appendChild(tagSpan);
     }
     
+    // Handle custom screenshot upload
+    if (customScreenshotInput && screenshotPreview) {
+        customScreenshotInput.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                // Check if file is an image
+                if (!file.type.match('image.*')) {
+                    showNotification('Please select an image file', 'error');
+                    return;
+                }
+                
+                // Check if file size is less than 5MB
+                if (file.size > 5 * 1024 * 1024) {
+                    showNotification('Image size should be less than 5MB', 'error');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Display the image
+                    screenshotPreview.src = e.target.result;
+                    
+                    // Update status message
+                    const statusEl = document.getElementById('screenshotStatus');
+                    if (statusEl) {
+                        statusEl.innerHTML = `
+                            <i class="material-icons" style="color: #ff9800;">image</i>
+                            <span>Custom screenshot selected</span>
+                        `;
+                    }
+                    
+                    // Store the base64 image data
+                    if (reviewScreenshotData) {
+                        // Extract the base64 data without the prefix
+                        const base64data = e.target.result.split(',')[1];
+                        // Store the file path prefix and filename for backend processing
+                        reviewScreenshotData.value = `custom_${Date.now()}.png`;
+                        // Store the actual data in a data attribute for submission
+                        reviewScreenshotData.dataset.content = base64data;
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
     // Save bookmark
     if (saveBookmarkBtn) {
-        // debugger;
         saveBookmarkBtn.addEventListener('click', function() {
             if (!currentUrlData) {
-                alert('URL verisi mevcut değil');
+                showNotification('No data available to save', 'error');
+                return;
+            }
+
+            const url = currentUrlData.url || reviewUrl.value;
+            const title = reviewTitle.value;
+            const description = reviewDescription.value;
+            
+            // Kategori gruplarını topla
+            const categoryGroups = Array.from(categoryGroupsList.querySelectorAll('.category-group'))
+                .map(group => ({
+                    mainCategory: group.querySelector('.main-category-label').textContent,
+                    subcategory: group.querySelector('.subcategory-label').textContent
+                }));
+            
+            // Ana kategorileri listeye dönüştür
+            const mainCategories = [...new Set(categoryGroups.map(group => group.mainCategory))];
+            
+            // Alt kategorileri listeye dönüştür
+            const subcategories = categoryGroups.map(group => group.subcategory);
+            
+            // Her alt kategori için hangi ana kategoriye ait olduğunu belirle
+            const categorySubcategoryMap = {};
+            categoryGroups.forEach(group => {
+                if (!categorySubcategoryMap[group.mainCategory]) {
+                    categorySubcategoryMap[group.mainCategory] = [];
+                }
+                categorySubcategoryMap[group.mainCategory].push(group.subcategory);
+            });
+            
+            // Etiketleri topla
+            const tags = Array.from(reviewTagsList.querySelectorAll('.tag'))
+                .map(tag => tag.childNodes[0].nodeValue.trim());
+            
+            // Screenshot data
+            let screenshotData = currentUrlData.screenshot_data;
+            if (reviewScreenshotData && reviewScreenshotData.value) {
+                screenshotData = reviewScreenshotData.value;
+            }
+            
+            // Check required fields
+            if (!url || !title || mainCategories.length === 0) {
+                showNotification('URL, title, and at least one category are required', 'error');
                 return;
             }
             
-            // Butonları devre dışı bırak (çift tıklamayı önlemek için)
-            saveBookmarkBtn.disabled = true;
-            
-            // Tüm kategori gruplarını al
-            const categoryGroups = categoryGroupsList ? categoryGroupsList.querySelectorAll('.category-group') : [];
-            
-            // Ana kategorileri ve alt kategorileri topla
-            const mainCategories = [];
-            const subcategories = [];
-            
-            // Kategori-alt kategori ilişkilerini tutacak harita
-            const categorySubcategoryMap = {};
-            
-            // Kategori gruplarını işle
-            categoryGroups.forEach(group => {
-                const mainCategory = group.querySelector('.main-category-label')?.textContent.trim();
-                const subcategory = group.querySelector('.subcategory-label')?.textContent.trim();
-                
-                if (mainCategory) {
-                    if (!mainCategories.includes(mainCategory)) {
-                        mainCategories.push(mainCategory);
-                    }
-                    
-                    if (subcategory) {
-                        if (!subcategories.includes(subcategory)) {
-                            subcategories.push(subcategory);
-                        }
-                        
-                        // Kategori-alt kategori ilişkisini kaydet
-                        if (!categorySubcategoryMap[mainCategory]) {
-                            categorySubcategoryMap[mainCategory] = [];
-                        }
-                        if (!categorySubcategoryMap[mainCategory].includes(subcategory)) {
-                            categorySubcategoryMap[mainCategory].push(subcategory);
-                        }
-                    }
-                }
-            });
-            
-            // Etiketleri al
-            const tags = Array.from(reviewTagsList ? reviewTagsList.querySelectorAll('.tag') : [])
-                .map(tag => tag.childNodes[0].nodeValue.trim())
-                .filter(tag => tag);
-            
-            // Bookmark verilerini hazırla
-            const bookmarkData = {
-                url: reviewUrl.value,
-                title: reviewTitle.value,
-                description: reviewDescription.value,
-                main_categories: mainCategories,
-                subcategories: subcategories,
-                tags: tags,
-                category_subcategory_map: categorySubcategoryMap
-            };
-            
-            // CSRF token al
+            // Get CSRF token
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
             
             if (!csrfToken) {
-                alert('CSRF token bulunamadı. Sayfayı yenileyin ve tekrar deneyin.');
-                saveBookmarkBtn.disabled = false;
+                showNotification('CSRF token bulunamadı', 'error');
                 return;
             }
             
-            // Bookmark'ı kaydet
+            // Prepare data for the API
+            const bookmarkData = {
+                url,
+                title,
+                description,
+                main_categories: mainCategories,
+                subcategories,
+                category_subcategory_map: categorySubcategoryMap,
+                tags,
+                screenshot_data: screenshotData
+            };
+            
+            // If we have custom screenshot base64 data, include it
+            if (reviewScreenshotData && reviewScreenshotData.dataset.content) {
+                bookmarkData.custom_screenshot = reviewScreenshotData.dataset.content;
+            }
+            
+            // Call the API
             fetch('/api/save-bookmark/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken
+                    'X-CSRFToken': csrfToken,
                 },
-                body: JSON.stringify(bookmarkData)
+                body: JSON.stringify(bookmarkData),
+                credentials: 'same-origin'
             })
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    // Başarılı kayıt
-                    showNotification('Bookmark başarıyla kaydedildi!', 'success');
-                    
-                    // Modalı kapat
-                    urlReviewModal.classList.remove('active');
-                    
-                    // Sayfayı yenile
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
-                } else {
-                    // Hata durumu
-                    alert('Bookmark kaydedilirken hata oluştu: ' + (data.error || 'Bilinmeyen hata'));
-                    saveBookmarkBtn.disabled = false;
+                if (data.error) {
+                    throw new Error(data.error);
                 }
+                
+                // Close modal
+                if (urlReviewModal) {
+                    urlReviewModal.classList.remove('active');
+                }
+                
+                // Show success message
+                showNotification('Bookmark saved successfully', 'success');
+                
+                // Reload page after a short delay
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
             })
             .catch(error => {
-                console.error('Error:', error);
-                alert('Bookmark kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.');
-                saveBookmarkBtn.disabled = false;
+                console.error('Error saving bookmark:', error);
+                showNotification('Error saving bookmark: ' + error.message, 'error');
             });
         });
     }
@@ -838,23 +1019,81 @@ function showNotification(message, type = 'info') {
 }
 
 function showUrlReviewModal(data, url) {
+    const urlReviewModal = document.getElementById('urlReviewModal');
+    if (!urlReviewModal) return;
+    
+    const urlModal = document.getElementById('urlModal');
+    if (urlModal) {
+        urlModal.classList.remove('active');
+    }
+    
+    // Hide previous loading
+    const reviewLoadingContainer = document.querySelector('.review-loading');
+    if (reviewLoadingContainer) {
+        reviewLoadingContainer.style.display = 'none';
+    }
+    
+    // Update current URL data
+    currentUrlData = data;
+    
+    // Update form fields
+    const reviewUrl = document.getElementById('reviewUrl');
+    const reviewTitle = document.getElementById('reviewTitle');
+    const reviewDescription = document.getElementById('reviewDescription');
+    const reviewScreenshotData = document.getElementById('reviewScreenshotData');
+    const screenshotPreview = document.getElementById('screenshotPreview');
+    const categoryGroupsList = document.getElementById('categoryGroupsList');
+    const reviewTagsList = document.getElementById('reviewTagsList');
+    
+    if (reviewUrl) reviewUrl.value = url;
+    if (reviewTitle) reviewTitle.value = data.title || '';
+    if (reviewDescription) reviewDescription.value = data.description || '';
+    
+    // Update the screenshot preview and field
+    if (reviewScreenshotData && screenshotPreview) {
+        const screenshotData = data.screenshot_data;
+        reviewScreenshotData.value = screenshotData || '';
+        
+        // Clear any previous custom data
+        reviewScreenshotData.dataset.content = '';
+        
+        // Update the screenshot preview
+        if (screenshotData) {
+            screenshotPreview.src = `/static/${screenshotData}`;
+            
+            // Update status message based on screenshot source
+            const statusEl = document.getElementById('screenshotStatus');
+            if (statusEl) {
+                if (data.screenshot_used) {
+                    statusEl.innerHTML = `
+                        <i class="material-icons" style="color: #4caf50;">check_circle</i>
+                        <span>Screenshot captured automatically</span>
+                    `;
+                } else {
+                    statusEl.innerHTML = `
+                        <i class="material-icons" style="color: #2196f3;">image</i>
+                        <span>Screenshot available</span>
+                    `;
+                }
+            }
+        } else {
+            // No screenshot available
+            screenshotPreview.src = '/static/images/default-thumbnail.png';
+            const statusEl = document.getElementById('screenshotStatus');
+            if (statusEl) {
+                statusEl.innerHTML = `
+                    <i class="material-icons" style="color: #f44336;">error_outline</i>
+                    <span>No screenshot available</span>
+                `;
+            }
+        }
+    }
+    
     // Clear previous data
-    categoryGroupsList.innerHTML = '';
-    reviewTagsList.innerHTML = '';
+    if (categoryGroupsList) categoryGroupsList.innerHTML = '';
+    if (reviewTagsList) reviewTagsList.innerHTML = '';
     
-    // Set URL in the form
-    document.getElementById('reviewUrl').value = url;
-    
-    // Set title and description if available
-    if (data.title) {
-        reviewTitle.value = data.title;
-    }
-    
-    if (data.description) {
-        reviewDescription.value = data.description;
-    }
-    
-    // Process categories and tags
+    // Process the Gemini response
     processGeminiResponse(data, categoryGroupsList, reviewTagsList);
     
     // Show the review modal

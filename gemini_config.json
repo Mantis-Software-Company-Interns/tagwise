@@ -1,0 +1,14 @@
+{
+  "temperature": 1.0,
+  "top_p": 0.95,
+  "top_k": 40,
+  "max_output_tokens": 8192,
+  "candidate_count": 1,
+  "stop_sequences": [],
+  "safety_settings": {
+    "harassment": "block_none",
+    "hate_speech": "block_none",
+    "sexually_explicit": "block_none",
+    "dangerous_content": "block_none"
+  }
+}

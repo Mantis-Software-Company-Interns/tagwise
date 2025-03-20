@@ -5,11 +5,24 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 import json
-from .reader import fetch_html, extract_content, categorize_with_gemini, capture_screenshot, analyze_screenshot_with_gemini
-from .models import Bookmark, Category, Tag, Collection
+import os
+from .reader.html_fetcher import fetch_html
+from .reader.content_extractor import extract_content
+from .reader.gemini_analyzer import categorize_with_gemini
+from .reader.screenshot import capture_screenshot
+from .reader.gemini_analyzer import analyze_screenshot_with_gemini
+from .models import Bookmark, Category, Tag, Collection, Profile
 from django.db import models
 from collections import Counter
 from django.contrib import messages
+from django.conf import settings
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+import base64
+import time
+import traceback
+from django.db.models import Q, Count
+from django.utils import timezone
 
 # Create your views here.
 
@@ -56,6 +69,10 @@ def logout_view(request):
 def index(request):
     # Kullanıcıya ait bookmark'ları getir
     bookmarks = Bookmark.objects.filter(user=request.user).order_by('-created_at')
+    
+    # Bookmarks için ekran görüntüsü bilgisini ekle
+    for bookmark in bookmarks:
+        bookmark.has_screenshot = bool(bookmark.screenshot_data)
     
     # Ana kategorileri getir
     main_categories = Category.objects.filter(parent=None)
@@ -130,6 +147,10 @@ def topics(request):
         subcategories=subcategory
     ).order_by('-created_at')
     
+    # Bookmarks için ekran görüntüsü bilgisini ekle
+    for bookmark in bookmarks:
+        bookmark.has_screenshot = bool(bookmark.screenshot_data)
+    
     # Get other subcategories in the same category for navigation
     related_subcategories = Category.objects.filter(parent=category)
     
@@ -147,6 +168,11 @@ def tagged_bookmarks(request):
         tag = Tag.objects.filter(name=tag_name).first()
         if tag:
             bookmarks = Bookmark.objects.filter(user=request.user, tags=tag).order_by('-created_at')
+            
+            # Bookmarks için ekran görüntüsü bilgisini ekle
+            for bookmark in bookmarks:
+                bookmark.has_screenshot = bool(bookmark.screenshot_data)
+                
             return render(request, 'bookmarks/tagged_bookmarks.html', {'tag': tag, 'bookmarks': bookmarks})
     
     return redirect('tagwiseapp:tags')
@@ -175,21 +201,59 @@ def analyze_url(request):
             html = fetch_html(url)
             content = None
             category_json = None
+            screenshot_path = None
             screenshot_used = False
             
             if html:
                 print("HTML içeriği alındı, içerik çıkarılıyor...")
                 # Extract main content
                 content = extract_content(html)
-            
-            # HTML içeriği alınamadıysa veya içerik çıkarılamazsa, Selenium ile ekran görüntüsü al
-            if not html or not content or len(content.strip()) < 50:
-                print("HTML içeriği alınamadı veya içerik yetersiz, Selenium ile ekran görüntüsü alınıyor...")
-                screenshot_base64 = capture_screenshot(url)
                 
-                if screenshot_base64:
+                # HTML'den thumbnail almayı dene
+                from .reader.utils import extract_thumbnail_from_html
+                thumbnail = extract_thumbnail_from_html(html, url)
+                
+                if thumbnail:
+                    print("HTML'den thumbnail alındı")
+                    # Generate a unique filename for the thumbnail
+                    import uuid
+                    filename = f"{uuid.uuid4()}.png"
+                    thumbnail_path = os.path.join('static', 'images', 'thumbnails', filename)
+                    
+                    # Save the thumbnail
+                    with open(thumbnail_path, 'wb') as f:
+                        f.write(thumbnail)
+                    
+                    # Store the relative path in screenshot_path
+                    screenshot_path = os.path.join('images', 'thumbnails', filename)
+                    screenshot_used = False
+                else:
+                    print("HTML'den thumbnail alınamadı, ekran görüntüsü alınıyor...")
+                    # Take screenshot as fallback
+                    screenshot = capture_screenshot(url)
+                    
+                    if screenshot:
+                        # Generate a unique filename for the screenshot
+                        import uuid
+                        filename = f"{uuid.uuid4()}.png"
+                        thumbnail_path = os.path.join('static', 'images', 'thumbnails', filename)
+                        
+                        # Save the screenshot
+                        with open(thumbnail_path, 'wb') as f:
+                            f.write(screenshot)
+                        
+                        # Store the relative path in screenshot_path
+                        screenshot_path = os.path.join('images', 'thumbnails', filename)
+                        screenshot_used = True
+            
+            # HTML içeriği alınamadıysa veya içerik çıkarılamazsa, ekran görüntüsünden kategorize et
+            if not html or not content or len(content.strip()) < 50:
+                print("HTML içeriği alınamadı veya içerik yetersiz, ekran görüntüsünden analiz yapılıyor...")
+                
+                if screenshot:
+                    # Convert binary screenshot to base64 for analysis
+                    screenshot_base64 = base64.b64encode(screenshot).decode('utf-8')
                     # Ekran görüntüsünü Gemini ile analiz et ve kategorize et
-                    # Bu fonksiyon artık doğrudan kategorize edilmiş JSON döndürüyor
                     category_json = analyze_screenshot_with_gemini(screenshot_base64, url)
                     screenshot_used = True
             
@@ -211,25 +275,56 @@ def analyze_url(request):
                 else:
                     result = category_json
                 
-                # Add screenshot_used flag to result
+                # Add screenshot_used flag and screenshot path to result
                 if isinstance(result, dict):
                     result['screenshot_used'] = screenshot_used
+                    if screenshot_path:
+                        result['screenshot_data'] = screenshot_path
+                    
+                    # Tags kısmını kontrol et
+                    if 'tags' in result:
+                        print(f"Result'ta tags var. Tags: {result['tags']}")
+                    else:
+                        print("Result'ta tags yok.")
                 
                 return JsonResponse(result)
             except json.JSONDecodeError:
-                # If JSON parsing fails, return the raw string
-                return JsonResponse({
-                    'raw_result': category_json,
-                    'screenshot_used': screenshot_used
-                })
-                
+                # If JSON parsing fails, try to use the corrected JSON from the categorization function
+                print("JSON ayrıştırma hatası: Hata düzeltme mekanizması deneniyor...")
+                try:
+                    from .reader.utils import ensure_correct_json_structure
+                    
+                    # Fallback JSON oluştur
+                    fallback_json = ensure_correct_json_structure({}, url)
+                    
+                    # Add screenshot_used flag and screenshot path to result
+                    fallback_json['screenshot_used'] = screenshot_used
+                    if screenshot_path:
+                        fallback_json['screenshot_data'] = screenshot_path
+                    
+                    # Tags kısmını kontrol et
+                    if 'tags' in fallback_json:
+                        print(f"Fallback JSON'da tags var. Tags: {fallback_json['tags']}")
+                    else:
+                        print("Fallback JSON'da tags yok. Boş dizi ekleniyor.")
+                        fallback_json['tags'] = []
+                    
+                    print(f"Düzeltilmiş fallback JSON: {fallback_json}")
+                    return JsonResponse(fallback_json)
+                except Exception as fallback_error:
+                    print(f"Fallback JSON hatası: {fallback_error}")
+                    # If everything fails, return the raw string
+                    return JsonResponse({
+                        'raw_result': category_json,
+                        'screenshot_used': screenshot_used,
+                        'screenshot_data': screenshot_path
+                    })
+            
         except Exception as e:
-            print(f"Hata: {e}")
-            import traceback
-            print(traceback.format_exc())
+            print(f"Hata: {str(e)}")
             return JsonResponse({'error': str(e)}, status=500)
     
-    return JsonResponse({'error': 'Sadece POST istekleri kabul edilir'}, status=405)
+    return JsonResponse({'error': 'Geçersiz istek'}, status=400)
 
 @csrf_protect
 @login_required(login_url='tagwiseapp:login')
@@ -245,6 +340,8 @@ def save_bookmark(request):
             main_categories = data.get('main_categories', [])
             subcategories = data.get('subcategories', [])
             tags = data.get('tags', [])
+            screenshot_data = data.get('screenshot_data')
+            custom_screenshot = data.get('custom_screenshot')  # Base64 encoded custom screenshot
             
             # Backward compatibility for old format
             if 'main_category' in data and not main_categories:
@@ -254,12 +351,31 @@ def save_bookmark(request):
             if not url or not title or not main_categories:
                 return JsonResponse({'error': 'URL, title, and at least one main category are required'}, status=400)
             
+            # Process custom screenshot if provided
+            if custom_screenshot and screenshot_data:
+                try:
+                    # Convert base64 to binary
+                    screenshot_binary = base64.b64decode(custom_screenshot)
+                    
+                    # Save to file system
+                    thumbnail_path = os.path.join('static', 'images', 'thumbnails', os.path.basename(screenshot_data))
+                    
+                    with open(thumbnail_path, 'wb') as f:
+                        f.write(screenshot_binary)
+                    
+                    # Update screenshot_data to point to the new file
+                    screenshot_data = os.path.join('images', 'thumbnails', os.path.basename(screenshot_data))
+                except Exception as e:
+                    print(f"Error processing custom screenshot: {str(e)}")
+                    # Continue without the custom screenshot if it fails
+            
             # Create the bookmark
             bookmark = Bookmark.objects.create(
                 url=url,
                 title=title,
                 description=description,
-                user=request.user
+                user=request.user,
+                screenshot_data=screenshot_data
             )
             
             # Kullanılan ana kategorileri ve alt kategorileri takip et
@@ -584,12 +700,19 @@ def api_tagged_bookmarks(request):
         # Prepare bookmark data
         bookmark_data = []
         for bookmark in bookmarks:
+            # Determine thumbnail - use screenshot if available, otherwise placeholder
+            thumbnail = '/static/images/placeholder.jpg'
+            has_screenshot = False
+            if bookmark.screenshot_data:
+                has_screenshot = True
+                
             bookmark_data.append({
                 'id': bookmark.id,
                 'url': bookmark.url,
                 'title': bookmark.title,
                 'description': bookmark.description,
-                'thumbnail': '/static/images/placeholder.jpg',  # Replace with actual thumbnail if available
+                'thumbnail': thumbnail,
+                'has_screenshot': has_screenshot,
                 'created_at': bookmark.created_at.isoformat(),
                 'tags': list(bookmark.tags.values_list('name', flat=True))
             })
@@ -622,6 +745,8 @@ def update_bookmark(request):
             main_categories = data.get('main_categories', [])
             subcategories = data.get('subcategories', [])
             tags = data.get('tags', [])
+            screenshot_data = data.get('screenshot_data')
+            custom_screenshot = data.get('custom_screenshot')  # Base64 encoded custom screenshot
             
             # Validate required fields
             if not bookmark_id or not title or not main_categories:
@@ -633,9 +758,32 @@ def update_bookmark(request):
             except Bookmark.DoesNotExist:
                 return JsonResponse({'error': 'Bookmark not found'}, status=404)
             
+            # Process custom screenshot if provided
+            if custom_screenshot and screenshot_data:
+                try:
+                    # Convert base64 to binary
+                    screenshot_binary = base64.b64decode(custom_screenshot)
+                    
+                    # Save to file system
+                    thumbnail_path = os.path.join('static', 'images', 'thumbnails', os.path.basename(screenshot_data))
+                    
+                    with open(thumbnail_path, 'wb') as f:
+                        f.write(screenshot_binary)
+                    
+                    # Update screenshot_data to point to the new file
+                    screenshot_data = os.path.join('images', 'thumbnails', os.path.basename(screenshot_data))
+                except Exception as e:
+                    print(f"Error processing custom screenshot: {str(e)}")
+                    # Continue without the custom screenshot if it fails
+            
             # Update basic fields
             bookmark.title = title
             bookmark.description = description
+            
+            # Only update screenshot_data if provided
+            if screenshot_data:
+                bookmark.screenshot_data = screenshot_data
+                
             bookmark.save()
             
             # Kullanılan ana kategorileri ve alt kategorileri takip et
@@ -958,3 +1106,287 @@ def remove_bookmark_from_collection(request):
             return JsonResponse({'error': str(e)}, status=500)
     
     return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
+
+# Login Gerektiren Servisler
+@login_required(login_url='tagwiseapp:login')
+def profile_settings(request):
+    """Kullanıcı profil ayarları sayfasını gösterir."""
+    success_message = request.session.pop('success_message', None)
+    error_message = request.session.pop('error_message', None)
+    
+    context = {
+        'success_message': success_message,
+        'error_message': error_message
+    }
+    
+    return render(request, 'settings/profile.html', context)
+
+@login_required(login_url='tagwiseapp:login')
+def update_profile_photo(request):
+    """Kullanıcı profil fotoğrafını günceller."""
+    if request.method == 'POST':
+        try:
+            # Base64 formatında gelen profil fotoğrafını al
+            base64_image = request.POST.get('profile_photo')
+            
+            if not base64_image:
+                request.session['error_message'] = 'Lütfen bir profil fotoğrafı seçin.'
+                return redirect('tagwiseapp:profile_settings')
+            
+            # Make sure user has a profile
+            if not hasattr(request.user, 'profile'):
+                Profile.objects.create(user=request.user)
+                print(f"Yeni profil oluşturuldu - {request.user.username}")
+            
+            # Delete old photo if exists
+            if request.user.profile.profile_photo:
+                try:
+                    old_photo_path = request.user.profile.profile_photo.path
+                    if os.path.exists(old_photo_path):
+                        os.remove(old_photo_path)
+                        print(f"Eski profil fotoğrafı silindi: {old_photo_path}")
+                except Exception as e:
+                    print(f"Eski fotoğraf silinirken hata: {str(e)}")
+            
+            # Base64 formatındaki görüntüyü işle
+            # Format: "data:image/jpeg;base64,/9j/4AAQSkZJRgABA..."
+            if ',' in base64_image:
+                format, imgstr = base64_image.split(';base64,')
+                ext = format.split('/')[-1]
+                data = ContentFile(base64.b64decode(imgstr))
+                
+                # Dosya adını oluştur
+                filename = f'profile_{request.user.username}_{int(time.time())}.{ext}'
+                
+                # Profil fotoğrafını kaydet
+                request.user.profile.profile_photo.save(filename, data, save=True)
+                print(f"Yeni profil fotoğrafı kaydedildi: {request.user.profile.profile_photo.url}")
+                
+                request.session['success_message'] = 'Profil fotoğrafınız başarıyla güncellendi.'
+            else:
+                request.session['error_message'] = 'Geçersiz görüntü formatı.'
+                
+            return redirect('tagwiseapp:profile_settings')
+        except Exception as e:
+            import traceback
+            print(f"Profil fotoğrafı güncellenirken hata: {str(e)}")
+            print(traceback.format_exc())
+            request.session['error_message'] = f'Profil fotoğrafı güncellenirken bir hata oluştu: {str(e)}'
+            return redirect('tagwiseapp:profile_settings')
+    
+    return redirect('tagwiseapp:profile_settings')
+
+@login_required(login_url='tagwiseapp:login')
+def update_profile(request):
+    """Kullanıcı profil bilgilerini günceller."""
+    if request.method == 'POST':
+        try:
+            email = request.POST.get('email')
+            name = request.POST.get('name').strip()
+            
+            if not email:
+                request.session['error_message'] = 'E-posta adresi gereklidir.'
+                return redirect('tagwiseapp:profile_settings')
+            
+            # E-posta adresini güncelle
+            request.user.email = email
+            
+            # Ad Soyad'ı güncelle
+            if name:
+                # Ad ve soyadı ayır
+                name_parts = name.split(' ', 1)
+                request.user.first_name = name_parts[0]
+                request.user.last_name = name_parts[1] if len(name_parts) > 1 else ''
+            
+            request.user.save()
+            
+            request.session['success_message'] = 'Profil bilgileriniz başarıyla güncellendi.'
+            return redirect('tagwiseapp:profile_settings')
+        except Exception as e:
+            request.session['error_message'] = f'Profil bilgileri güncellenirken bir hata oluştu: {str(e)}'
+            return redirect('tagwiseapp:profile_settings')
+    
+    return redirect('tagwiseapp:profile_settings')
+
+@login_required(login_url='tagwiseapp:login')
+def change_password(request):
+    """Kullanıcı şifresini değiştirir."""
+    if request.method == 'POST':
+        try:
+            current_password = request.POST.get('current_password')
+            new_password = request.POST.get('new_password')
+            confirm_password = request.POST.get('confirm_password')
+            
+            # Şifreleri kontrol et
+            if not current_password or not new_password or not confirm_password:
+                request.session['error_message'] = 'Tüm alanlar doldurulmalıdır.'
+                return redirect('tagwiseapp:profile_settings')
+            
+            if new_password != confirm_password:
+                request.session['error_message'] = 'Yeni şifreler eşleşmiyor.'
+                return redirect('tagwiseapp:profile_settings')
+            
+            # Mevcut şifreyi doğrula
+            if not request.user.check_password(current_password):
+                request.session['error_message'] = 'Mevcut şifre yanlış.'
+                return redirect('tagwiseapp:profile_settings')
+            
+            # Yeni şifreyi ayarla
+            request.user.set_password(new_password)
+            request.user.save()
+            
+            # Kullanıcıyı yeniden giriş yaptır
+            user = authenticate(username=request.user.username, password=new_password)
+            login(request, user)
+            
+            request.session['success_message'] = 'Şifreniz başarıyla değiştirildi.'
+            return redirect('tagwiseapp:profile_settings')
+        except Exception as e:
+            request.session['error_message'] = f'Şifre değiştirilirken bir hata oluştu: {str(e)}'
+            return redirect('tagwiseapp:profile_settings')
+    
+    return redirect('tagwiseapp:profile_settings')
+
+@login_required(login_url='tagwiseapp:login')
+def update_notifications(request):
+    """Kullanıcı bildirim tercihlerini günceller."""
+    if request.method == 'POST':
+        try:
+            email_notifications = 'email_notifications' in request.POST
+            new_features = 'new_features' in request.POST
+            
+            # Kullanıcının profil modeli yoksa oluştur
+            if not hasattr(request.user, 'profile'):
+                Profile.objects.create(user=request.user)
+            
+            # Bildirim tercihlerini güncelle
+            request.user.profile.email_notifications = email_notifications
+            request.user.profile.new_features = new_features
+            request.user.profile.save()
+            
+            request.session['success_message'] = 'Bildirim tercihleriniz başarıyla güncellendi.'
+            return redirect('tagwiseapp:profile_settings')
+        except Exception as e:
+            request.session['error_message'] = f'Bildirim tercihleri güncellenirken bir hata oluştu: {str(e)}'
+            return redirect('tagwiseapp:profile_settings')
+    
+    return redirect('tagwiseapp:profile_settings')
+
+@login_required(login_url='tagwiseapp:login')
+def search_bookmarks(request):
+    query = request.GET.get('query', '')
+    filter_title = request.GET.get('filter_title', 'on')
+    filter_url = request.GET.get('filter_url', 'on')
+    filter_tags = request.GET.get('filter_tags', 'on')
+    
+    if not query:
+        return redirect('tagwiseapp:index')
+    
+    # Get bookmarks for the logged-in user
+    bookmarks = Bookmark.objects.filter(user=request.user)
+    
+    # Apply filters
+    filter_conditions = Q()
+    if filter_title == 'on':
+        filter_conditions |= Q(title__icontains=query)
+    if filter_url == 'on':
+        filter_conditions |= Q(url__icontains=query)
+    if filter_tags == 'on':
+        filter_conditions |= Q(tags__name__icontains=query)
+    
+    bookmarks = bookmarks.filter(filter_conditions).distinct()
+    
+    # Get main categories for filter dropdown
+    main_categories = Category.objects.filter(parent=None)
+    
+    context = {
+        'bookmarks': bookmarks,
+        'main_categories': main_categories,
+        'search_query': query,
+        'is_search': True,
+        'filter_title': filter_title,
+        'filter_url': filter_url,
+        'filter_tags': filter_tags,
+    }
+    
+    return render(request, 'home/main.html', context)
+
+@login_required(login_url='tagwiseapp:login')
+def search_categories(request):
+    query = request.GET.get('query', '')
+    
+    if not query:
+        return redirect('tagwiseapp:categories')
+    
+    # Search in main categories
+    main_categories = Category.objects.filter(
+        Q(name__icontains=query),
+        parent=None
+    )
+    
+    # Add bookmark count and icon to categories
+    for category in main_categories:
+        category.bookmark_count = Bookmark.objects.filter(main_categories=category, user=request.user).count()
+        category.icon_name = 'category'  # Default icon
+        category.color = '#2196F3'  # Default color
+    
+    # Get recent categories for adding to search results
+    recent_categories = Category.objects.filter(
+        parent=None,
+        main_bookmarks__user=request.user
+    ).annotate(
+        bookmark_count=Count('main_bookmarks', filter=Q(main_bookmarks__user=request.user))
+    ).order_by('-main_bookmarks__created_at')[:5]
+    
+    # Add icon and color to recent categories
+    for category in recent_categories:
+        category.icon_name = 'category'  # Default icon
+        category.color = '#2196F3'  # Default color
+    
+    context = {
+        'main_categories': main_categories,
+        'recent_categories': recent_categories,
+        'search_query': query,
+        'is_search': True
+    }
+    
+    return render(request, 'categories/search_results.html', context)
+
+@login_required(login_url='tagwiseapp:login')
+def search_tags(request):
+    query = request.GET.get('query', '')
+    
+    if not query:
+        return redirect('tagwiseapp:tags')
+    
+    # Search in tags
+    tags = Tag.objects.filter(name__icontains=query)
+    
+    # Get bookmark count for each tag
+    for tag in tags:
+        tag.bookmark_count = Bookmark.objects.filter(tags=tag, user=request.user).count()
+    
+    # Group tags by first letter
+    grouped_tags = {}
+    for tag in tags:
+        first_letter = tag.name[0].upper()
+        if first_letter not in grouped_tags:
+            grouped_tags[first_letter] = []
+        grouped_tags[first_letter].append(tag)
+    
+    # Sort the groups by letter
+    grouped_tags = dict(sorted(grouped_tags.items()))
+    
+    # Get recent tags
+    recent_tags = Tag.objects.filter(bookmark__user=request.user).annotate(
+        bookmark_count=Count('bookmark', filter=Q(bookmark__user=request.user))
+    ).order_by('-bookmark__created_at')[:10]
+    
+    context = {
+        'grouped_tags': grouped_tags,
+        'recent_tags': recent_tags,
+        'search_query': query,
+        'is_search': True
+    }
+    
+    return render(request, 'tags/search_results.html', context)

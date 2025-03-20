@@ -7,6 +7,19 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('register/', views.register_view, name='register'),
     path('logout/', views.logout_view, name='logout'),
+    
+    # Arama URL'leri
+    path('search/bookmarks/', views.search_bookmarks, name='search_bookmarks'),
+    path('search/categories/', views.search_categories, name='search_categories'),
+    path('search/tags/', views.search_tags, name='search_tags'),
+    
+    # Profil Ayarları URL'leri
+    path('settings/profile/', views.profile_settings, name='profile_settings'),
+    path('settings/profile/update/', views.update_profile, name='update_profile'),
+    path('settings/profile/photo/update/', views.update_profile_photo, name='update_profile_photo'),
+    path('settings/password/change/', views.change_password, name='change_password'),
+    path('settings/notifications/update/', views.update_notifications, name='update_notifications'),
+    
     path('categories/', views.categories, name="categories"),
     path('collections/', views.collections, name='collections'),
     path('collections/<int:collection_id>/', views.collection_detail, name='collection_detail'),

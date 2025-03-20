@@ -1,0 +1,23 @@
+Aşağıdaki ekran görüntüsünü analiz et ve kategorize et. Yanıtını JSON formatında ver.
+
+Şu alanları içermelidir:
+- title: Sayfanın başlığı
+- description: Sayfanın kısa açıklaması (200 karakterden az)
+- main_category: Ana kategori (tek bir kategori)
+- subcategory: Alt kategori (ana kategoriye bağlı, tek bir alt kategori)
+- tags: İlgili etiketler (en fazla 5 etiket)
+
+Mevcut kategorileri ve etiketleri mümkün olduğunca kullan, ancak gerekirse yeni öneriler de yapabilirsin.
+
+Yanıtını SADECE aşağıdaki formatta ver:
+```json
+{
+  "title": "Sayfanın başlığı",
+  "description": "Sayfanın kısa açıklaması",
+  "main_category": "Ana kategori",
+  "subcategory": "Alt kategori",
+  "tags": ["Etiket1", "Etiket2", "Etiket3"]
+}
+```
+
+Lütfen tüm alanları doldur ve boş bırakma. Eğer bir alan için uygun değer bulamazsan, en mantıklı tahmini yap. Görüntüdeki metinleri, başlıkları ve içeriği dikkatlice analiz et. Özellikle main_category ve subcategory alanlarını mutlaka doldur. 

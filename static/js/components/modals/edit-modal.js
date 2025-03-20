@@ -105,16 +105,49 @@ const EditModal = {
             categoryGroupsList.innerHTML = '';
             
             // Kategori-alt kategori ilişkilerini doğru şekilde göster
-            // Her ana kategori için bir alt kategori göster (ilk alt kategoriyi kullan)
             if (mainCategories.length > 0 && subcategories.length > 0) {
-                // Her ana kategori için bir alt kategori göster
-                for (let i = 0; i < mainCategories.length; i++) {
-                    const mainCategory = mainCategories[i];
-                    // Alt kategori sayısı kadar döngü yapma, sadece bir tane göster
-                    // Eğer alt kategori sayısı ana kategori sayısından az ise, son alt kategoriyi kullan
-                    const subcategoryIndex = Math.min(i, subcategories.length - 1);
-                    const subcategory = subcategories[subcategoryIndex];
-                    this.addCategoryGroup(mainCategory, subcategory, categoryGroupsList);
+                // Önce her ana kategori için alt kategorileri belirle
+                const categorySubcategoryMap = {};
+                
+                // Backend'den gelen kategori-alt kategori ilişkilerini kullan
+                // Eğer bu bilgi yoksa, mevcut alt kategorileri tüm ana kategorilere dağıt
+                mainCategories.forEach(mainCategory => {
+                    categorySubcategoryMap[mainCategory] = [];
+                });
+                
+                // Her alt kategori için, ilişkili olduğu ana kategorileri bul
+                subcategories.forEach(subcategory => {
+                    let added = false;
+                    
+                    // Eğer bir alt kategori hiçbir ana kategoriye eklenmezse
+                    // ilk ana kategoriye ekle (geriye dönük uyumluluk)
+                    if (!added && mainCategories.length > 0) {
+                        categorySubcategoryMap[mainCategories[0]].push(subcategory);
+                    }
+                });
+                
+                // Her ana kategori için ilişkili alt kategorileri göster
+                mainCategories.forEach(mainCategory => {
+                    // Eğer bu ana kategoriye ait alt kategori yoksa, ana kategoriyi tek başına göster
+                    if (categorySubcategoryMap[mainCategory].length === 0) {
+                        this.addCategoryGroup(mainCategory, '', categoryGroupsList);
+                    } else {
+                        // Bu ana kategoriye ait tüm alt kategorileri göster
+                        categorySubcategoryMap[mainCategory].forEach(subcategory => {
+                            this.addCategoryGroup(mainCategory, subcategory, categoryGroupsList);
+                        });
+                    }
+                });
+                
+                // Eğer hiçbir ana kategoriye atanmamış alt kategoriler varsa, bunları da göster
+                const assignedSubcategories = Object.values(categorySubcategoryMap).flat();
+                const unassignedSubcategories = subcategories.filter(sub => !assignedSubcategories.includes(sub));
+                
+                if (unassignedSubcategories.length > 0 && mainCategories.length > 0) {
+                    // Atanmamış alt kategorileri ilk ana kategoriye ekle
+                    unassignedSubcategories.forEach(subcategory => {
+                        this.addCategoryGroup(mainCategories[0], subcategory, categoryGroupsList);
+                    });
                 }
             } 
             // Eğer alt kategori yoksa, sadece ana kategorileri göster

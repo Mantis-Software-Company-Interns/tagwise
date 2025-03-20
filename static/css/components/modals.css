@@ -299,4 +299,122 @@
 
 .remove-btn:hover {
     background-color: #eee;
+}
+
+/* Screenshot Preview */
+.screenshot-preview {
+    margin: 20px 0;
+    background: var(--secondary-bg);
+    border-radius: 8px;
+    padding: 15px;
+    border: 1px solid var(--border-color);
+}
+
+.screenshot-preview h4 {
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.screenshot-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+#screenshotStatus, #editScreenshotStatus {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--success-color, #4caf50);
+    font-size: 14px;
+}
+
+.custom-file-upload {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    background-color: var(--primary-color, #2196F3);
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.custom-file-upload:hover {
+    background-color: var(--primary-color-dark, #1976D2);
+}
+
+.screenshot-container {
+    overflow: hidden;
+    max-height: 300px;
+    border-radius: 4px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.website-screenshot {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover;
+}
+
+/* Dark mode */
+.dark-mode .screenshot-preview {
+    background: var(--dark-secondary-bg);
+    border-color: var(--dark-border-color);
+}
+
+.dark-mode .screenshot-preview h4 {
+    color: var(--dark-text-color);
+}
+
+.dark-mode .custom-file-upload {
+    background-color: var(--dark-primary-color, #64b5f6);
+}
+
+.dark-mode .custom-file-upload:hover {
+    background-color: var(--dark-primary-color-dark, #42a5f5);
+}
+
+/* Detay modalında önizleme resmi */
+.details-modal .bookmark-preview {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.details-modal .preview-image {
+    max-width: 100%;
+    max-height: 300px;
+    object-fit: contain;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.details-modal .visit-link {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 16px;
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.details-modal .visit-link:hover {
+    background-color: var(--primary-color-dark);
 } 

@@ -156,26 +156,33 @@ function setupDetailsModal() {
 
 function updateModalContent(card) {
     const modal = document.getElementById('detailsModal');
+    const bookmarkId = card.dataset.id;
     
-    // Ana kategoriyi al
-    const mainCategory = card.dataset.mainCategory;
+    // Bookmark ID'sini image'ın data-id özelliğine kaydet
+    const previewImage = modal.querySelector('.preview-image');
+    previewImage.dataset.id = bookmarkId;
     
-    // Ana kategori linkini güncelle
-    const mainCategoryLink = modal.querySelector('.main-category');
-    mainCategoryLink.textContent = mainCategory;
-    mainCategoryLink.href = `/categories/?category=${encodeURIComponent(mainCategory)}`;
+    // Kategori ve alt kategorileri al
+    const mainCategories = card.getAttribute('data-main-categories');
+    
+    // Kategori container'ı güncelle
+    const categoriesContainer = modal.querySelector('.bookmark-categories');
+    categoriesContainer.innerHTML = mainCategories.split(',').map(cat => 
+        `<a href="{% url 'tagwiseapp:categories' %}?category=${encodeURIComponent(cat)}" class="category-tag">${cat}</a>`
+    ).join('');
     
     // Alt kategorileri al
-    const subcategories = Array.from(card.querySelectorAll('.subcategory-tab')).map(cat => ({
-        name: cat.textContent,
-        url: cat.href
-    }));
+    const subcategoriesContainer = modal.querySelector('.bookmark-subcategories');
+    const subcategories = Array.from(card.querySelectorAll('.subcategory-tab'));
+    subcategoriesContainer.innerHTML = '';
     
-    // Alt kategorileri güncelle
-    const subcategoriesContainer = modal.querySelector('.subcategories');
-    subcategoriesContainer.innerHTML = subcategories.map(sub => 
-        `<a href="${sub.url}" class="subcategory-tab">${sub.name}</a>`
-    ).join('');
+    subcategories.forEach(sub => {
+        const link = document.createElement('a');
+        link.href = sub.href;
+        link.className = 'subcategory-tag';
+        link.textContent = sub.textContent;
+        subcategoriesContainer.appendChild(link);
+    });
     
     // Genel bilgileri güncelle
     modal.querySelector('.bookmark-date').textContent = card.querySelector('.date').textContent;
@@ -185,22 +192,29 @@ function updateModalContent(card) {
     modal.querySelector('.bookmark-description').textContent = card.querySelector('.description').textContent;
     
     // Tag'leri güncelle
-    const tags = Array.from(card.querySelectorAll('.tag')).map(tag => ({
-        name: tag.textContent,
-        url: tag.href
-    }));
-    
     const tagsContainer = modal.querySelector('.bookmark-tags');
-    tagsContainer.innerHTML = tags.map(tag => 
-        `<a href="${tag.url}" class="tag">${tag.name}</a>`
-    ).join('');
+    const tags = Array.from(card.querySelectorAll('.tag'));
+    tagsContainer.innerHTML = '';
+    
+    tags.forEach(tag => {
+        const link = document.createElement('a');
+        link.href = tag.href;
+        link.className = 'tag';
+        link.textContent = tag.textContent;
+        tagsContainer.appendChild(link);
+    });
     
     // Görsel ve link güncelle
-    const previewImage = modal.querySelector('.preview-image');
     const visitLink = modal.querySelector('.visit-link');
     
+    // Önizleme resmini ayarla - thumbnail'deki kaynak URL'yi kullan
     previewImage.src = card.querySelector('.thumbnail').src;
-    visitLink.href = card.querySelector('.thumbnail-link').href;
+    
+    // Ziyaret linkini ayarla
+    const linkElem = card.querySelector('.title-link');
+    if (linkElem) {
+        visitLink.href = linkElem.href;
+    }
 }
 
 // Edit işlemleri
@@ -211,8 +225,8 @@ function setupEditFunctionality() {
     const closeBtn = editModal.querySelector('.close-btn');
     const cancelBtn = editModal.querySelector('.cancel-btn');
     const saveBtn = editModal.querySelector('.save-btn');
-    const addSubcategoryBtn = editModal.querySelector('.add-subcategory-btn');
-    const addTagBtn = editModal.querySelector('.add-tag-btn');
+    const editScreenshotInput = document.getElementById('editScreenshotInput');
+    const editScreenshotPreview = document.getElementById('editScreenshotPreview');
     
     // Edit butonlarına tıklama
     document.querySelectorAll('.edit-bookmark').forEach(item => {
@@ -229,29 +243,52 @@ function setupEditFunctionality() {
         });
     });
 
-    // Alt kategori ekleme
-    addSubcategoryBtn.addEventListener('click', () => {
-        const input = document.getElementById('subcategoryInput');
-        const subcategory = input.value.trim();
-        
-        if (subcategory) {
-            const subcategoriesList = document.getElementById('subcategoriesList');
-            subcategoriesList.insertAdjacentHTML('beforeend', createSubcategoryItem(subcategory));
-            input.value = '';
-        }
-    });
-
-    // Tag ekleme
-    addTagBtn.addEventListener('click', () => {
-        const input = document.getElementById('tagInput');
-        const tag = input.value.trim();
-        
-        if (tag) {
-            const tagsList = document.getElementById('tagsList');
-            tagsList.insertAdjacentHTML('beforeend', createTagItem(tag));
-            input.value = '';
-        }
-    });
+    // Handle screenshot upload
+    if (editScreenshotInput && editScreenshotPreview) {
+        editScreenshotInput.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                // Check if file is an image
+                if (!file.type.match('image.*')) {
+                    alert('Please select an image file');
+                    return;
+                }
+                
+                // Check if file size is less than 5MB
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Image size should be less than 5MB');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Display the image
+                    editScreenshotPreview.src = e.target.result;
+                    
+                    // Update status message
+                    const statusEl = document.getElementById('editScreenshotStatus');
+                    if (statusEl) {
+                        statusEl.innerHTML = `
+                            <i class="material-icons" style="color: #ff9800;">image</i>
+                            <span>Custom screenshot selected</span>
+                        `;
+                    }
+                    
+                    // Store the base64 image data
+                    const editScreenshotData = document.getElementById('editScreenshotData');
+                    if (editScreenshotData) {
+                        // Extract the base64 data without the prefix
+                        const base64data = e.target.result.split(',')[1];
+                        // Store the file path prefix and filename for backend processing
+                        editScreenshotData.value = `custom_${Date.now()}.png`;
+                        // Store the actual data in a data attribute for submission
+                        editScreenshotData.dataset.content = base64data;
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
 
     // Değişiklikleri kaydetme
     saveBtn.addEventListener('click', saveBookmarkChanges);
@@ -262,60 +299,154 @@ function openEditModal(card) {
     const bookmarkId = card.dataset.id;
     const title = card.querySelector('.title').textContent;
     const description = card.querySelector('.description').textContent;
-    const mainCategory = card.dataset.mainCategory;
-    const subcategories = Array.from(card.querySelectorAll('.subcategory-tab')).map(cat => cat.textContent);
-    const tags = Array.from(card.querySelectorAll('.tag')).map(tag => tag.textContent);
-
+    
+    // Screenshot elements
+    const editScreenshotData = document.getElementById('editScreenshotData');
+    const editScreenshotPreview = document.getElementById('editScreenshotPreview');
+    const editScreenshotStatus = document.getElementById('editScreenshotStatus');
+    
     // Form alanlarını doldur
     modal.querySelector('#editBookmarkId').value = bookmarkId;
     modal.querySelector('#editTitle').value = title;
     modal.querySelector('#editDescription').value = description;
     
-    // Ana kategoriyi seç
-    const mainCategorySelect = modal.querySelector('#mainCategory');
-    for (let i = 0; i < mainCategorySelect.options.length; i++) {
-        if (mainCategorySelect.options[i].value === mainCategory) {
-            mainCategorySelect.selectedIndex = i;
-            break;
+    // Screenshot'ı ayarla
+    if (editScreenshotPreview && editScreenshotData) {
+        const thumbnail = card.querySelector('.thumbnail');
+        if (thumbnail && thumbnail.src) {
+            editScreenshotPreview.src = thumbnail.src;
+            // Extract the path from src
+            const srcPath = thumbnail.src.split('/static/')[1];
+            if (srcPath) {
+                editScreenshotData.value = srcPath;
+                // Clear any previous custom data
+                editScreenshotData.dataset.content = '';
+                
+                // Update status message
+                if (editScreenshotStatus) {
+                    editScreenshotStatus.innerHTML = `
+                        <i class="material-icons" style="color: #2196f3;">image</i>
+                        <span>Current screenshot</span>
+                    `;
+                }
+            } else {
+                editScreenshotPreview.src = '/static/images/default-thumbnail.png';
+                editScreenshotData.value = '';
+                
+                // Update status message
+                if (editScreenshotStatus) {
+                    editScreenshotStatus.innerHTML = `
+                        <i class="material-icons" style="color: #f44336;">error_outline</i>
+                        <span>No screenshot available</span>
+                    `;
+                }
+            }
+        } else {
+            editScreenshotPreview.src = '/static/images/default-thumbnail.png';
+            editScreenshotData.value = '';
+            
+            // Update status message
+            if (editScreenshotStatus) {
+                editScreenshotStatus.innerHTML = `
+                    <i class="material-icons" style="color: #f44336;">error_outline</i>
+                    <span>No screenshot available</span>
+                `;
+            }
         }
     }
-
-    // Alt kategorileri ekle
-    const subcategoriesList = modal.querySelector('#subcategoriesList');
-    subcategoriesList.innerHTML = subcategories.map(subcategory => createSubcategoryItem(subcategory)).join('');
-
+    
+    const mainCategories = (card.dataset.mainCategories || '').split(',').filter(cat => cat.trim());
+    const subcategories = Array.from(card.querySelectorAll('.subcategory-tab')).map(sub => sub.textContent);
+    
+    // Kategori gruplarını ekle
+    const editCategoryGroupsList = modal.querySelector('#editCategoryGroupsList');
+    editCategoryGroupsList.innerHTML = '';
+    
+    if (mainCategories.length > 0 && subcategories.length > 0) {
+        // Her ana kategori için tüm alt kategorileri göster
+        mainCategories.forEach(mainCategory => {
+            // Bu ana kategoriye ait alt kategorileri bul
+            const relatedSubcategories = subcategories.filter(sub => {
+                // Burada alt kategorinin ana kategoriye ait olup olmadığını kontrol etmek gerekir
+                // Basit bir çözüm olarak tüm alt kategorileri gösteriyoruz
+                return true;
+            });
+            
+            if (relatedSubcategories.length === 0) {
+                // Eğer ilişkili alt kategori yoksa, ana kategoriyi tek başına göster
+                addCategoryGroupToEdit(mainCategory, '', editCategoryGroupsList);
+            } else {
+                // Bu ana kategoriye ait tüm alt kategorileri göster
+                relatedSubcategories.forEach(subcategory => {
+                    addCategoryGroupToEdit(mainCategory, subcategory, editCategoryGroupsList);
+                });
+            }
+        });
+    } else if (mainCategories.length > 0) {
+        // Sadece ana kategorileri göster
+        mainCategories.forEach(mainCategory => {
+            addCategoryGroupToEdit(mainCategory, '', editCategoryGroupsList);
+        });
+    } else if (subcategories.length > 0) {
+        // Sadece alt kategorileri göster (varsayılan ana kategori ile)
+        subcategories.forEach(subcategory => {
+            addCategoryGroupToEdit('Uncategorized', subcategory, editCategoryGroupsList);
+        });
+    }
+    
     // Etiketleri ekle
     const tagsList = modal.querySelector('#tagsList');
-    tagsList.innerHTML = tags.map(tag => createTagItem(tag)).join('');
-
+    const tags = Array.from(card.querySelectorAll('.tag')).map(tag => tag.textContent);
+    tagsList.innerHTML = '';
+    
+    tags.forEach(tag => {
+        addTagToEdit(tag, tagsList);
+    });
+    
     // Modalı aç
     modal.classList.add('active');
 }
 
-function createSubcategoryItem(subcategory) {
-    return `
-        <div class="subcategory-item">
-            ${subcategory}
-            <button class="remove-btn" onclick="removeItem(this, 'subcategory')">
+function addCategoryGroupToEdit(mainCategory, subcategory, container) {
+    const groupDiv = document.createElement('div');
+    groupDiv.className = 'category-group';
+    
+    groupDiv.innerHTML = `
+        <div class="group-header">
+            <span class="main-category-label">${mainCategory}</span>
+            <span class="separator">›</span>
+            <span class="subcategory-label">${subcategory}</span>
+            <button class="remove-group-btn">
                 <i class="material-icons">close</i>
             </button>
         </div>
     `;
+    
+    // Remove button functionality
+    const removeBtn = groupDiv.querySelector('.remove-group-btn');
+    removeBtn.addEventListener('click', () => {
+        groupDiv.remove();
+    });
+    
+    container.appendChild(groupDiv);
 }
 
-function createTagItem(tag) {
-    return `
-        <div class="tag-item">
-            ${tag}
-            <button class="remove-btn" onclick="removeItem(this, 'tag')">
-                <i class="material-icons">close</i>
-            </button>
-        </div>
-    `;
-}
-
-function removeItem(button, type) {
-    button.closest(`.${type}-item`).remove();
+function addTagToEdit(tag, container) {
+    const tagSpan = document.createElement('span');
+    tagSpan.className = 'tag';
+    tagSpan.textContent = tag;
+    
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-tag-btn';
+    removeBtn.innerHTML = '<i class="material-icons">close</i>';
+    
+    // Remove button functionality
+    removeBtn.addEventListener('click', () => {
+        tagSpan.remove();
+    });
+    
+    tagSpan.appendChild(removeBtn);
+    container.appendChild(tagSpan);
 }
 
 function saveBookmarkChanges() {
@@ -323,13 +454,55 @@ function saveBookmarkChanges() {
     const bookmarkId = modal.querySelector('#editBookmarkId').value;
     const title = modal.querySelector('#editTitle').value;
     const description = modal.querySelector('#editDescription').value;
-    const mainCategory = modal.querySelector('#mainCategory').value;
-    const subcategories = Array.from(modal.querySelectorAll('.subcategory-item')).map(item => item.textContent.trim());
-    const tags = Array.from(modal.querySelectorAll('.tag-item')).map(item => item.textContent.trim());
-
-    // CSRF token'ı al
+    
+    // Get all category groups
+    const categoryGroups = Array.from(modal.querySelectorAll('.category-group'))
+        .map(group => ({
+            mainCategory: group.querySelector('.main-category-label').textContent,
+            subcategory: group.querySelector('.subcategory-label').textContent
+        }));
+    
+    // Extract main categories and subcategories
+    const mainCategories = [...new Set(categoryGroups.map(group => group.mainCategory))];
+    const subcategories = categoryGroups.map(group => group.subcategory);
+    
+    // Create category-subcategory map
+    const categorySubcategoryMap = {};
+    categoryGroups.forEach(group => {
+        if (!categorySubcategoryMap[group.mainCategory]) {
+            categorySubcategoryMap[group.mainCategory] = [];
+        }
+        categorySubcategoryMap[group.mainCategory].push(group.subcategory);
+    });
+    
+    // Get tags
+    const tags = Array.from(modal.querySelectorAll('.tags-list .tag'))
+        .map(tag => tag.childNodes[0].nodeValue.trim());
+    
+    // Get screenshot data
+    const editScreenshotData = document.getElementById('editScreenshotData');
+    let screenshotData = editScreenshotData ? editScreenshotData.value : null;
+    
+    // CSRF token al
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-
+    
+    // Prepare the data for API call
+    const bookmarkData = {
+        id: bookmarkId,
+        title: title,
+        description: description,
+        main_categories: mainCategories,
+        subcategories: subcategories,
+        category_subcategory_map: categorySubcategoryMap,
+        tags: tags,
+        screenshot_data: screenshotData
+    };
+    
+    // Add custom screenshot if available
+    if (editScreenshotData && editScreenshotData.dataset.content) {
+        bookmarkData.custom_screenshot = editScreenshotData.dataset.content;
+    }
+    
     // API çağrısı yap
     fetch('/api/update-bookmark/', {
         method: 'POST',
@@ -337,14 +510,7 @@ function saveBookmarkChanges() {
             'Content-Type': 'application/json',
             'X-CSRFToken': csrfToken
         },
-        body: JSON.stringify({
-            id: bookmarkId,
-            title: title,
-            description: description,
-            main_category: mainCategory,
-            subcategories: subcategories,
-            tags: tags
-        })
+        body: JSON.stringify(bookmarkData)
     })
     .then(response => {
         if (!response.ok) {

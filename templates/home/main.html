@@ -37,62 +37,77 @@
 {% endblock %}
 
 {% block content %}
-<div class="grid">
-    {% if bookmarks %}
-        {% for bookmark in bookmarks %}
-        <div class="grid-item bookmark-card" data-main-categories="{% for cat in bookmark.main_categories.all %}{{ cat.name }}{% if not forloop.last %},{% endif %}{% endfor %}" data-id="{{ bookmark.id }}">
-            <div class="card-header">
-                <button class="more-btn">
-                    <i class="material-icons">more_vert</i>
-                </button>
-                <div class="more-menu">
-                    <div class="menu-item edit-bookmark"><i class="material-icons">edit</i>Edit</div>
-                    <div class="menu-item"><i class="material-icons">star</i>Favorite</div>
-                    <div class="menu-item"><i class="material-icons">archive</i>Archive</div>
-                    <div class="menu-item"><i class="material-icons">local_offer</i>Edit Tags</div>
-                    <div class="menu-item delete"><i class="material-icons">delete</i>Delete</div>
-                </div>
-            </div>
-            <a href="{{ bookmark.url }}" target="_blank" class="thumbnail-link">
-                <div class="thumbnail-container">
-                    <img src="{% if bookmark.thumbnail %}{{ bookmark.thumbnail }}{% else %}{% static 'images/default-thumbnail.png' %}{% endif %}" alt="{{ bookmark.title }}" class="thumbnail">
-                    <div class="subcategory-container">
-                        {% for subcategory in bookmark.subcategories.all %}
-                        <a href="{% url 'tagwiseapp:topics' %}?subcategory={{ subcategory.name|urlencode }}" class="subcategory-tab">{{ subcategory.name }}</a>
-                        {% endfor %}
+<div class="main-container">
+    <div class="main-header">
+        {% if is_search %}
+        <h1>Arama Sonuçları: "{{ search_query }}"</h1>
+        {% else %}
+        <h1>My Bookmarks</h1>
+        {% endif %}
+        
+        
+
+    <div class="grid">
+        {% if bookmarks %}
+            {% for bookmark in bookmarks %}
+            <div class="grid-item bookmark-card" data-main-categories="{% for cat in bookmark.main_categories.all %}{{ cat.name }}{% if not forloop.last %},{% endif %}{% endfor %}" data-id="{{ bookmark.id }}">
+                <div class="card-header">
+                    <button class="more-btn">
+                        <i class="material-icons">more_vert</i>
+                    </button>
+                    <div class="more-menu">
+                        <div class="menu-item edit-bookmark"><i class="material-icons">edit</i>Edit</div>
+                        <div class="menu-item"><i class="material-icons">star</i>Favorite</div>
+                        <div class="menu-item"><i class="material-icons">archive</i>Archive</div>
+                        <div class="menu-item"><i class="material-icons">local_offer</i>Edit Tags</div>
+                        <div class="menu-item delete"><i class="material-icons">delete</i>Delete</div>
                     </div>
                 </div>
-            </a>
-            <div class="card-content">
-                <a href="{{ bookmark.url }}" target="_blank" class="title-link">
-                    <h3 class="title">{{ bookmark.title }}</h3>
+                <a href="{{ bookmark.url }}" target="_blank" class="thumbnail-link">
+                    <div class="thumbnail-container">
+                        {% if bookmark.screenshot_data %}
+                        <img src="{{ bookmark.screenshot_url }}" alt="{{ bookmark.title }}" class="thumbnail">
+                        {% else %}
+                        <img src="{% static 'images/default-thumbnail.png' %}" alt="{{ bookmark.title }}" class="thumbnail">
+                        {% endif %}
+                        <div class="subcategory-container">
+                            {% for subcategory in bookmark.subcategories.all %}
+                            <a href="{% url 'tagwiseapp:topics' %}?subcategory={{ subcategory.name|urlencode }}" class="subcategory-tab">{{ subcategory.name }}</a>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </a>
-                <p class="description">{{ bookmark.description }}</p>
-                <div class="tags">
-                    {% for tag in bookmark.tags.all %}
-                    <a href="{% url 'tagwiseapp:tagged_bookmarks' %}?tag={{ tag.name|urlencode }}" class="tag">{{ tag.name }}</a>
-                    {% endfor %}
-                </div>
-                <div class="card-footer">
-                    <button class="expand-btn">
-                        <i class="material-icons">info_outline</i>
-                    </button>
-                    <div class="date">{{ bookmark.created_at|date:"Y-m-d H:i" }}</div>
+                <div class="card-content">
+                    <a href="{{ bookmark.url }}" target="_blank" class="title-link">
+                        <h3 class="title">{{ bookmark.title }}</h3>
+                    </a>
+                    <p class="description">{{ bookmark.description }}</p>
+                    <div class="tags">
+                        {% for tag in bookmark.tags.all %}
+                        <a href="{% url 'tagwiseapp:tagged_bookmarks' %}?tag={{ tag.name|urlencode }}" class="tag">{{ tag.name }}</a>
+                        {% endfor %}
+                    </div>
+                    <div class="card-footer">
+                        <button class="expand-btn">
+                            <i class="material-icons">info_outline</i>
+                        </button>
+                        <div class="date">{{ bookmark.created_at|date:"Y-m-d H:i" }}</div>
+                    </div>
                 </div>
             </div>
-        </div>
-        {% endfor %}
-    {% else %}
-        <div class="empty-state">
-            <i class="material-icons">bookmark_border</i>
-            <h3>No bookmarks yet</h3>
-            <p>Start adding your favorite websites to organize and access them easily.</p>
-            <button class="add-url-btn">
-                <i class="material-icons">add_link</i>
-                <span>Add Your First URL</span>
-            </button>
-        </div>
-    {% endif %}
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="material-icons">bookmark_border</i>
+                <h3>No bookmarks yet</h3>
+                <p>Start adding your favorite websites to organize and access them easily.</p>
+                <button class="add-url-btn">
+                    <i class="material-icons">add_link</i>
+                    <span>Add Your First URL</span>
+                </button>
+            </div>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}
 
@@ -138,6 +153,7 @@
                 </div>
                 <!-- Gizli URL input alanı -->
                 <input type="hidden" id="reviewUrl">
+                <input type="hidden" id="reviewScreenshotData">
                 <div class="form-group">
                     <label for="reviewTitle">Title</label>
                     <input type="text" id="reviewTitle" placeholder="Enter title">
@@ -145,6 +161,26 @@
                 <div class="form-group">
                     <label for="reviewDescription">Description</label>
                     <textarea id="reviewDescription" rows="3" placeholder="Enter description"></textarea>
+                </div>
+                <!-- Screenshot Preview and Upload Section -->
+                <div class="form-group">
+                    <label>Screenshot</label>
+                    <div class="screenshot-preview">
+                        <div class="screenshot-actions">
+                            <div id="screenshotStatus">
+                                <i class="material-icons">check_circle</i>
+                                <span>Screenshot captured automatically</span>
+                            </div>
+                            <label for="customScreenshotInput" class="custom-file-upload">
+                                <i class="material-icons">file_upload</i>
+                                Change screenshot
+                            </label>
+                            <input type="file" id="customScreenshotInput" accept="image/*" style="display: none;">
+                        </div>
+                        <div class="screenshot-container">
+                            <img id="screenshotPreview" class="website-screenshot" src="" alt="Website screenshot">
+                        </div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Categories</label>
@@ -244,8 +280,12 @@
                 <div class="detail-section">
                     <h3>Preview</h3>
                     <div class="bookmark-preview">
-                        <img class="preview-image" alt="Preview">
-                        <a class="visit-link" target="_blank">
+                        {% if bookmark.screenshot_data %}
+                        <img src="{{ bookmark.screenshot_url }}" alt="{{ bookmark.title }}" class="preview-image">
+                        {% else %}
+                        <img src="{% static 'images/default-thumbnail.png' %}" alt="{{ bookmark.title }}" class="preview-image">
+                        {% endif %}
+                        <a href="{{ bookmark.url }}" target="_blank" class="visit-link">
                             <i class="material-icons">open_in_new</i>
                             Visit Website
                         </a>
@@ -267,6 +307,7 @@
         </div>
         <div class="modal-body">
             <input type="hidden" id="editBookmarkId">
+            <input type="hidden" id="editScreenshotData">
             <div class="form-group">
                 <label for="editTitle">Title</label>
                 <input type="text" id="editTitle" placeholder="Enter title">
@@ -274,6 +315,26 @@
             <div class="form-group">
                 <label for="editDescription">Description</label>
                 <textarea id="editDescription" rows="3" placeholder="Enter description"></textarea>
+            </div>
+            <!-- Screenshot Preview and Upload Section -->
+            <div class="form-group">
+                <label>Screenshot</label>
+                <div class="screenshot-preview">
+                    <div class="screenshot-actions">
+                        <div id="editScreenshotStatus">
+                            <i class="material-icons">image</i>
+                            <span>Current screenshot</span>
+                        </div>
+                        <label for="editScreenshotInput" class="custom-file-upload">
+                            <i class="material-icons">file_upload</i>
+                            Change screenshot
+                        </label>
+                        <input type="file" id="editScreenshotInput" accept="image/*" style="display: none;">
+                    </div>
+                    <div class="screenshot-container">
+                        <img id="editScreenshotPreview" class="website-screenshot" src="" alt="Website screenshot">
+                    </div>
+                </div>
             </div>
             <div class="form-group">
                 <label>Categories</label>

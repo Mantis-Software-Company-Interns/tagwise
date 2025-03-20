@@ -1,35 +1,267 @@
-{% extends 'base.html' %}
 {% load static %}
-
-{% block title %}Login - TagWise{% endblock %}
-
-{% block content %}
-<div class="auth-container">
-    <div class="auth-card">
-        <h2>Login to TagWise</h2>
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giriş Yap - TagWise</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2196F3;
+            --primary-color-dark: #1976D2;
+            --danger-color: #dc3545;
+            --text-color: #2c3e50;
+            --text-secondary: #64748b;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --border-color: rgba(0, 0, 0, 0.08);
+        }
         
-        {% if error %}
-        <div class="error-message">
-            {{ error }}
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+            background-color: #f5f7fa;
+            height: 100%;
+            color: var(--text-color);
+        }
+        
+        .login-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .login-sidebar {
+            width: 40%;
+            background-color: var(--primary-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            padding: 40px;
+        }
+        
+        .login-sidebar-content {
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .login-sidebar h1 {
+            font-size: 32px;
+            margin-bottom: 20px;
+        }
+        
+        .login-sidebar p {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        
+        .login-sidebar .features {
+            text-align: left;
+            margin-top: 40px;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .feature-item i {
+            margin-right: 15px;
+            font-size: 24px;
+        }
+        
+        .login-form-container {
+            width: 60%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+        
+        .login-form {
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .logo img {
+            height: 60px;
+        }
+        
+        .form-title {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 30px;
+            text-align: center;
+            color: var(--text-color);
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            font-size: 16px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+        
+        .form-group input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+        }
+        
+        .error-message {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .login-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 14px 20px;
+            width: 100%;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .login-btn:hover {
+            background-color: var(--primary-color-dark);
+        }
+        
+        .auth-links {
+            margin-top: 25px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+        
+        .auth-links a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .auth-links a:hover {
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 768px) {
+            .login-container {
+                flex-direction: column;
+            }
+            
+            .login-sidebar {
+                width: 100%;
+                padding: 30px;
+            }
+            
+            .login-form-container {
+                width: 100%;
+                padding: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-sidebar">
+            <div class="login-sidebar-content">
+                <h1>TagWise'a Hoş Geldiniz</h1>
+                <p>Tagwise, web içeriklerinizi kolayca organize etmenizi, etiketlemenizi ve yönetmenizi sağlayan güçlü bir araçtır.</p>
+                
+                <div class="features">
+                    <div class="feature-item">
+                        <i class="material-icons">bookmark</i>
+                        <div>
+                            <h3>Yer İşaretleri</h3>
+                            <p>Önemli web sayfalarınızı kategorize edin ve kolayca erişin.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-item">
+                        <i class="material-icons">local_offer</i>
+                        <div>
+                            <h3>Etiketleme</h3>
+                            <p>İçeriklerinizi etiketleyerek hızlı arama ve filtreleme yapın.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-item">
+                        <i class="material-icons">category</i>
+                        <div>
+                            <h3>Kategorilendirme</h3>
+                            <p>Düzenli bir bilgi yapısı oluşturun ve içeriklerinizi kategorize edin.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        {% endif %}
         
-        <form method="post" action="{% url 'tagwiseapp:login' %}">
-            {% csrf_token %}
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required>
+        <div class="login-form-container">
+            <div class="login-form">
+                <div class="logo">
+                    <img src="{% static 'images/TAGWISE.svg' %}" alt="TagWise Logo">
+                </div>
+                
+                <h2 class="form-title">Giriş Yap</h2>
+                
+                {% if error %}
+                <div class="error-message">
+                    {{ error }}
+                </div>
+                {% endif %}
+                
+                <form method="post" action="{% url 'tagwiseapp:login' %}">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="username">Kullanıcı Adı</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Şifre</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="login-btn">Giriş Yap</button>
+                </form>
+                
+                <div class="auth-links">
+                    <p>Hesabınız yok mu? <a href="{% url 'tagwiseapp:register' %}">Kayıt Ol</a></p>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            <button type="submit" class="auth-btn">Login</button>
-        </form>
-        
-        <div class="auth-links">
-            <p>Don't have an account? <a href="{% url 'tagwiseapp:register' %}">Register</a></p>
         </div>
     </div>
-</div>
-{% endblock %} 
+</body>
+</html> 

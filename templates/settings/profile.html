@@ -1,0 +1,757 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Profil Ayarları - TagWise{% endblock %}
+
+{% block extra_css %}
+<!-- Cropper.js CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+<style>
+    .settings-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .settings-header {
+        margin-bottom: 30px;
+    }
+    
+    .settings-header h1 {
+        font-size: 28px;
+        color: var(--text-color);
+        margin-bottom: 10px;
+    }
+    
+    .settings-description {
+        color: var(--text-secondary);
+        font-size: 16px;
+    }
+    
+    .settings-tabs {
+        display: flex;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 30px;
+    }
+    
+    .settings-tab {
+        padding: 15px 25px;
+        font-weight: 500;
+        cursor: pointer;
+        color: var(--text-secondary);
+        border-bottom: 3px solid transparent;
+        transition: all 0.3s ease;
+    }
+    
+    .settings-tab.active {
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+    }
+    
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    .settings-card {
+        background-color: var(--card-bg);
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .settings-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .settings-card-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+    
+    .profile-photo-container {
+        display: flex;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+    
+    .current-photo {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid var(--primary-color-light);
+        margin-right: 30px;
+    }
+    
+    .photo-upload-container {
+        flex: 1;
+    }
+    
+    .upload-btn-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+    }
+    
+    .btn-upload {
+        border: 2px solid var(--primary-color);
+        color: var(--primary-color);
+        background-color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .btn-upload:hover {
+        background-color: var(--primary-color-light);
+    }
+    
+    .upload-btn-wrapper input[type=file] {
+        font-size: 100px;
+        position: absolute;
+        left: 0;
+        top: 0;
+        opacity: 0;
+        cursor: pointer;
+    }
+    
+    .photo-guidelines {
+        margin-top: 15px;
+        font-size: 14px;
+        color: var(--text-secondary);
+    }
+    
+    .form-group {
+        margin-bottom: 25px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: var(--text-color);
+    }
+    
+    .form-group input {
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        font-size: 16px;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        transition: border-color 0.3s;
+    }
+    
+    .form-group input:focus {
+        border-color: var(--primary-color);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    }
+    
+    .password-strength {
+        height: 5px;
+        background-color: #f5f5f5;
+        border-radius: 5px;
+        margin-top: 10px;
+        overflow: hidden;
+    }
+    
+    .password-strength-meter {
+        height: 100%;
+        width: 0;
+        border-radius: 5px;
+        transition: width 0.3s, background-color 0.3s;
+    }
+    
+    .password-strength-text {
+        font-size: 12px;
+        margin-top: 5px;
+        color: var(--text-secondary);
+    }
+    
+    .save-btn {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 25px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    
+    .save-btn:hover {
+        background-color: var(--primary-color-dark);
+    }
+    
+    .success-message {
+        display: none;
+        background-color: rgba(40, 167, 69, 0.1);
+        border: 1px solid rgba(40, 167, 69, 0.2);
+        color: #28a745;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 14px;
+    }
+    
+    .error-message {
+        display: none;
+        background-color: rgba(220, 53, 69, 0.1);
+        border: 1px solid rgba(220, 53, 69, 0.2);
+        color: #dc3545;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 14px;
+    }
+    
+    /* Cropper.js Modal Styles */
+    .crop-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        z-index: 1000;
+        overflow: auto;
+    }
+    
+    .crop-modal-content {
+        background-color: var(--card-bg);
+        margin: 5% auto;
+        padding: 20px;
+        border-radius: 10px;
+        width: 80%;
+        max-width: 800px;
+    }
+    
+    .crop-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .crop-modal-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+    
+    .crop-close {
+        font-size: 28px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: color 0.3s;
+    }
+    
+    .crop-close:hover {
+        color: var(--text-color);
+    }
+    
+    .crop-container {
+        max-height: 500px;
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+    
+    .crop-preview {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        overflow: hidden;
+        margin: 0 auto 20px;
+        border: 3px solid var(--primary-color-light);
+    }
+    
+    .crop-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+    }
+    
+    .crop-btn {
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .crop-cancel-btn {
+        background-color: #f5f5f5;
+        color: var(--text-color);
+        border: none;
+    }
+    
+    .crop-apply-btn {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+    }
+    
+    .crop-cancel-btn:hover {
+        background-color: #e9ecef;
+    }
+    
+    .crop-apply-btn:hover {
+        background-color: var(--primary-color-dark);
+    }
+    
+    /* Preview Comparison Styles */
+    .photo-comparison {
+        display: none;
+        margin-top: 20px;
+        background-color: var(--bg-color);
+        border-radius: 10px;
+        padding: 20px;
+        border: 1px solid var(--border-color);
+    }
+    
+    .photo-comparison-title {
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--text-color);
+        margin-bottom: 15px;
+        text-align: center;
+    }
+    
+    .photos-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 30px;
+    }
+    
+    .photo-item {
+        text-align: center;
+    }
+    
+    .photo-label {
+        font-size: 14px;
+        color: var(--text-secondary);
+        margin-bottom: 10px;
+    }
+    
+    .photo-preview {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid var(--primary-color-light);
+        display: inline-block;
+    }
+    
+    .photo-comparison .buttons-container {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 20px;
+    }
+    
+    .photo-comparison .save-btn {
+        margin-top: 0;
+        display: inline-block;
+        width: auto;
+    }
+    
+    .photo-comparison .cancel-btn {
+        background-color: #f5f5f5;
+        color: var(--text-color);
+        border: none;
+        border-radius: 8px;
+        padding: 12px 25px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    
+    .photo-comparison .cancel-btn:hover {
+        background-color: #e9ecef;
+    }
+    
+    .photo-arrows {
+        display: flex;
+        align-items: center;
+        color: var(--primary-color);
+        font-size: 24px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <div class="settings-header">
+        <h1>Profil Ayarları</h1>
+        <p class="settings-description">Kişisel bilgilerinizi ve hesap ayarlarınızı yönetin.</p>
+    </div>
+
+    <div class="settings-tabs">
+        <div class="settings-tab active" data-tab="profile">Profil</div>
+        <div class="settings-tab" data-tab="password">Şifre</div>
+        <div class="settings-tab" data-tab="notifications">Bildirimler</div>
+    </div>
+
+    {% if success_message %}
+    <div class="success-message" style="display: block;">
+        {{ success_message }}
+    </div>
+    {% endif %}
+
+    {% if error_message %}
+    <div class="error-message" style="display: block;">
+        {{ error_message }}
+    </div>
+    {% endif %}
+
+    <!-- Profil Sekmesi -->
+    <div class="tab-content active" id="profile-tab">
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <h2 class="settings-card-title">Profil Fotoğrafı</h2>
+            </div>
+
+            <form method="post" action="{% url 'tagwiseapp:update_profile_photo' %}" enctype="multipart/form-data" id="profile-photo-form">
+                {% csrf_token %}
+                <div class="profile-photo-container">
+                    <img src="{% if user.profile.profile_photo %}{{ user.profile.profile_photo.url }}{% else %}{% static 'images/profile.jpg' %}{% endif %}" alt="Profile Photo" class="current-photo" id="current-photo">
+                    <div class="photo-upload-container">
+                        <div class="upload-btn-wrapper">
+                            <button type="button" class="btn-upload"><i class="material-icons" style="vertical-align: middle; margin-right: 5px;">file_upload</i> Fotoğraf Seç</button>
+                            <input type="file" name="profile_photo_input" id="profile-photo-input" accept="image/*">
+                            <input type="hidden" name="profile_photo" id="cropped-image-input">
+                        </div>
+                        <p class="photo-guidelines">En az 200x200 piksel çözünürlükte .jpg, .png veya .gif formatında bir dosya yükleyin. Yükleme sonrasında fotoğrafı istediğiniz şekilde kırpabilirsiniz.</p>
+                    </div>
+                </div>
+                
+                <!-- Fotoğraf Karşılaştırma Bölümü -->
+                <div class="photo-comparison" id="photo-comparison">
+                    <h3 class="photo-comparison-title">Profil Fotoğrafı Değişikliği</h3>
+                    <div class="photos-container">
+                        <div class="photo-item">
+                            <p class="photo-label">Mevcut Fotoğraf</p>
+                            <img id="old-photo-preview" class="photo-preview" src="{% if user.profile.profile_photo %}{{ user.profile.profile_photo.url }}{% else %}{% static 'images/profile.jpg' %}{% endif %}" alt="Mevcut Fotoğraf">
+                        </div>
+                        <div class="photo-arrows">
+                            <i class="material-icons">arrow_forward</i>
+                        </div>
+                        <div class="photo-item">
+                            <p class="photo-label">Yeni Fotoğraf</p>
+                            <img id="new-photo-preview" class="photo-preview" src="" alt="Yeni Fotoğraf">
+                        </div>
+                    </div>
+                    <div class="buttons-container">
+                        <button type="button" id="cancel-photo-btn" class="cancel-btn">Vazgeç</button>
+                        <button type="submit" class="save-btn">Fotoğrafı Güncelle</button>
+                    </div>
+                </div>
+            </form>
+            
+            <!-- Crop Modal -->
+            <div id="cropModal" class="crop-modal">
+                <div class="crop-modal-content">
+                    <div class="crop-modal-header">
+                        <h3 class="crop-modal-title">Profil Fotoğrafını Düzenle</h3>
+                        <span class="crop-close">&times;</span>
+                    </div>
+                    <div class="crop-container">
+                        <img id="image-to-crop" src="" alt="Kırpılacak görsel">
+                    </div>
+                    <div class="crop-preview">
+                        <div id="preview"></div>
+                    </div>
+                    <div class="crop-buttons">
+                        <button class="crop-btn crop-cancel-btn">İptal</button>
+                        <button class="crop-btn crop-apply-btn">Uygula</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <h2 class="settings-card-title">Kişisel Bilgiler</h2>
+            </div>
+
+            <form method="post" action="{% url 'tagwiseapp:update_profile' %}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="username">Kullanıcı Adı</label>
+                    <input type="text" id="username" name="username" value="{{ user.username }}" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="email">E-posta Adresi</label>
+                    <input type="email" id="email" name="email" value="{{ user.email }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="name">Ad Soyad</label>
+                    <input type="text" id="name" name="name" value="{{ user.first_name }} {{ user.last_name }}">
+                </div>
+                <button type="submit" class="save-btn">Bilgileri Kaydet</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Şifre Sekmesi -->
+    <div class="tab-content" id="password-tab">
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <h2 class="settings-card-title">Şifre Değiştir</h2>
+            </div>
+
+            <form method="post" action="{% url 'tagwiseapp:change_password' %}" id="password-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="current-password">Mevcut Şifre</label>
+                    <input type="password" id="current-password" name="current_password" required>
+                </div>
+                <div class="form-group">
+                    <label for="new-password">Yeni Şifre</label>
+                    <input type="password" id="new-password" name="new_password" required>
+                    <div class="password-strength">
+                        <div class="password-strength-meter"></div>
+                    </div>
+                    <div class="password-strength-text">Şifre gücü: Zayıf</div>
+                </div>
+                <div class="form-group">
+                    <label for="confirm-password">Yeni Şifre (Tekrar)</label>
+                    <input type="password" id="confirm-password" name="confirm_password" required>
+                </div>
+                <button type="submit" class="save-btn">Şifreyi Değiştir</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bildirimler Sekmesi -->
+    <div class="tab-content" id="notifications-tab">
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <h2 class="settings-card-title">Bildirim Tercihleri</h2>
+            </div>
+
+            <form method="post" action="{% url 'tagwiseapp:update_notifications' %}">
+                {% csrf_token %}
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="email-notifications" name="email_notifications" {% if user.profile.email_notifications %}checked{% endif %} style="width: auto; margin-right: 10px;">
+                    <label for="email-notifications" style="margin-bottom: 0;">E-posta bildirimleri al</label>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="new-features" name="new_features" {% if user.profile.new_features %}checked{% endif %} style="width: auto; margin-right: 10px;">
+                    <label for="new-features" style="margin-bottom: 0;">Yeni özellikler hakkında bilgilendir</label>
+                </div>
+                <button type="submit" class="save-btn">Bildirimleri Güncelle</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Cropper.js JavaScript -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script>
+    // Tab değiştirme işlevi
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabs = document.querySelectorAll('.settings-tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Aktif sekmeyi güncelle
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // Aktif içeriği güncelle
+                const tabId = tab.getAttribute('data-tab');
+                tabContents.forEach(content => {
+                    content.classList.remove('active');
+                    if (content.id === tabId + '-tab') {
+                        content.classList.add('active');
+                    }
+                });
+            });
+        });
+        
+        // Cropper.js ile fotoğraf düzenleme
+        const photoInput = document.getElementById('profile-photo-input');
+        const cropModal = document.getElementById('cropModal');
+        const imageToEdit = document.getElementById('image-to-crop');
+        const closeBtn = document.querySelector('.crop-close');
+        const cancelBtn = document.querySelector('.crop-cancel-btn');
+        const applyBtn = document.querySelector('.crop-apply-btn');
+        const croppedInput = document.getElementById('cropped-image-input');
+        const photoComparison = document.getElementById('photo-comparison');
+        const newPhotoPreview = document.getElementById('new-photo-preview');
+        const currentPhoto = document.getElementById('current-photo');
+        const cancelPhotoBtn = document.getElementById('cancel-photo-btn');
+        
+        let cropper;
+        
+        // Fotoğraf seçildiğinde modalı aç
+        photoInput.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    // Modaldaki resmi ayarla
+                    imageToEdit.src = e.target.result;
+                    
+                    // Modalı göster
+                    cropModal.style.display = 'block';
+                    
+                    // Cropper.js'yi başlat
+                    if (cropper) {
+                        cropper.destroy();
+                    }
+                    
+                    cropper = new Cropper(imageToEdit, {
+                        aspectRatio: 1,
+                        viewMode: 1,
+                        dragMode: 'move',
+                        autoCropArea: 0.8,
+                        restore: false,
+                        guides: true,
+                        center: true,
+                        highlight: false,
+                        cropBoxMovable: true,
+                        cropBoxResizable: true,
+                        toggleDragModeOnDblclick: false,
+                        preview: '#preview'
+                    });
+                };
+                
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // Modal kapatıcıları
+        closeBtn.addEventListener('click', function() {
+            cropModal.style.display = 'none';
+            if (cropper) {
+                cropper.destroy();
+                photoInput.value = '';
+            }
+        });
+        
+        cancelBtn.addEventListener('click', function() {
+            cropModal.style.display = 'none';
+            if (cropper) {
+                cropper.destroy();
+                photoInput.value = '';
+            }
+        });
+        
+        // Kırpılmış görüntüyü uygula
+        applyBtn.addEventListener('click', function() {
+            if (cropper) {
+                // Kırpılmış canvas'ı al
+                const canvas = cropper.getCroppedCanvas({
+                    width: 300,
+                    height: 300,
+                    minWidth: 200,
+                    minHeight: 200,
+                    maxWidth: 1000,
+                    maxHeight: 1000,
+                    fillColor: '#fff',
+                    imageSmoothingEnabled: true,
+                    imageSmoothingQuality: 'high',
+                });
+                
+                if (canvas) {
+                    // Canvas'ı base64 formatında URL'ye dönüştür
+                    const croppedImageUrl = canvas.toDataURL('image/jpeg', 0.9);
+                    
+                    // Veriye gizli input alanına yerleştir
+                    croppedInput.value = croppedImageUrl;
+                    
+                    // Yeni fotoğraf önizlemesini göster
+                    newPhotoPreview.src = croppedImageUrl;
+                    
+                    // Karşılaştırma bölümünü göster
+                    photoComparison.style.display = 'block';
+                    
+                    // Modalı kapat
+                    cropModal.style.display = 'none';
+                    
+                    // Cropper'ı kaldır
+                    cropper.destroy();
+                }
+            }
+        });
+        
+        // Fotoğraf işlemini iptal et
+        cancelPhotoBtn.addEventListener('click', function() {
+            // Karşılaştırma panelini gizle
+            photoComparison.style.display = 'none';
+            
+            // Input değerlerini temizle
+            photoInput.value = '';
+            croppedInput.value = '';
+        });
+        
+        // Şifre gücü kontrolü
+        const newPasswordInput = document.getElementById('new-password');
+        const passwordStrengthMeter = document.querySelector('.password-strength-meter');
+        const passwordStrengthText = document.querySelector('.password-strength-text');
+        
+        newPasswordInput.addEventListener('input', function() {
+            const password = this.value;
+            let strength = 0;
+            let status = '';
+            
+            if (password.length >= 8) strength += 25;
+            if (password.match(/[a-z]/)) strength += 25;
+            if (password.match(/[A-Z]/)) strength += 25;
+            if (password.match(/[0-9]/)) strength += 25;
+            
+            passwordStrengthMeter.style.width = strength + '%';
+            
+            if (strength <= 25) {
+                passwordStrengthMeter.style.backgroundColor = '#dc3545';
+                status = 'Çok Zayıf';
+            } else if (strength <= 50) {
+                passwordStrengthMeter.style.backgroundColor = '#ffc107';
+                status = 'Zayıf';
+            } else if (strength <= 75) {
+                passwordStrengthMeter.style.backgroundColor = '#17a2b8';
+                status = 'İyi';
+            } else {
+                passwordStrengthMeter.style.backgroundColor = '#28a745';
+                status = 'Güçlü';
+            }
+            
+            passwordStrengthText.textContent = 'Şifre gücü: ' + status;
+        });
+        
+        // Şifre eşleşme kontrolü
+        const passwordForm = document.getElementById('password-form');
+        const confirmPasswordInput = document.getElementById('confirm-password');
+        
+        passwordForm.addEventListener('submit', function(e) {
+            if (newPasswordInput.value !== confirmPasswordInput.value) {
+                e.preventDefault();
+                alert('Yeni şifreler eşleşmiyor!');
+            }
+        });
+    });
+</script>
+{% endblock %} 

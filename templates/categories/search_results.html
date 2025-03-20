@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Kategori Arama Sonuçları - TagWise{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <div class="main-header">
+        <h1>Arama Sonuçları: "{{ search_query }}"</h1>
+        <a href="{% url 'tagwiseapp:categories' %}" class="back-link">
+            <i class="material-icons">arrow_back</i>
+            Tüm Kategorilere Dön
+        </a>
+    </div>
+
+    <div class="categories-container">
+        {% if main_categories %}
+            <div class="section-header">
+                <h2>Kategoriler</h2>
+            </div>
+            <div class="categories-grid">
+                {% for category in main_categories %}
+                <div class="category-card">
+                    <a href="{% url 'tagwiseapp:subcategories' %}?category={{ category.name|urlencode }}" class="category-link">
+                        <div class="category-icon" style="background-color: {{ category.color|default:'#2196F3' }}">
+                            <i class="material-icons">{{ category.icon_name|default:'category' }}</i>
+                        </div>
+                        <div class="category-content">
+                            <h3 class="category-title">{{ category.name }}</h3>
+                            <span class="bookmark-count">{{ category.bookmark_count }} yer imi</span>
+                        </div>
+                        <div class="category-action">
+                            <i class="material-icons">chevron_right</i>
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if recent_categories %}
+            <div class="section-header">
+                <h2>Son Eklenen Kategoriler</h2>
+            </div>
+            <div class="categories-grid">
+                {% for category in recent_categories %}
+                <div class="category-card">
+                    <a href="{% url 'tagwiseapp:subcategories' %}?category={{ category.name|urlencode }}" class="category-link">
+                        <div class="category-icon" style="background-color: {{ category.color|default:'#2196F3' }}">
+                            <i class="material-icons">{{ category.icon_name|default:'category' }}</i>
+                        </div>
+                        <div class="category-content">
+                            <h3 class="category-title">{{ category.name }}</h3>
+                            <span class="bookmark-count">{{ category.bookmark_count }} yer imi</span>
+                        </div>
+                        <div class="category-action">
+                            <i class="material-icons">chevron_right</i>
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if not main_categories and not recent_categories %}
+            <div class="empty-state">
+                <i class="material-icons">category</i>
+                <h3>Arama sonucu bulunamadı</h3>
+                <p>Aramanızla eşleşen kategori yok. Lütfen farklı bir arama terimi deneyin.</p>
+                <a href="{% url 'tagwiseapp:categories' %}" class="btn primary-btn">Tüm Kategorilere Dön</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

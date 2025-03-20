@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Etiket Arama Sonuçları - TagWise{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <div class="main-header">
+        <h1>Arama Sonuçları: "{{ search_query }}"</h1>
+        <a href="{% url 'tagwiseapp:tags' %}" class="back-link">
+            <i class="material-icons">arrow_back</i>
+            Tüm Etiketlere Dön
+        </a>
+    </div>
+
+    <div class="tags-container">
+        {% if grouped_tags %}
+            <div class="section-header">
+                <h2>Etiketler</h2>
+            </div>
+            {% for letter, tags in grouped_tags.items %}
+            <div class="tags-group">
+                <div class="letter-header">{{ letter }}</div>
+                <div class="tags-list">
+                    {% for tag in tags %}
+                    <a href="{% url 'tagwiseapp:tagged_bookmarks' %}?tag={{ tag.name|urlencode }}" class="tag-item">
+                        <i class="material-icons">local_offer</i>
+                        <span class="tag-name">{{ tag.name }}</span>
+                        <span class="tag-count">{{ tag.bookmark_count }} yer imi</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        {% if recent_tags %}
+            <div class="section-header">
+                <h2>Son Eklenen Etiketler</h2>
+            </div>
+            <div class="tags-list recent-tags">
+                {% for tag in recent_tags %}
+                <a href="{% url 'tagwiseapp:tagged_bookmarks' %}?tag={{ tag.name|urlencode }}" class="tag-item">
+                    <i class="material-icons">local_offer</i>
+                    <span class="tag-name">{{ tag.name }}</span>
+                    <span class="tag-count">{{ tag.bookmark_count }} yer imi</span>
+                </a>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if not grouped_tags and not recent_tags %}
+            <div class="empty-state">
+                <i class="material-icons">local_offer</i>
+                <h3>Arama sonucu bulunamadı</h3>
+                <p>Aramanızla eşleşen etiket yok. Lütfen farklı bir arama terimi deneyin.</p>
+                <a href="{% url 'tagwiseapp:tags' %}" class="btn primary-btn">Tüm Etiketlere Dön</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

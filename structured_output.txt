@@ -1,0 +1,28 @@
+response_schema=genai.types.Schema(
+            type = genai.types.Type.OBJECT,
+            properties = {
+                "title": genai.types.Schema(
+                    type = genai.types.Type.STRING,
+                ),
+                "description": genai.types.Schema(
+                    type = genai.types.Type.STRING,
+                ),
+                "categories": genai.types.Schema(
+                    type = genai.types.Type.ARRAY,
+                    items = genai.types.Schema(
+                        type = genai.types.Type.OBJECT,
+                        properties = {
+                            "main_category": genai.types.Schema(
+                                type = genai.types.Type.STRING,
+                            ),
+                            "subcategory": genai.types.Schema(
+                                type = genai.types.Type.STRING,
+                            ),
+                        },
+                    ),
+                ),
+                "tags": genai.types.Schema(
+                    type = genai.types.Type.STRING,
+                ),
+            },
+        ),

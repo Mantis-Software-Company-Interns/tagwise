@@ -56,8 +56,40 @@
             <div class="top-bar">
                 <div class="left-section">
                     <div class="search-container">
-                        <i class="material-icons">search</i>
-                        <input type="text" placeholder="{% block search_placeholder %}Search...{% endblock %}">
+                        <form method="GET" action="{% if request.path == '/' %}{% url 'tagwiseapp:search_bookmarks' %}{% elif '/categories/' in request.path %}{% url 'tagwiseapp:search_categories' %}{% elif '/tags/' in request.path %}{% url 'tagwiseapp:search_tags' %}{% else %}{% url 'tagwiseapp:search_bookmarks' %}{% endif %}">
+                            <div class="search-input-wrapper">
+                                <i class="material-icons">search</i>
+                                <input type="text" name="query" placeholder="{% if '/categories/' in request.path %}Kategorilerde ara...{% elif '/tags/' in request.path %}Etiketlerde ara...{% else %}Ara...{% endif %}" class="search-input">
+                                <button type="submit" class="search-submit-btn">
+                                    <i class="material-icons">arrow_forward</i>
+                                </button>
+                            </div>
+                            <div class="filter-dropdown">
+                                <button type="button" class="filter-btn">
+                                    <i class="material-icons">filter_list</i>
+                                </button>
+                                <div class="filter-options">
+                                    <div class="filter-header">Arama Filtresi</div>
+                                    <div class="filter-items">
+                                        {% if '/categories/' not in request.path and '/tags/' not in request.path %}
+                                        <label class="filter-item">
+                                            <input type="checkbox" name="filter_title" checked>
+                                            <span>Başlık</span>
+                                        </label>
+                                        <label class="filter-item">
+                                            <input type="checkbox" name="filter_url" checked>
+                                            <span>URL</span>
+                                        </label>
+                                        <label class="filter-item">
+                                            <input type="checkbox" name="filter_tags" checked>
+                                            <span>Etiketler</span>
+                                        </label>
+                                        {% endif %}
+                                    </div>
+                                    <button type="submit" class="apply-filter-btn">Filtrele</button>
+                                </div>
+                            </div>
+                        </form>
                     </div>
                     {% block breadcrumb %}{% endblock %}
                     {% block extra_top_bar_left %}{% endblock %}
@@ -67,7 +99,23 @@
                     <button class="theme-toggle">
                         <i class="material-icons">light_mode</i>
                     </button>
-                    <img src="{% static 'images/profile.jpg' %}" alt="Profile">
+                    <div class="profile-dropdown">
+                        <img src="{% if user.profile.profile_photo %}{{ user.profile.profile_photo.url }}{% else %}{% static 'images/profile.jpg' %}{% endif %}" alt="Profile" class="profile-img">
+                        <div class="profile-menu">
+                            <a href="{% url 'tagwiseapp:profile_settings' %}" class="profile-menu-item">
+                                <i class="material-icons">person</i>
+                                <span>Profil</span>
+                            </a>
+                            <a href="{% url 'tagwiseapp:profile_settings' %}" class="profile-menu-item">
+                                <i class="material-icons">settings</i>
+                                <span>Ayarlar</span>
+                            </a>
+                            <a href="{% url 'tagwiseapp:logout' %}" class="profile-menu-item logout">
+                                <i class="material-icons">logout</i>
+                                <span>Çıkış Yap</span>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
 

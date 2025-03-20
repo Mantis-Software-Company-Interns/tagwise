@@ -1,0 +1,121 @@
+<!-- URL Modal -->
+<div class="modal" id="urlModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Yeni URL Ekle</h2>
+            <button class="close-btn">
+                <i class="material-icons">close</i>
+            </button>
+        </div>
+        <div class="modal-body">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="url">URL</label>
+                <input type="url" id="url" placeholder="https://" required>
+            </div>
+            <div class="loading-container" style="display: none;">
+                <div class="spinner"></div>
+                <p>URL Analiz Ediliyor...</p>
+            </div>
+            <button class="submit-url-btn">URL'yi Analiz Et</button>
+        </div>
+    </div>
+</div>
+
+<!-- URL İnceleme Modal -->
+<div class="modal" id="urlReviewModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Yer İmini İncele</h2>
+            <button class="close-btn">
+                <i class="material-icons">close</i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="urlForm">
+                <div class="loading-container review-loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>URL Tekrar Analiz Ediliyor...</p>
+                </div>
+                <!-- Gizli URL input alanı -->
+                <input type="hidden" id="reviewUrl">
+                <input type="hidden" id="reviewScreenshotData">
+                <div class="form-group">
+                    <label for="reviewTitle">Başlık</label>
+                    <input type="text" id="reviewTitle" placeholder="Başlık girin">
+                </div>
+                <div class="form-group">
+                    <label for="reviewDescription">Açıklama</label>
+                    <textarea id="reviewDescription" rows="3" placeholder="Açıklama girin"></textarea>
+                </div>
+                <!-- Screenshot Önizleme ve Yükleme Bölümü -->
+                <div class="form-group">
+                    <label>Ekran Görüntüsü</label>
+                    <div class="screenshot-preview">
+                        <div class="screenshot-actions">
+                            <div id="screenshotStatus">
+                                <i class="material-icons">check_circle</i>
+                                <span>Ekran görüntüsü otomatik olarak alındı</span>
+                            </div>
+                            <label for="customScreenshotInput" class="custom-file-upload">
+                                <i class="material-icons">file_upload</i>
+                                Ekran görüntüsünü değiştir
+                            </label>
+                            <input type="file" id="customScreenshotInput" accept="image/*" style="display: none;">
+                        </div>
+                        <div class="screenshot-container">
+                            <img id="screenshotPreview" class="website-screenshot" src="" alt="Web sitesi ekran görüntüsü">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Kategoriler</label>
+                    <div class="categories-container">
+                        <!-- Kategori grupları listesi -->
+                        <div class="category-groups-container">
+                            <label>Kategoriler ve Alt Kategoriler (Yapay Zeka Eşleştirmesi)</label>
+                            <div id="categoryGroupsList" class="category-groups-list"></div>
+                        </div>
+                        
+                        <!-- Yeni kategori grubu ekleme -->
+                        <div class="add-category-group">
+                            <div class="category-group-inputs">
+                                <div class="input-group">
+                                    <label for="newMainCategory">Kategori</label>
+                                    <input type="text" id="newMainCategory" placeholder="Kategori ekle">
+                                </div>
+                                <div class="input-group">
+                                    <label for="newSubcategory">Alt Kategori</label>
+                                    <input type="text" id="newSubcategory" placeholder="Alt kategori ekle">
+                                </div>
+                                <button class="add-category-group-btn" id="addCategoryGroupBtn">
+                                    <i class="material-icons">add</i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Etiketler</label>
+                    <div class="tags-container">
+                        <div class="tags-input">
+                            <input type="text" id="newTag" placeholder="Yeni etiket ekle">
+                            <button class="add-tag-btn" id="addNewTagBtn">
+                                <i class="material-icons">add</i>
+                            </button>
+                        </div>
+                        <div class="tags-list-container">
+                            <label>Etiketler (Yapay Zeka Eşleştirmesi)</label>
+                            <div class="tags-list" id="reviewTagsList"></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-review-btn">İptal</button>
+                <button class="retry-analysis-btn">Tekrar Analiz Et</button>
+                <button class="save-bookmark-btn">Yer İmini Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div> 
