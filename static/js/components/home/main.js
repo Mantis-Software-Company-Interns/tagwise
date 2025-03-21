@@ -342,7 +342,7 @@ function openEditModal(card) {
                 }
             }
         } else {
-            editScreenshotPreview.src = '/static/images/default-thumbnail.png';
+            editScreenshotPreview.src = '/media/default-thumbnail.png';
             editScreenshotData.value = '';
             
             // Update status message
@@ -543,44 +543,9 @@ function setupDeleteFunctionality() {
             const bookmarkId = card.dataset.id;
             
             if (confirm('Are you sure you want to delete this bookmark?')) {
-                deleteBookmark(bookmarkId, card);
+                BookmarkActions.deleteBookmark(bookmarkId, card);
             }
         });
-    });
-}
-
-function deleteBookmark(bookmarkId, card) {
-    // CSRF token'ı al
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-
-    // API çağrısı yap
-    fetch('/api/delete-bookmark/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken
-        },
-        body: JSON.stringify({
-            id: bookmarkId
-        })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            // Başarılı olduğunda kartı kaldır
-            card.remove();
-        } else {
-            alert('Error deleting bookmark: ' + data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error deleting bookmark:', error);
-        alert('Error deleting bookmark. Please try again.');
     });
 }
 
@@ -678,20 +643,6 @@ function editTags(card) {
     
     // Tag'leri düzenlerken formatTag fonksiyonunu kullan
     // Modal implementation...
-}
-
-function deleteBookmark(card) {
-    if (confirm('Are you sure you want to delete this bookmark?')) {
-        card.classList.add('deleted');
-        
-        // Layout'a göre farklı animasyon süresi
-        const isCompact = card.closest('.grid').classList.contains('compact-view');
-        const animationDuration = isCompact ? 200 : 300;
-        
-        setTimeout(() => {
-            card.remove();
-        }, animationDuration);
-    }
 }
 
 // More butonlarının görünürlüğünü güncelleme fonksiyonu

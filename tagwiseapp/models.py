@@ -39,14 +39,14 @@ class Bookmark(models.Model):
     @property
     def screenshot_url(self):
         if self.screenshot_data:
-            # Ensure the path always starts with /static/
-            if self.screenshot_data.startswith('/static/'):
+            # Ensure the path always starts with /media/
+            if self.screenshot_data.startswith('/media/'):
                 return self.screenshot_data
-            elif self.screenshot_data.startswith('static/'):
+            elif self.screenshot_data.startswith('media/'):
                 return f"/{self.screenshot_data}"
             else:
-                return f"/static/{self.screenshot_data}"
-        return "/static/images/default-thumbnail.png"
+                return f"/media/{self.screenshot_data}"
+        return "/media/default-thumbnail.png"
 
 class Collection(models.Model):
     name = models.CharField(max_length=100)

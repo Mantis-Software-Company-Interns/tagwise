@@ -12,6 +12,7 @@ from PIL import Image
 import io
 from dotenv import load_dotenv
 import re
+import requests
 
 def load_api_key():
     """
@@ -50,97 +51,80 @@ def correct_json_format(text):
         # Sadece JSON kısmını al
         text = text[start_idx:end_idx+1]
     
+    # Description alanını özel olarak işle
+    try:
+        # Önce description alanını bul ve ayır
+        desc_start = text.find('"description"')
+        if desc_start != -1:
+            # Description değerinin başlangıcını bul
+            value_start = text.find(':', desc_start) + 1
+            # İlk tırnak işaretini bul
+            quote_start = text.find('"', value_start)
+            if quote_start != -1:
+                # Kapanış tırnağını bul (escape edilmiş tırnakları atla)
+                pos = quote_start + 1
+                while pos < len(text):
+                    if text[pos] == '"' and text[pos-1] != '\\':
+                        # Doğru kapanış tırnağını bulduk
+                        quote_end = pos
+                        # Description değerini al
+                        desc_value = text[quote_start+1:quote_end]
+                        # Türkçe karakter sorunlarını düzelt
+                        desc_value = desc_value.replace('",', '')
+                        desc_value = desc_value.replace(',"', '')
+                        desc_value = desc_value.replace('"u,n', '"un')
+                        desc_value = desc_value.replace('"ı,n', '"ın')
+                        desc_value = desc_value.replace('"i,n', '"in')
+                        # İç tırnakları escape et
+                        desc_value = desc_value.replace('"', '\\"')
+                        # Düzeltilmiş description'ı metne yerleştir
+                        text = text[:quote_start+1] + desc_value + text[quote_end:]
+                        break
+                    pos += 1
+    except Exception as e:
+        print(f"Description düzeltme hatası: {e}")
+    
     # Tek tırnak yerine çift tırnak kullan
     text = text.replace("'", '"')
     
-    # Türkçe ve özel karakterleri düzelt - özellikle John Nash"in gibi durumlarda çift tırnak içinde çift tırnak sorununu çöz
-    text = text.replace('"in', "'in")  # "in" özel durumu için (örn. "John Nash"in")
-    text = text.replace('"nin', "'nin")  # "nin" özel durumu için
-    text = text.replace('"den', "'den")  # "den" özel durumu için
-    text = text.replace('"dan', "'dan")  # "dan" özel durumu için
-    text = text.replace('"te', "'te")    # "te" özel durumu için
-    text = text.replace('"ta', "'ta")    # "ta" özel durumu için
-    
     # Tag dizisindeki tırnak işareti sorunlarını düzelt
-    # Önce tag dizilerini bul: "tags": [...]
-    tags_regex = r'"tags"\s*:\s*\[(.*?)\]'
-    tags_match = re.search(tags_regex, text, re.DOTALL)
-    if tags_match:
-        tags_content = tags_match.group(1)
-        # Tırnak işaretlerini düzelt (tek ve çift tırnak karışımını çöz)
-        fixed_tags_content = ''
-        inside_quote = False
-        quote_type = None
-        
-        for char in tags_content:
-            if char in ['"', "'"]:
-                if not inside_quote:
-                    # Tırnak başlangıcı
-                    inside_quote = True
-                    quote_type = char
-                    fixed_tags_content += '"'  # Her zaman çift tırnak kullan
-                elif char == quote_type:
-                    # Tırnak bitişi
-                    inside_quote = False
-                    fixed_tags_content += '"'  # Her zaman çift tırnak kullan
-                else:
-                    # Farklı tipte tırnak, escape et
-                    fixed_tags_content += '\\"'
-            else:
-                fixed_tags_content += char
-        
-        # Düzeltilmiş tag dizisini metne ekle
-        text = re.sub(tags_regex, f'"tags": [{fixed_tags_content}]', text, flags=re.DOTALL)
+    try:
+        tags_start = text.find('"tags"')
+        if tags_start != -1:
+            # Tags array başlangıcını bul
+            array_start = text.find('[', tags_start)
+            if array_start != -1:
+                # Array sonunu bul
+                bracket_count = 1
+                pos = array_start + 1
+                while pos < len(text) and bracket_count > 0:
+                    if text[pos] == '[':
+                        bracket_count += 1
+                    elif text[pos] == ']':
+                        bracket_count -= 1
+                    pos += 1
+                
+                if bracket_count == 0:
+                    array_end = pos - 1
+                    # Tags içeriğini al
+                    tags_content = text[array_start+1:array_end]
+                    # Tırnak işaretlerini düzelt
+                    tags_items = re.findall(r'"[^"]*"|\S+', tags_content)
+                    fixed_tags = []
+                    for item in tags_items:
+                        item = item.strip().strip(',').strip('"').strip("'")
+                        if item:
+                            fixed_tags.append(f'"{item}"')
+                    # Düzeltilmiş tags array'ini yerleştir
+                    text = text[:array_start+1] + ', '.join(fixed_tags) + text[array_end:]
+    except Exception as e:
+        print(f"Tags düzeltme hatası: {e}")
     
-    # Boşlukları düzelt
+    # Gereksiz boşlukları ve satır sonlarını temizle
+    text = re.sub(r'\s+', ' ', text)
     text = text.strip()
     
     print(f"Düzeltilmiş JSON: {text[:100]}...")
-    
-    # JSON parse etmeyi dene, hata varsa manuel olarak düzelt
-    try:
-        json.loads(text)
-    except json.JSONDecodeError as e:
-        print(f"JSON ayrıştırma hatası: {e}")
-        # Problemli karakterleri tespit edip düzelt
-        if "line" in str(e) and "column" in str(e):
-            try:
-                # Hata mesajından satır ve sütun bilgisini al
-                error_info = str(e)
-                line_match = re.search(r'line (\d+)', error_info)
-                col_match = re.search(r'column (\d+)', error_info)
-                
-                if line_match and col_match:
-                    line = int(line_match.group(1))
-                    col = int(col_match.group(1))
-                    
-                    # Metni satırlara böl
-                    lines = text.split('\n')
-                    
-                    # Hatalı satırı bul
-                    if 1 <= line <= len(lines):
-                        problem_line = lines[line-1]
-                        
-                        # Sorunlu karakteri " ile değiştir
-                        if col <= len(problem_line):
-                            # Hata tipine göre farklı düzeltmeler
-                            if "Expecting property name" in error_info:
-                                # Muhtemelen bir anahtar etrafında tırnak işareti eksik
-                                fixed_line = problem_line[:col-1] + '"' + problem_line[col-1:]
-                            elif "Expecting ',' delimiter" in error_info:
-                                # Muhtemelen bir virgül eksik
-                                fixed_line = problem_line[:col] + ',' + problem_line[col:]
-                            else:
-                                # Genel düzeltme - tırnak işareti ekle
-                                fixed_line = problem_line[:col-1] + '"' + problem_line[col:]
-                            
-                            lines[line-1] = fixed_line
-                            
-                            # Düzeltilmiş metni birleştir
-                            text = '\n'.join(lines)
-                            print(f"Hatalı karakter düzeltildi: {text[:100]}...")
-            except Exception as fix_error:
-                print(f"Karakter düzeltme hatası: {fix_error}")
     
     return text
 
@@ -508,7 +492,8 @@ def load_image_from_file(image_path):
 
 def extract_thumbnail_from_html(html, url):
     """
-    HTML içeriğinden og:image veya twitter:image meta etiketlerini çeker ve resmi indirir.
+    HTML içeriğinden thumbnail meta etiketlerini çeker ve resmi indirir.
+    Öncelikli olarak og:image ve twitter:image meta etiketlerini kullanır.
     
     Args:
         html (str): HTML içeriği
@@ -520,85 +505,83 @@ def extract_thumbnail_from_html(html, url):
     try:
         from bs4 import BeautifulSoup
         import requests
+        from urllib.parse import urljoin, urlparse
+        from PIL import Image
+        import io
         
+        # HTML içeriğini parse et
         soup = BeautifulSoup(html, 'html.parser')
-        
-        # Debug: Tüm meta etiketlerini kontrol et
-        print("Tüm meta etiketleri:")
-        for meta in soup.find_all('meta'):
-            print(f"Meta tag: {meta}")
-        
-        # Farklı meta tag formatlarını dene
         image_url = None
         
-        # 1. og:image property ile
-        og_image = soup.find('meta', property='og:image')
-        if og_image:
-            print(f"og:image (property) bulundu: {og_image}")
-            image_url = og_image.get('content')
+        # 1. og:image meta etiketlerini kontrol et (en yaygın ve güvenilir yöntem)
+        og_tags = soup.find_all('meta', attrs={'property': lambda x: x and 'og:image' in x})
+        if og_tags:
+            for tag in og_tags:
+                content = tag.get('content')
+                if content and ('http://' in content or 'https://' in content):
+                    image_url = content
+                    print(f"og:image bulundu: {image_url[:100]}...")
+                    break
         
-        # 2. og:image name ile
+        # 2. twitter:image meta etiketlerini kontrol et
         if not image_url:
-            og_image = soup.find('meta', {'name': 'og:image'})
-            if og_image:
-                print(f"og:image (name) bulundu: {og_image}")
-                image_url = og_image.get('content')
+            twitter_tags = soup.find_all('meta', attrs={'name': lambda x: x and 'twitter:image' in x})
+            if twitter_tags:
+                for tag in twitter_tags:
+                    content = tag.get('content')
+                    if content and ('http://' in content or 'https://' in content):
+                        image_url = content
+                        print(f"twitter:image bulundu: {image_url[:100]}...")
+                        break
         
-        # 3. twitter:image property ile
+        # 3. Schema.org image meta etiketlerini kontrol et
         if not image_url:
-            twitter_image = soup.find('meta', property='twitter:image')
-            if twitter_image:
-                print(f"twitter:image (property) bulundu: {twitter_image}")
-                image_url = twitter_image.get('content')
-        
-        # 4. twitter:image name ile
-        if not image_url:
-            twitter_image = soup.find('meta', {'name': 'twitter:image'})
-            if twitter_image:
-                print(f"twitter:image (name) bulundu: {twitter_image}")
-                image_url = twitter_image.get('content')
-        
-        # 5. twitter:image:src property ile
-        if not image_url:
-            twitter_image = soup.find('meta', property='twitter:image:src')
-            if twitter_image:
-                print(f"twitter:image:src (property) bulundu: {twitter_image}")
-                image_url = twitter_image.get('content')
-        
-        # 6. image_src link ile
-        if not image_url:
-            image_link = soup.find('link', {'rel': 'image_src'})
-            if image_link:
-                print(f"image_src link bulundu: {image_link}")
-                image_url = image_link.get('href')
-        
-        if not image_url:
-            print("Hiçbir meta image etiketi bulunamadı")
-            return None
-        
-        print(f"Bulunan image URL: {image_url}")
+            schema_tags = soup.find_all('meta', attrs={'itemprop': 'image'})
+            if schema_tags:
+                for tag in schema_tags:
+                    content = tag.get('content')
+                    if content:
+                        image_url = content
+                        print(f"schema.org image bulundu: {image_url[:100]}...")
+                        break
         
         # Göreceli URL'yi mutlak URL'ye çevir
         if image_url and not image_url.startswith(('http://', 'https://')):
-            from urllib.parse import urljoin
             image_url = urljoin(url, image_url)
-            print(f"Mutlak URL'ye çevrildi: {image_url}")
+            print(f"URL mutlak URL'ye çevrildi: {image_url}")
         
-        # Resmi indir
+        # Resmi indir ve doğrula
         if image_url:
-            print(f"Resim indiriliyor: {image_url}")
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
                 "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-                "Accept-Language": "en-US,en;q=0.5",
-                "Accept-Encoding": "gzip, deflate, br",
-                "Connection": "keep-alive",
-                "DNT": "1"
+                "Referer": url
             }
-            response = requests.get(image_url, headers=headers, timeout=10)
-            print(f"İndirme durumu: {response.status_code}")
-            if response.status_code == 200:
-                return response.content
+            
+            try:
+                response = requests.get(image_url, headers=headers, timeout=10)
+                if response.status_code == 200:
+                    content_type = response.headers.get('Content-Type', '')
+                    
+                    # Resim formatını doğrula
+                    if 'image' in content_type:
+                        try:
+                            # Resmi PIL ile aç ve boyutlarını kontrol et
+                            img = Image.open(io.BytesIO(response.content))
+                            width, height = img.size
+                            
+                            # Minimum boyut kontrolü
+                            if width >= 200 and height >= 200:
+                                print(f"Geçerli resim indirildi: {width}x{height}")
+                                return response.content
+                            else:
+                                print(f"Resim çok küçük: {width}x{height}")
+                        except Exception as img_error:
+                            print(f"Resim doğrulama hatası: {img_error}")
+                    else:
+                        print(f"Geçersiz içerik türü: {content_type}")
+            except Exception as req_error:
+                print(f"Resim indirme hatası: {req_error}")
         
         return None
         

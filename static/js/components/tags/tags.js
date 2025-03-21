@@ -315,7 +315,7 @@ function loadTaggedBookmarks(tag) {
                         </button>
                     </div>
                     <a href="${bookmark.url}" target="_blank" class="thumbnail-container">
-                        <img src="${bookmark.thumbnail || '/static/images/placeholder.jpg'}" alt="Thumbnail" class="thumbnail">
+                        <img src="${bookmark.thumbnail || '/media/placeholder.jpg'}" alt="Thumbnail" class="thumbnail">
                     </a>
                     <div class="card-content">
                         <a href="${bookmark.url}" target="_blank" class="title-link">

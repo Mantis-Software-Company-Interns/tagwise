@@ -43,7 +43,41 @@
                 Clean Orphan Data
             </button>
             <p class="help-text">This will remove all tags and categories that are not associated with any bookmarks.</p>
+            
+            <button type="button" name="delete_all_bookmarks" class="delete-all-btn" id="deleteAllBookmarksBtn">
+                <i class="material-icons">delete_forever</i>
+                Delete All Bookmarks
+            </button>
+            <p class="help-text warning-text">Warning: This will permanently delete ALL bookmarks. This action cannot be undone.</p>
         </form>
+    </div>
+</div>
+
+<!-- Delete All Bookmarks Confirmation Modal -->
+<div class="modal" id="deleteAllBookmarksModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Confirm Deletion</h2>
+            <button type="button" class="close-btn">
+                <i class="material-icons">close</i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="warning-message">
+                <i class="material-icons large-icon">warning</i>
+                <h3>Are you sure you want to delete ALL bookmarks?</h3>
+                <p>This action will permanently delete all bookmarks from the database. This action cannot be undone.</p>
+                <p>Total bookmarks to be deleted: <strong>{{ total_bookmarks }}</strong></p>
+            </div>
+            <form id="delete-all-form" method="post" action="{% url 'tagwiseapp:admin_panel' %}">
+                {% csrf_token %}
+                <input type="hidden" name="delete_all_bookmarks" value="1">
+                <div class="modal-footer">
+                    <button type="button" class="cancel-btn">Cancel</button>
+                    <button type="submit" class="confirm-delete-btn">Delete All Bookmarks</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 {% endblock %}

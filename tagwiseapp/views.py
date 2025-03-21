@@ -73,6 +73,9 @@ def index(request):
     # Bookmarks için ekran görüntüsü bilgisini ekle
     for bookmark in bookmarks:
         bookmark.has_screenshot = bool(bookmark.screenshot_data)
+        # Ekran görüntüsü yolu tanımla
+        if bookmark.screenshot_data:
+            bookmark.screenshot_path = normalize_thumbnail_path(bookmark.screenshot_data)
     
     # Ana kategorileri getir
     main_categories = Category.objects.filter(parent=None)
@@ -80,14 +83,18 @@ def index(request):
     # NOT: Varsayılan kategorileri otomatik oluşturmayı kaldırdık
     # Kategoriler artık sadece bookmark eklendiğinde, gerçekten kullanıldıklarında oluşturulacak
     
+    # MEDIA_URL'i context'e ekle
+    from django.conf import settings
+    
     return render(request, 'home/main.html', {
         'bookmarks': bookmarks,
-        'main_categories': main_categories
+        'main_categories': main_categories,
+        'MEDIA_URL': settings.MEDIA_URL
     })
 
 def tags(request):
     # Get all tags with bookmark count
-    tags = Tag.objects.annotate(bookmark_count=models.Count('bookmark'))
+    tags = Tag.objects.annotate(bookmark_count=models.Count('bookmark')).order_by('name')
     
     # Get recent tags (those with bookmarks added in the last 7 days)
     from django.utils import timezone
@@ -105,7 +112,7 @@ def tags(request):
     
     recent_tags = Tag.objects.filter(id__in=recent_tag_ids).annotate(
         bookmark_count=models.Count('bookmark')
-    )
+    ).order_by('name')
     
     # Group tags by first letter for organization
     for tag in tags:
@@ -120,11 +127,25 @@ def tags(request):
     })
 
 @login_required(login_url='tagwiseapp:login')
-def collections_view(request):
+def collections(request):
     """Kullanıcının koleksiyonlarını görüntüler."""
     collections = Collection.objects.filter(user=request.user).order_by('-created_at')
+    # Kullanıcının tüm bookmarklarını getir
+    bookmarks = Bookmark.objects.filter(user=request.user).order_by('-created_at')
+    
+    # Debug için bookmark sayısını ve ilk birkaç bookmark'ı yazdır
+    bookmark_count = bookmarks.count()
+    print(f"DEBUG: Collections - Toplam bookmark sayısı: {bookmark_count}")
+    if bookmark_count > 0:
+        first_bookmarks = bookmarks[:3]  # İlk 3 bookmark
+        for idx, bm in enumerate(first_bookmarks):
+            print(f"DEBUG: Collections - Bookmark {idx+1} - ID: {bm.id}, Başlık: {bm.title}")
+    else:
+        print("DEBUG: Collections - Hiç bookmark bulunamadı!")
+    
     return render(request, 'collections/collections.html', {
-        'collections': collections
+        'collections': collections,
+        'bookmarks': bookmarks
     })
 
 @login_required(login_url='tagwiseapp:login')
@@ -150,15 +171,22 @@ def topics(request):
     # Bookmarks için ekran görüntüsü bilgisini ekle
     for bookmark in bookmarks:
         bookmark.has_screenshot = bool(bookmark.screenshot_data)
+        # Ekran görüntüsü yolu tanımla
+        if bookmark.screenshot_data:
+            bookmark.screenshot_path = normalize_thumbnail_path(bookmark.screenshot_data)
     
     # Get other subcategories in the same category for navigation
     related_subcategories = Category.objects.filter(parent=category)
+    
+    # MEDIA_URL'i context'e ekle
+    from django.conf import settings
     
     return render(request, 'topics/topics.html', {
         'category': category,
         'subcategory': subcategory,
         'bookmarks': bookmarks,
-        'related_subcategories': related_subcategories
+        'related_subcategories': related_subcategories,
+        'MEDIA_URL': settings.MEDIA_URL
     })
 
 @login_required(login_url='tagwiseapp:login')
@@ -172,8 +200,18 @@ def tagged_bookmarks(request):
             # Bookmarks için ekran görüntüsü bilgisini ekle
             for bookmark in bookmarks:
                 bookmark.has_screenshot = bool(bookmark.screenshot_data)
-                
-            return render(request, 'bookmarks/tagged_bookmarks.html', {'tag': tag, 'bookmarks': bookmarks})
+                # Ekran görüntüsü yolu tanımla
+                if bookmark.screenshot_data:
+                    bookmark.screenshot_path = normalize_thumbnail_path(bookmark.screenshot_data)
+            
+            # MEDIA_URL'i context'e ekle
+            from django.conf import settings
+            
+            return render(request, 'bookmarks/tagged_bookmarks.html', {
+                'tag': tag, 
+                'bookmarks': bookmarks,
+                'MEDIA_URL': settings.MEDIA_URL
+            })
     
     return redirect('tagwiseapp:tags')
 
@@ -204,6 +242,12 @@ def analyze_url(request):
             screenshot_path = None
             screenshot_used = False
             
+            # Thumbnails dizininin varlığını kontrol et ve yoksa oluştur
+            thumbnails_dir = os.path.join('media', 'thumbnails')
+            if not os.path.exists(thumbnails_dir):
+                os.makedirs(thumbnails_dir, exist_ok=True)
+                print(f"Thumbnails dizini oluşturuldu: {thumbnails_dir}")
+            
             if html:
                 print("HTML içeriği alındı, içerik çıkarılıyor...")
                 # Extract main content
@@ -218,14 +262,21 @@ def analyze_url(request):
                     # Generate a unique filename for the thumbnail
                     import uuid
                     filename = f"{uuid.uuid4()}.png"
-                    thumbnail_path = os.path.join('static', 'images', 'thumbnails', filename)
+                    
+                    # Ensure the path exists
+                    thumbnails_dir = os.path.join('media', 'thumbnails')
+                    if not os.path.exists(thumbnails_dir):
+                        os.makedirs(thumbnails_dir, exist_ok=True)
+                        print(f"Thumbnails dizini oluşturuldu: {thumbnails_dir}")
+                    
+                    thumbnail_path = os.path.join('media', 'thumbnails', filename)
                     
                     # Save the thumbnail
                     with open(thumbnail_path, 'wb') as f:
                         f.write(thumbnail)
                     
-                    # Store the relative path in screenshot_path
-                    screenshot_path = os.path.join('images', 'thumbnails', filename)
+                    # Store the relative path in screenshot_path - normalize the path
+                    screenshot_path = normalize_thumbnail_path(thumbnail_path)
                     screenshot_used = False
                 else:
                     print("HTML'den thumbnail alınamadı, ekran görüntüsü alınıyor...")
@@ -236,14 +287,21 @@ def analyze_url(request):
                         # Generate a unique filename for the screenshot
                         import uuid
                         filename = f"{uuid.uuid4()}.png"
-                        thumbnail_path = os.path.join('static', 'images', 'thumbnails', filename)
+                        
+                        # Ensure the path exists
+                        thumbnails_dir = os.path.join('media', 'thumbnails')
+                        if not os.path.exists(thumbnails_dir):
+                            os.makedirs(thumbnails_dir, exist_ok=True)
+                            print(f"Thumbnails dizini oluşturuldu: {thumbnails_dir}")
+                        
+                        thumbnail_path = os.path.join('media', 'thumbnails', filename)
                         
                         # Save the screenshot
                         with open(thumbnail_path, 'wb') as f:
                             f.write(screenshot)
                         
-                        # Store the relative path in screenshot_path
-                        screenshot_path = os.path.join('images', 'thumbnails', filename)
+                        # Store the relative path in screenshot_path - normalize the path
+                        screenshot_path = normalize_thumbnail_path(thumbnail_path)
                         screenshot_used = True
             
             # HTML içeriği alınamadıysa veya içerik çıkarılamazsa, ekran görüntüsünden kategorize et
@@ -357,14 +415,20 @@ def save_bookmark(request):
                     # Convert base64 to binary
                     screenshot_binary = base64.b64decode(custom_screenshot)
                     
+                    # Ensure thumbnails directory exists
+                    thumbnails_dir = os.path.join('media', 'thumbnails')
+                    if not os.path.exists(thumbnails_dir):
+                        os.makedirs(thumbnails_dir, exist_ok=True)
+                        print(f"Thumbnails dizini oluşturuldu: {thumbnails_dir}")
+                    
                     # Save to file system
-                    thumbnail_path = os.path.join('static', 'images', 'thumbnails', os.path.basename(screenshot_data))
+                    thumbnail_path = os.path.join('media', 'thumbnails', os.path.basename(screenshot_data))
                     
                     with open(thumbnail_path, 'wb') as f:
                         f.write(screenshot_binary)
                     
-                    # Update screenshot_data to point to the new file
-                    screenshot_data = os.path.join('images', 'thumbnails', os.path.basename(screenshot_data))
+                    # Update screenshot_data to use normalized path
+                    screenshot_data = normalize_thumbnail_path(thumbnail_path)
                 except Exception as e:
                     print(f"Error processing custom screenshot: {str(e)}")
                     # Continue without the custom screenshot if it fails
@@ -527,10 +591,6 @@ def subcategories(request):
     
     return redirect('tagwiseapp:categories')
 
-@login_required(login_url='tagwiseapp:login')
-def collections(request):
-    return render(request, 'collections/collections.html')
-
 # Admin Görünümleri
 @login_required(login_url='tagwiseapp:login')
 def admin_panel(request):
@@ -542,6 +602,17 @@ def admin_panel(request):
     if request.method == 'POST' and 'clean_orphans' in request.POST:
         cleaned_data = clean_orphan_data(request.user)
         messages.success(request, f"Temizleme tamamlandı: {cleaned_data['tags']} tag, {cleaned_data['main_categories']} ana kategori, {cleaned_data['subcategories']} alt kategori silindi.")
+        return redirect('tagwiseapp:admin_panel')
+    
+    # Tüm bookmarkları sil
+    if request.method == 'POST' and 'delete_all_bookmarks' in request.POST:
+        # Kullanıcıya ait tüm bookmarkları sayalım
+        bookmark_count = Bookmark.objects.filter(user=request.user).count()
+        
+        # Bookmarkları silme işlemi
+        Bookmark.objects.filter(user=request.user).delete()
+        
+        messages.success(request, f"Tüm bookmarklar başarıyla silindi. Toplam {bookmark_count} bookmark silindi.")
         return redirect('tagwiseapp:admin_panel')
     
     # Admin paneli için gerekli verileri hazırla
@@ -673,7 +744,8 @@ def api_related_tags(request):
         tag_counter = Counter(related_tag_ids)
         most_common_tag_ids = [tag_id for tag_id, _ in tag_counter.most_common(10)]
         
-        related_tags = Tag.objects.filter(id__in=most_common_tag_ids).values_list('name', flat=True)
+        # Get related tags and order them alphabetically
+        related_tags = Tag.objects.filter(id__in=most_common_tag_ids).order_by('name').values_list('name', flat=True)
         
         return JsonResponse({
             'success': True,
@@ -701,18 +773,19 @@ def api_tagged_bookmarks(request):
         bookmark_data = []
         for bookmark in bookmarks:
             # Determine thumbnail - use screenshot if available, otherwise placeholder
-            thumbnail = '/static/images/placeholder.jpg'
-            has_screenshot = False
-            if bookmark.screenshot_data:
-                has_screenshot = True
-                
+            has_screenshot = bool(bookmark.screenshot_data)
+            screenshot_path = None
+            
+            if has_screenshot:
+                screenshot_path = normalize_thumbnail_path(bookmark.screenshot_data)
+            
             bookmark_data.append({
                 'id': bookmark.id,
                 'url': bookmark.url,
                 'title': bookmark.title,
                 'description': bookmark.description,
-                'thumbnail': thumbnail,
                 'has_screenshot': has_screenshot,
+                'screenshot_path': screenshot_path,
                 'created_at': bookmark.created_at.isoformat(),
                 'tags': list(bookmark.tags.values_list('name', flat=True))
             })
@@ -764,14 +837,20 @@ def update_bookmark(request):
                     # Convert base64 to binary
                     screenshot_binary = base64.b64decode(custom_screenshot)
                     
+                    # Ensure thumbnails directory exists
+                    thumbnails_dir = os.path.join('media', 'thumbnails')
+                    if not os.path.exists(thumbnails_dir):
+                        os.makedirs(thumbnails_dir, exist_ok=True)
+                        print(f"Thumbnails dizini oluşturuldu: {thumbnails_dir}")
+                    
                     # Save to file system
-                    thumbnail_path = os.path.join('static', 'images', 'thumbnails', os.path.basename(screenshot_data))
+                    thumbnail_path = os.path.join('media', 'thumbnails', os.path.basename(screenshot_data))
                     
                     with open(thumbnail_path, 'wb') as f:
                         f.write(screenshot_binary)
                     
-                    # Update screenshot_data to point to the new file
-                    screenshot_data = os.path.join('images', 'thumbnails', os.path.basename(screenshot_data))
+                    # Update screenshot_data to use normalized path
+                    screenshot_data = normalize_thumbnail_path(thumbnail_path)
                 except Exception as e:
                     print(f"Error processing custom screenshot: {str(e)}")
                     # Continue without the custom screenshot if it fails
@@ -933,10 +1012,8 @@ def collection_detail(request, collection_id):
         bookmarks = collection.bookmarks.all().order_by('-created_at')
         
         # Get all user bookmarks for the add bookmark modal
-        # Exclude bookmarks already in the collection
-        all_bookmarks = Bookmark.objects.filter(user=request.user).exclude(
-            id__in=bookmarks.values_list('id', flat=True)
-        ).order_by('-created_at')
+        # Artık koleksiyonda olanları hariç tutmuyoruz - bir bookmark birden fazla koleksiyonda olabilir
+        all_bookmarks = Bookmark.objects.filter(user=request.user).order_by('-created_at')
         
         # Print for debugging
         print(f"Collection: {collection.name}, Bookmarks count: {bookmarks.count()}, Available bookmarks: {all_bookmarks.count()}")
@@ -1360,7 +1437,7 @@ def search_tags(request):
         return redirect('tagwiseapp:tags')
     
     # Search in tags
-    tags = Tag.objects.filter(name__icontains=query)
+    tags = Tag.objects.filter(name__icontains=query).order_by('name')
     
     # Get bookmark count for each tag
     for tag in tags:
@@ -1377,10 +1454,14 @@ def search_tags(request):
     # Sort the groups by letter
     grouped_tags = dict(sorted(grouped_tags.items()))
     
+    # Sort tags within each group alphabetically
+    for letter in grouped_tags:
+        grouped_tags[letter] = sorted(grouped_tags[letter], key=lambda x: x.name)
+    
     # Get recent tags
     recent_tags = Tag.objects.filter(bookmark__user=request.user).annotate(
         bookmark_count=Count('bookmark', filter=Q(bookmark__user=request.user))
-    ).order_by('-bookmark__created_at')[:10]
+    ).order_by('name')[:10]
     
     context = {
         'grouped_tags': grouped_tags,
@@ -1390,3 +1471,23 @@ def search_tags(request):
     }
     
     return render(request, 'tags/search_results.html', context)
+
+def normalize_thumbnail_path(screenshot_data):
+    """
+    Standardize thumbnail path handling.
+    Returns path relative to MEDIA_ROOT, starting with 'thumbnails/'
+    """
+    if not screenshot_data:
+        return None
+        
+    # If already starts with thumbnails/, use as is
+    if screenshot_data.startswith('thumbnails/'):
+        return screenshot_data
+    # If starts with media/, remove media/ prefix
+    elif screenshot_data.startswith('media/'):
+        path = screenshot_data[6:]  # Remove "media/" prefix
+        # Ensure it starts with thumbnails/
+        return f"thumbnails/{path.split('thumbnails/')[-1]}" if 'thumbnails/' in path else f"thumbnails/{path}"
+    # Otherwise add thumbnails/ prefix
+    else:
+        return f"thumbnails/{screenshot_data}"

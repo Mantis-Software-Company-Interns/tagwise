@@ -49,7 +49,8 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 15px;
+    position: relative;
+    margin-bottom: 10px;
 }
 
 .collection-header i {
@@ -61,12 +62,52 @@
     color: #334155;
     font-size: 1.25rem;
     font-weight: 600;
+    margin: 0;
+    flex-grow: 1;
+}
+
+.collection-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.collection-actions button {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.collection-actions button:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #2196F3;
+}
+
+.collection-actions i {
+    font-size: 18px !important;
+    color: inherit !important;
+}
+
+.edit-collection-btn:hover {
+    color: #4CAF50 !important;
+}
+
+.delete-collection-btn:hover {
+    color: #F44336 !important;
 }
 
 .collection-description {
     color: #64748b;
     font-size: 0.875rem;
-    margin: 0.5rem 0;
+    margin: 0.75rem 0;
+    min-height: 30px;
 }
 
 .collection-stats {
@@ -382,4 +423,77 @@
     --dark-input-bg: #2d2d2d;
     --hover-bg: #f0f0f0;
     --dark-hover-bg: #363636;
+}
+
+.warning {
+    color: #F44336;
+    font-weight: 500;
+    background-color: rgba(244, 67, 54, 0.1);
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 10px;
+}
+
+.delete-confirm-btn {
+    background-color: #F44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.delete-confirm-btn:hover {
+    background-color: #D32F2F;
+}
+
+.notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: white;
+    border-radius: 4px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.notification.success {
+    border-left: 4px solid #4CAF50;
+}
+
+.notification.error {
+    border-left: 4px solid #F44336;
+}
+
+.notification.info {
+    border-left: 4px solid #2196F3;
+}
+
+.notification i {
+    font-size: 20px;
+}
+
+.notification.success i {
+    color: #4CAF50;
+}
+
+.notification.error i {
+    color: #F44336;
+}
+
+.notification.info i {
+    color: #2196F3;
 } 

@@ -91,7 +91,7 @@ function updateCollection() {
     };
     
     // Send update request
-    fetch('/tagwise/api/update-collection/', {
+    fetch('/api/update-collection/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -159,7 +159,7 @@ function deleteCollection() {
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
     
     // Send delete request
-    fetch('/tagwise/api/delete-collection/', {
+    fetch('/api/delete-collection/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -173,7 +173,7 @@ function deleteCollection() {
             showNotification('Collection deleted successfully', 'success');
             // Redirect to collections page
             setTimeout(() => {
-                window.location.href = '/tagwise/collections/';
+                window.location.href = '/collections/';
             }, 1000);
         } else {
             showNotification('Error deleting collection: ' + (data.error || 'Unknown error'), 'error');
@@ -300,7 +300,7 @@ function addBookmarksToCollection() {
     };
     
     // Send request
-    fetch('/tagwise/api/add-bookmarks-to-collection/', {
+    fetch('/api/add-bookmarks-to-collection/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -412,7 +412,7 @@ function removeBookmarkFromCollection(bookmarkId, collectionId) {
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
     
     // Send request
-    fetch('/tagwise/api/remove-bookmark-from-collection/', {
+    fetch('/api/remove-bookmark-from-collection/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -470,7 +470,7 @@ function deleteBookmark(bookmarkId) {
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
     
     // Send delete request
-    fetch('/tagwise/api/delete-bookmark/', {
+    fetch('/api/delete-bookmark/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -544,4 +544,4 @@ function showNotification(message, type = 'info') {
             notification.remove();
         }, 300);
     }, 3000);
-} 
+}

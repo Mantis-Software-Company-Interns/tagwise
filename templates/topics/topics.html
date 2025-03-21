@@ -57,7 +57,7 @@
             <a href="{{ bookmark.url }}" target="_blank" class="thumbnail-link">
                 <div class="thumbnail-container">
                     {% if bookmark.screenshot_data %}
-                    <img src="{{ bookmark.screenshot_url }}" alt="{{ bookmark.title }}" class="thumbnail">
+                    <img src="{{ MEDIA_URL }}{{ bookmark.screenshot_path }}" alt="{{ bookmark.title }}" class="thumbnail">
                     {% else %}
                     <img src="{% static 'images/default-thumbnail.png' %}" alt="{{ bookmark.title }}" class="thumbnail">
                     {% endif %}

@@ -1078,7 +1078,7 @@ function showUrlReviewModal(data, url) {
             }
         } else {
             // No screenshot available
-            screenshotPreview.src = '/static/images/default-thumbnail.png';
+            screenshotPreview.src = '/media/default-thumbnail.png';
             const statusEl = document.getElementById('screenshotStatus');
             if (statusEl) {
                 statusEl.innerHTML = `

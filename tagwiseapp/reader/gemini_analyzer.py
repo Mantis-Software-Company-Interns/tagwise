@@ -845,6 +845,28 @@ def categorize_with_gemini(content, url, existing_title=None, existing_descripti
         
         return fallback_json
 
+def fix_turkish_json(json_str):
+    """Türkçe metinlerdeki JSON sorunlarını düzeltir."""
+    
+    # İç içe tırnak işaretlerini düzelt
+    json_str = re.sub(r'(?<!\\)"([^"]*)"([^"]*)"', lambda m: f'"{m.group(1)}\"{m.group(2)}"', json_str)
+    
+    # Türkçe karakterleri düzelt
+    json_str = json_str.replace('"u,n', '"un')
+    json_str = json_str.replace('"ı,n', '"ın')
+    json_str = json_str.replace('"i,n', '"in')
+    
+    # Kaçış karakterlerini düzelt
+    json_str = json_str.replace('\\"', '"').replace('\\\\', '\\')
+    
+    # Çift tırnak içindeki tek tırnakları düzelt
+    json_str = re.sub(r'"([^"]*?)\'([^"]*?)"', r'"\1\\"\2"', json_str)
+    
+    # JSON string içindeki virgülleri düzelt
+    json_str = re.sub(r'(?<=\w),(?=\w)', '', json_str)
+    
+    return json_str
+
 if __name__ == "__main__":
     # Test için
     from .utils import load_api_key

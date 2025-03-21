@@ -22,8 +22,8 @@ const BookmarkActions = {
     },
     
     setupBookmarkActions() {
-        // Setup favorite toggle
-        document.querySelectorAll('.favorite-btn, .menu-item:has(i.material-icons:contains("star"))').forEach(btn => {
+        // Setup favorite toggle for favorite buttons
+        document.querySelectorAll('.favorite-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 const card = e.target.closest('.bookmark-card');
@@ -31,8 +31,20 @@ const BookmarkActions = {
             });
         });
         
-        // Setup archive action
-        document.querySelectorAll('.archive-btn, .menu-item:has(i.material-icons:contains("archive"))').forEach(btn => {
+        // Setup favorite toggle for menu items with star icon
+        document.querySelectorAll('.menu-item').forEach(item => {
+            const icon = item.querySelector('i.material-icons');
+            if (icon && icon.textContent.trim() === 'star') {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const card = e.target.closest('.bookmark-card');
+                    this.toggleFavorite(card);
+                });
+            }
+        });
+        
+        // Setup archive action for archive buttons
+        document.querySelectorAll('.archive-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 const card = e.target.closest('.bookmark-card');
@@ -40,13 +52,28 @@ const BookmarkActions = {
             });
         });
         
-        // Setup edit tags action
-        document.querySelectorAll('.menu-item:has(i.material-icons:contains("local_offer"))').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const card = e.target.closest('.bookmark-card');
-                TagUtils.editTags(card);
-            });
+        // Setup archive action for menu items with archive icon
+        document.querySelectorAll('.menu-item').forEach(item => {
+            const icon = item.querySelector('i.material-icons');
+            if (icon && icon.textContent.trim() === 'archive') {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const card = e.target.closest('.bookmark-card');
+                    this.archiveBookmark(card);
+                });
+            }
+        });
+        
+        // Setup edit tags action for menu items with tag icon
+        document.querySelectorAll('.menu-item').forEach(item => {
+            const icon = item.querySelector('i.material-icons');
+            if (icon && icon.textContent.trim() === 'local_offer') {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const card = e.target.closest('.bookmark-card');
+                    TagUtils.editTags(card);
+                });
+            }
         });
     },
     
@@ -99,8 +126,17 @@ const BookmarkActions = {
         })
         .then(data => {
             if (data.success) {
-                // Remove card on success
-                card.remove();
+                // Add deleted class for animation
+                card.classList.add('deleted');
+                
+                // Different animation duration based on layout
+                const isCompact = card.closest('.grid').classList.contains('compact-view');
+                const animationDuration = isCompact ? 200 : 300;
+                
+                // Remove card after animation
+                setTimeout(() => {
+                    card.remove();
+                }, animationDuration);
             } else {
                 alert('Error deleting bookmark: ' + data.error);
             }

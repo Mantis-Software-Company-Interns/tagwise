@@ -63,10 +63,11 @@
                         <div class="menu-item delete"><i class="material-icons">delete</i>Delete</div>
                     </div>
                 </div>
+               
                 <a href="{{ bookmark.url }}" target="_blank" class="thumbnail-link">
                     <div class="thumbnail-container">
                         {% if bookmark.screenshot_data %}
-                        <img src="{{ bookmark.screenshot_url }}" alt="{{ bookmark.title }}" class="thumbnail">
+                        <img src="{{ MEDIA_URL }}{{ bookmark.screenshot_path }}" alt="{{ bookmark.title }}" class="thumbnail">
                         {% else %}
                         <img src="{% static 'images/default-thumbnail.png' %}" alt="{{ bookmark.title }}" class="thumbnail">
                         {% endif %}
@@ -251,6 +252,7 @@
                         <label>Added Date:</label>
                         <span class="bookmark-date"></span>
                     </div>
+
                     <div class="info-group">
                         <label>Categories:</label>
                         <div class="bookmark-categories"></div>
@@ -281,7 +283,7 @@
                     <h3>Preview</h3>
                     <div class="bookmark-preview">
                         {% if bookmark.screenshot_data %}
-                        <img src="{{ bookmark.screenshot_url }}" alt="{{ bookmark.title }}" class="preview-image">
+                        <img src="{{ MEDIA_URL }}thumbnails/{{ bookmark.screenshot_path }}" alt="{{ bookmark.title }}" class="preview-image">
                         {% else %}
                         <img src="{% static 'images/default-thumbnail.png' %}" alt="{{ bookmark.title }}" class="preview-image">
                         {% endif %}

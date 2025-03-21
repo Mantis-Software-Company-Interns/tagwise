@@ -1,0 +1,220 @@
+/* Collections Tabs & More Button Styles */
+
+/* More Button */
+.more-btn {
+    background: transparent;
+    border: none;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #64748b;
+    position: relative;
+    z-index: 10;
+}
+
+.more-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #2196F3;
+}
+
+.more-btn i {
+    font-size: 20px !important;
+    color: inherit !important;
+}
+
+/* More Menu */
+.more-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    min-width: 160px;
+    z-index: 100;
+    opacity: 0;
+    transform: translateY(-10px);
+    visibility: hidden;
+    transition: all 0.2s ease;
+}
+
+.more-menu.active {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+}
+
+.menu-item {
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #64748b;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.menu-item:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #2196F3;
+}
+
+.menu-item i {
+    font-size: 18px;
+    color: inherit !important;
+}
+
+.menu-item.edit-collection:hover {
+    color: #4CAF50;
+}
+
+.menu-item.delete-collection:hover {
+    color: #F44336;
+}
+
+/* Collection Card Refinements */
+.collection-card {
+    position: relative;
+    cursor: pointer;
+}
+
+.collection-header {
+    position: relative;
+}
+
+/* Fix for subcategory tab styles */
+.subcategory-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    z-index: 2;
+}
+
+.subcategory-tab {
+    background: rgba(33, 150, 243, 0.8);
+    color: white;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    text-decoration: none;
+    backdrop-filter: blur(2px);
+    transition: all 0.2s ease;
+    display: inline-block;
+}
+
+.subcategory-tab:hover {
+    background: rgba(33, 150, 243, 1);
+}
+
+/* Bookmark Item Improvements */
+.bookmark-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: white;
+    transition: all 0.2s ease;
+    border: 1px solid #e2e8f0;
+}
+
+.bookmark-item:hover {
+    background: #f8fafc;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.bookmark-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.bookmark-icon i {
+    font-size: 18px;
+    color: #64748b;
+}
+
+.bookmark-info {
+    overflow: hidden;
+    flex: 1;
+}
+
+.bookmark-title {
+    font-size: 14px;
+    font-weight: 500;
+    margin: 0;
+    color: #334155;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bookmark-url {
+    font-size: 12px;
+    color: #64748b;
+    margin: 4px 0 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .more-menu {
+        background: #1e1e1e;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .menu-item {
+        color: #a0aec0;
+    }
+    
+    .menu-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .bookmark-icon {
+        background: #2d3748;
+    }
+    
+    .bookmark-icon i {
+        color: #a0aec0;
+    }
+    
+    .bookmark-title {
+        color: #e2e8f0;
+    }
+    
+    .bookmark-url {
+        color: #a0aec0;
+    }
+    
+    .bookmark-item {
+        background: #1e1e1e;
+        border-color: #2d3748;
+    }
+    
+    .bookmark-item:hover {
+        background: #2d3748;
+    }
+    
+    .more-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+} 
