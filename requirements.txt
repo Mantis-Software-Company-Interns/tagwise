@@ -1,0 +1,16 @@
+Django>=4.2.0,<5.0.0
+django-environ>=0.11.0
+Pillow>=10.0.0  # for image handling
+requests>=2.31.0
+python-dotenv>=1.0.0
+django-crispy-forms>=2.0
+crispy-bootstrap5>=0.7
+whitenoise>=6.5.0  # for serving static files
+gunicorn>=21.2.0  # for production deployment
+django-cors-headers>=4.3.0
+django-debug-toolbar>=4.2.0  # for development
+python-magic>=0.4.27  # for file type detection
+beautifulsoup4>=4.12.0  # for web scraping
+selenium>=4.15.0  # for screenshot capture
+webdriver_manager>=4.0.0
+django-cleanup>=8.0.0  # for automatic file cleanup 
