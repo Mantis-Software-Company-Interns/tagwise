@@ -23,6 +23,7 @@ import time
 import traceback
 from django.db.models import Q, Count
 from django.utils import timezone
+from .reader.youtube_analyzer import is_youtube_url, analyze_youtube_video, extract_youtube_video_id, fetch_youtube_thumbnail
 
 # Create your views here.
 
@@ -234,6 +235,56 @@ def analyze_url(request):
                 url = 'https://' + url
                 print(f"URL düzeltildi: {url}")
             
+            # Thumbnails dizininin varlığını kontrol et ve yoksa oluştur
+            thumbnails_dir = os.path.join('media', 'thumbnails')
+            if not os.path.exists(thumbnails_dir):
+                os.makedirs(thumbnails_dir, exist_ok=True)
+                print(f"Thumbnails dizini oluşturuldu: {thumbnails_dir}")
+            
+            # YouTube URL kontrolü yap
+            if is_youtube_url(url):
+                print(f"YouTube URL'i tespit edildi, YouTube analizörü kullanılıyor: {url}")
+                
+                # YouTube video ID'sini çıkar
+                video_id = extract_youtube_video_id(url)
+                
+                if video_id:
+                    # YouTube thumbnail'ini indir
+                    print(f"YouTube thumbnail indiriliyor: {video_id}")
+                    thumbnail_data = fetch_youtube_thumbnail(video_id)
+                    
+                    if thumbnail_data:
+                        # Benzersiz dosya adı oluştur
+                        import uuid
+                        filename = f"youtube_{video_id}_{uuid.uuid4()}.jpg"
+                        thumbnail_path = os.path.join('media', 'thumbnails', filename)
+                        
+                        # Thumbnail'i kaydet
+                        with open(thumbnail_path, 'wb') as f:
+                            f.write(thumbnail_data)
+                        
+                        # Thumbnail yolu için normalize et
+                        screenshot_path = normalize_thumbnail_path(thumbnail_path)
+                        print(f"YouTube thumbnail kaydedildi: {screenshot_path}")
+                
+                # YouTube analizini yap
+                result = analyze_youtube_video(url)
+                
+                if result:
+                    print(f"YouTube analizi tamamlandı: {result}")
+                    
+                    # Eğer thumbnail kaydedildiyse, sonuca ekle
+                    if 'screenshot_path' in locals():
+                        result['screenshot_data'] = screenshot_path
+                        result['screenshot_used'] = False  # Ekran görüntüsü değil, orijinal thumbnail
+                    
+                    # YouTube analizinden gelen sonucu döndür
+                    return JsonResponse(result)
+                else:
+                    print("YouTube analizi başarısız oldu, standart analiz deneniyor...")
+            
+            # YouTube analizi yapılmadıysa veya başarısız olduysa, standart analizi devam ettir
+            
             # Fetch HTML content
             print("HTML içeriği alınıyor...")
             html = fetch_html(url)
@@ -241,12 +292,6 @@ def analyze_url(request):
             category_json = None
             screenshot_path = None
             screenshot_used = False
-            
-            # Thumbnails dizininin varlığını kontrol et ve yoksa oluştur
-            thumbnails_dir = os.path.join('media', 'thumbnails')
-            if not os.path.exists(thumbnails_dir):
-                os.makedirs(thumbnails_dir, exist_ok=True)
-                print(f"Thumbnails dizini oluşturuldu: {thumbnails_dir}")
             
             if html:
                 print("HTML içeriği alındı, içerik çıkarılıyor...")

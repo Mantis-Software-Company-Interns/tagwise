@@ -259,13 +259,11 @@ def ensure_correct_json_structure(json_result, url, existing_title=None, existin
             
             # En sık geçen anlamlı kelimeleri bul
             word_counter = Counter(filtered_words)
-            common_words = word_counter.most_common(10)
+            common_words = word_counter.most_common(20)
             
             # Anlamlı kelimeleri etiket olarak kullan
             content_tags = []
             for word, count in common_words:
-                if len(content_tags) >= 5:  # En fazla 5 etiket
-                    break
                 # İlk harfi büyüt
                 tag = word.capitalize()
                 if tag and tag not in content_tags:
@@ -311,8 +309,8 @@ def ensure_correct_json_structure(json_result, url, existing_title=None, existin
                                     path_tags.append(word.capitalize())
                     
                     if path_tags:
-                        corrected_json['tags'] = path_tags[:5]  # En fazla 5 etiket
-                        print(f"URL yolundan oluşturulan etiketler: {path_tags[:5]}")
+                        corrected_json['tags'] = path_tags
+                        print(f"URL yolundan oluşturulan etiketler: {path_tags}")
                     else:
                         # En son çare olarak URL temel etiketleri
                         corrected_json['tags'] = ["Site", "Web", "Sayfa", "Bilgi", "İnternet"]
@@ -352,8 +350,8 @@ def ensure_correct_json_structure(json_result, url, existing_title=None, existin
                     content_tags.append(part.capitalize())
             
             if len(content_tags) >= 3:
-                corrected_json['tags'] = content_tags[:5]  # En fazla 5 etiket
-                print(f"Kategoriler ve alan adından oluşturulan etiketler: {content_tags[:5]}")
+                corrected_json['tags'] = content_tags
+                print(f"Kategoriler ve alan adından oluşturulan etiketler: {content_tags}")
             else:
                 # URL yolundan ipucu çıkar
                 path_parts = urlparse(url).path.split('/')
@@ -367,8 +365,8 @@ def ensure_correct_json_structure(json_result, url, existing_title=None, existin
                                 path_tags.append(word.capitalize())
                 
                 if path_tags:
-                    corrected_json['tags'] = (content_tags + path_tags)[:5]  # En fazla 5 etiket
-                    print(f"Kategoriler ve URL yolundan oluşturulan etiketler: {(content_tags + path_tags)[:5]}")
+                    corrected_json['tags'] = content_tags + path_tags
+                    print(f"Kategoriler ve URL yolundan oluşturulan etiketler: {content_tags + path_tags}")
                 else:
                     # En son çare olarak site bazlı etiketler
                     corrected_json['tags'] = ["Site", "Web", "Sayfa", "Bilgi", "İnternet"]
@@ -391,27 +389,24 @@ def ensure_correct_json_structure(json_result, url, existing_title=None, existin
             
             # En sık geçen anlamlı kelimeleri bul
             word_counter = Counter(filtered_words)
-            common_words = word_counter.most_common(10)
+            common_words = word_counter.most_common(20)
             
             # Anlamlı kelimeleri etiket olarak kullan
             content_tags = []
             for word, count in common_words:
-                if len(content_tags) >= 5:  # En fazla 5 etiket
-                    break
                 # İlk harfi büyüt
                 tag = word.capitalize()
                 if tag and tag not in content_tags:
                     content_tags.append(tag)
             
             # Eğer yeterli sayıda etiket bulunamadıysa, ana ve alt kategoriyi ekle
-            if len(content_tags) < 5:
-                # Ana kategoriyi etiket olarak ekle
-                if corrected_json['main_category'] and corrected_json['main_category'] not in content_tags:
-                    content_tags.append(corrected_json['main_category'])
-                
-                # Alt kategoriyi etiket olarak ekle
-                if corrected_json['subcategory'] and corrected_json['subcategory'] not in content_tags and corrected_json['subcategory'] != corrected_json['main_category']:
-                    content_tags.append(corrected_json['subcategory'])
+            # Ana kategoriyi etiket olarak ekle
+            if corrected_json['main_category'] and corrected_json['main_category'] not in content_tags:
+                content_tags.append(corrected_json['main_category'])
+            
+            # Alt kategoriyi etiket olarak ekle
+            if corrected_json['subcategory'] and corrected_json['subcategory'] not in content_tags and corrected_json['subcategory'] != corrected_json['main_category']:
+                content_tags.append(corrected_json['subcategory'])
             
             if content_tags:
                 corrected_json['tags'] = content_tags

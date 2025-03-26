@@ -75,7 +75,7 @@ def generate_summary_from_screenshot(screenshot_base64, url):
             Sen bir web sayfası analisti olarak görev yapıyorsun. 
             Verilen görüntüleri analiz ederek kapsamlı özetler oluşturursun. 
             Özetlerin, sayfanın ana konusunu, amacını, hedef kitlesini ve önemli bilgileri içermelidir.
-            Özetlerin en az 200, en fazla 500 kelime olmalıdır.
+            Özetini oluştururken kelime sayısı sınırlaması olmadan, sayfayı en iyi şekilde anlatacak kapsamlı bir özet yaz.
             """
         )
         
@@ -85,6 +85,7 @@ def generate_summary_from_screenshot(screenshot_base64, url):
         # Kullanıcı içeriğini hazırla
         user_content = f"""
         Bu bir web sayfasının ekran görüntüsüdür. Lütfen bu sayfanın içeriğini analiz edip kapsamlı bir özet oluştur.
+        Özet için herhangi bir kelime sınırlaması yok, sayfayı en iyi şekilde anlatan detaylı bir özet yaz.
         
         URL: {url}
         """
@@ -127,13 +128,14 @@ def generate_summary_from_content(content, url):
             Sen bir web sayfası analisti olarak görev yapıyorsun. 
             Verilen HTML içeriğini analiz ederek kapsamlı özetler oluşturursun. 
             Özetlerin, sayfanın ana konusunu, amacını, hedef kitlesini ve önemli bilgileri içermelidir.
-            Özetlerin en az 200, en fazla 500 kelime olmalıdır.
+            Özetini oluştururken kelime sayısı sınırlaması olmadan, sayfayı en iyi şekilde anlatacak kapsamlı bir özet yaz.
             """
         )
         
         # Kullanıcı içeriğini hazırla
         user_content = f"""
         Bu bir web sayfasının içeriğidir. Lütfen bu içeriği analiz edip kapsamlı bir özet oluştur.
+        Özet için herhangi bir kelime sınırlaması yok, sayfayı en iyi şekilde anlatan detaylı bir özet yaz.
         
         URL: {url}
         
@@ -606,12 +608,17 @@ def categorize_with_gemini(content, url, existing_title=None, existing_descripti
         }
         
         # Kullanıcı içeriğini hazırla
+        # Ana kategori ve alt kategori ilişkisini daha anlaşılır bir şekilde göster
+        category_format = ""
+        for main_cat, sub_cats in existing_categories['parent_map'].items():
+            sub_cats_formatted = '", "'.join(sub_cats)
+            category_format += f"{main_cat}: [\"{sub_cats_formatted}\"]\n"
+        
         user_content = f"""
         URL: {url}
         
-        Mevcut ana kategoriler: {existing_categories['main_categories']}
-        
-        Mevcut alt kategoriler: {existing_categories['subcategories']}
+        Mevcut kategoriler:
+        {category_format}
         
         Mevcut etiketler: {existing_tags}
         

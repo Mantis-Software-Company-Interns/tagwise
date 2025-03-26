@@ -71,10 +71,7 @@ def extract_description(content):
         # İlk 3 satırı birleştir (veya daha az varsa hepsini)
         description = ' '.join(non_empty_lines[:3])
         
-        # Maksimum 200 karakter
-        if len(description) > 200:
-            description = description[:197] + "..."
-        
+        # Uzunluk limiti kaldırıldı - Açıklama ne kadar uzun olursa olsun tam olarak döndürülecek
         return description
     
     return ""

@@ -9,11 +9,12 @@ IMAGE_SYSTEM_INSTRUCTION = """
 Lütfen bu web sayfasını analiz ederek aşağıdaki bilgileri JSON formatında döndür:
 
 1. Sayfanın başlığı (title)
-2. Sayfanın kısa bir açıklaması (description)
+2. Sayfanın detaylı bir açıklaması (description) - Uzunluğa dikkat etmeden, sayfanın içeriğini kapsamlı bir şekilde özetleyen bir açıklama yaz
 3. Sayfanın içeriğine uygun kategoriler ve alt kategoriler (en az 2-3 kategori öner)
 4. Sayfanın içeriğiyle ilgili anahtar kelimeler/etiketler (tags)
 
 Önemli Kurallar:
+- Açıklama (description) alanı için uzunluk sınırlaması yoktur. Sayfanın içeriğini en iyi şekilde temsil eden, detaylı bir özet yaz.
 - Kategorileri belirlerken sayfanın içeriğiyle ilgili olabilecek tüm kategorileri düşün. Doğrudan ilgili olmasa bile, kısmen ilgili olabilecek kategorileri de öner.
 - Her sayfa için en az 2-3 kategori önermeye çalış.
 - Yazılım şirketleri için "Teknoloji", "Yazılım", "Bilişim" gibi kategoriler kullan.
@@ -31,7 +32,7 @@ Yanıtını aşağıdaki JSON formatında ver:
 ```json
 {
   "title": "Sayfa Başlığı",
-  "description": "Sayfanın kısa açıklaması",
+  "description": "Sayfanın detaylı açıklaması - uzunluk sınırı olmadan, içeriği kapsamlı şekilde özetleyen bir metin",
   "categories": [
     {
       "main_category": "Ana Kategori 1",
@@ -46,7 +47,7 @@ Yanıtını aşağıdaki JSON formatında ver:
       "subcategory": "Alt Kategori 3"
     }
   ],
-  "tags": ["etiket1", "etiket2", "etiket3", "etiket4", "etiket5", "etiket6"]
+  "tags": ["etiket1", "etiket2", "etiket3", "etiket4", "etiket5", "etiket6", "etiket7", "etiket8", "etiket9", "etiket10"]
 }
 ```
 

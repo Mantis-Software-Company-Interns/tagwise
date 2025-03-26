@@ -7,6 +7,7 @@ This module provides the main functions for URL analysis.
 import base64
 import time
 import os
+import json
 from dotenv import load_dotenv
 
 from .django_setup import setup_django
@@ -56,6 +57,24 @@ def analyze_url(url):
     api_key = load_api_key()
     if not configure_gemini(api_key):
         return f"URL: {url}\nSonuç: Gemini API yapılandırılamadı."
+    
+    # YouTube URL kontrolü yap
+    try:
+        from .youtube_analyzer import is_youtube_url, analyze_youtube_video
+        
+        # Eğer YouTube URL'i ise, YouTube analiz fonksiyonunu kullan
+        if is_youtube_url(url):
+            print(f"YouTube URL'i tespit edildi, YouTube analizörü kullanılıyor: {url}")
+            result = analyze_youtube_video(url)
+            
+            if result:
+                print(f"YouTube analizi tamamlandı: {result}")
+                return f"URL: {url}\nSonuç: {json.dumps(result, ensure_ascii=False)}\n"
+    except Exception as e:
+        print(f"YouTube analizi denemesi sırasında hata: {e}")
+        print("Standart analize devam ediliyor...")
+    
+    # YouTube analizi yapılmadıysa veya başarısız olduysa, standart analizi devam ettir
     
     # HTML içeriğini çek
     html = fetch_html(url)
