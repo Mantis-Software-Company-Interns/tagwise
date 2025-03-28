@@ -184,11 +184,24 @@ def ensure_correct_json_structure(json_result, url, existing_title=None, existin
                 
                 # Düzeltilmiş kategorilere ekle
                 corrected_json['categories'].append(category_item)
+                
+                # Maksimum 3 kategori sınırı
+                if len(corrected_json['categories']) >= 3:
+                    break
         
         # Eğer en az bir kategori varsa, ilk kategoriyi ana ve alt kategori olarak kullan
         if corrected_json['categories']:
             corrected_json['main_category'] = corrected_json['categories'][0]['main_category']
             corrected_json['subcategory'] = corrected_json['categories'][0].get('subcategory', "")
+        else:
+            # Hiç kategori yoksa varsayılan bir kategori ekle
+            default_category = {
+                'main_category': 'Medya',
+                'subcategory': 'Video'
+            }
+            corrected_json['categories'].append(default_category)
+            corrected_json['main_category'] = default_category['main_category']
+            corrected_json['subcategory'] = default_category['subcategory']
     
     else:
         # Eski tarz JSON yanıtlarından categories dizisi oluştur
@@ -209,8 +222,14 @@ def ensure_correct_json_structure(json_result, url, existing_title=None, existin
             corrected_json['main_category'] = json_result['main_category']
             corrected_json['subcategory'] = json_result.get('subcategory', "")
         else:
-            corrected_json['main_category'] = ""
-            corrected_json['subcategory'] = ""
+            # Hiç kategori yoksa varsayılan bir kategori ekle
+            default_category = {
+                'main_category': 'Medya',
+                'subcategory': 'Video'
+            }
+            corrected_json['categories'].append(default_category)
+            corrected_json['main_category'] = default_category['main_category']
+            corrected_json['subcategory'] = default_category['subcategory']
     
     # Etiketler kontrolü - daha sıkı kontrol ve temizleme
     if 'tags' in json_result and isinstance(json_result['tags'], list):

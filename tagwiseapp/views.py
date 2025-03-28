@@ -292,6 +292,7 @@ def analyze_url(request):
             category_json = None
             screenshot_path = None
             screenshot_used = False
+            screenshot = None  # Initialize screenshot variable to avoid reference error
             
             if html:
                 print("HTML içeriği alındı, içerik çıkarılıyor...")
@@ -352,6 +353,10 @@ def analyze_url(request):
             # HTML içeriği alınamadıysa veya içerik çıkarılamazsa, ekran görüntüsünden kategorize et
             if not html or not content or len(content.strip()) < 50:
                 print("HTML içeriği alınamadı veya içerik yetersiz, ekran görüntüsünden analiz yapılıyor...")
+                
+                # Eğer halihazırda bir ekran görüntüsü yoksa, şimdi al
+                if not screenshot:
+                    screenshot = capture_screenshot(url)
                 
                 if screenshot:
                     # Convert binary screenshot to base64 for analysis
@@ -1536,3 +1541,67 @@ def normalize_thumbnail_path(screenshot_data):
     # Otherwise add thumbnails/ prefix
     else:
         return f"thumbnails/{screenshot_data}"
+
+@login_required
+def get_bookmark_details(request):
+    """
+    Bookmark detaylarını döndüren API endpoint'i
+    """
+    if request.method == 'GET':
+        bookmark_id = request.GET.get('id')
+        
+        if not bookmark_id:
+            return JsonResponse({'success': False, 'error': 'Bookmark ID is required'})
+        
+        try:
+            # Bookmark'u ve ilişkili verileri al
+            bookmark = Bookmark.objects.filter(id=bookmark_id, user=request.user).first()
+            
+            if not bookmark:
+                return JsonResponse({'success': False, 'error': 'Bookmark not found or not authorized'})
+            
+            # Ana kategorileri ve alt kategorileri al
+            main_categories = list(bookmark.main_categories.all().values('id', 'name'))
+            subcategories = list(bookmark.subcategories.all().values('id', 'name', 'parent'))
+            
+            # Etiketleri al
+            tags = list(bookmark.tags.all().values('id', 'name'))
+            
+            # Kategori ilişkilerini hazırla
+            category_subcategory_map = {}
+            
+            # Her ana kategori için, bu kategoriye ait alt kategorileri bul
+            for main_category in main_categories:
+                category_subcategory_map[main_category['name']] = []
+                
+                # Bu ana kategoriye ait alt kategorileri bul
+                for subcategory in subcategories:
+                    # Eğer alt kategorinin parent_id'si bu ana kategorinin id'sine eşitse veya
+                    # alt kategorinin adı ana kategorinin adı ile başlıyorsa, bu alt kategoriyi
+                    # ana kategoriye bağla
+                    if subcategory.get('parent') == main_category['id']:
+                        category_subcategory_map[main_category['name']].append(subcategory['name'])
+            
+            # Response data
+            bookmark_data = {
+                'id': bookmark.id,
+                'url': bookmark.url,
+                'title': bookmark.title,
+                'description': bookmark.description,
+                'main_categories': main_categories,
+                'subcategories': subcategories,
+                'tags': tags,
+                'category_subcategory_map': category_subcategory_map
+            }
+            
+            return JsonResponse({
+                'success': True,
+                'bookmark': bookmark_data
+            })
+            
+        except Exception as e:
+            import traceback
+            print(f"Error getting bookmark details: {traceback.format_exc()}")
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})

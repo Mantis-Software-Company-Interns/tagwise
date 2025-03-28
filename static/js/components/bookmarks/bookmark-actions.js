@@ -6,6 +6,7 @@ const BookmarkActions = {
         this.setupDeleteFunctionality();
         this.setupBookmarkActions();
         this.setupMoreButtons();
+        this.setupEditFunctionality();
     },
     
     setupDeleteFunctionality() {
@@ -17,6 +18,16 @@ const BookmarkActions = {
                 if (confirm('Are you sure you want to delete this bookmark?')) {
                     this.deleteBookmark(bookmarkId, card);
                 }
+            });
+        });
+    },
+    
+    setupEditFunctionality() {
+        document.querySelectorAll('.menu-item.edit-bookmark').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const card = e.target.closest('.bookmark-card');
+                this.editBookmark(card);
             });
         });
     },
@@ -106,6 +117,14 @@ const BookmarkActions = {
     deleteBookmark(bookmarkId, card) {
         // Get CSRF token
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        // Silme işlemini tekrar tekrar yapmamak için "deleting" sınıfı ekleyelim
+        if (card.classList.contains('deleting')) {
+            return; // Zaten silme işlemi devam ediyor
+        }
+        
+        // İşlem devam ediyor olarak işaretle
+        card.classList.add('deleting');
 
         // Make API call
         fetch('/api/delete-bookmark/', {
@@ -130,7 +149,7 @@ const BookmarkActions = {
                 card.classList.add('deleted');
                 
                 // Different animation duration based on layout
-                const isCompact = card.closest('.grid').classList.contains('compact-view');
+                const isCompact = card.closest('.grid') && card.closest('.grid').classList.contains('compact-view');
                 const animationDuration = isCompact ? 200 : 300;
                 
                 // Remove card after animation
@@ -138,10 +157,12 @@ const BookmarkActions = {
                     card.remove();
                 }, animationDuration);
             } else {
+                card.classList.remove('deleting'); // İşlem durdu, işareti kaldır
                 alert('Error deleting bookmark: ' + data.error);
             }
         })
         .catch(error => {
+            card.classList.remove('deleting'); // İşlem durdu, işareti kaldır
             console.error('Error deleting bookmark:', error);
             alert('Error deleting bookmark. Please try again.');
         });
@@ -150,6 +171,15 @@ const BookmarkActions = {
     editBookmark(card) {
         // Open edit modal
         console.log('Edit bookmark:', card);
+        
+        // EditModal objesinin tanımlı olup olmadığını kontrol et
+        if (typeof EditModal === 'undefined' || !EditModal) {
+            console.error('EditModal objesi tanımlı değil!');
+            return;
+        }
+        
+        console.log('EditModal objesinin openEditModal fonksiyonu mevcut:', typeof EditModal.openEditModal === 'function');
+        
         EditModal.openEditModal(card);
     },
     

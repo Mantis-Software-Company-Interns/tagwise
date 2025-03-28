@@ -69,6 +69,8 @@
 
 .modal-body {
     padding: 20px;
+    overflow-y: auto;
+    max-height: calc(100vh - 180px);
 }
 
 .modal-body .form-group {
@@ -198,8 +200,17 @@
 }
 
 /* Edit Modal */
-.modal#editModal .modal-content {
+.modal#editModal .modal-content,
+.modal#addUrlModal .modal-content {
     max-width: 600px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal#editModal .modal-body,
+.modal#addUrlModal .modal-body {
+    overflow-y: auto;
 }
 
 .form-group {
@@ -365,6 +376,12 @@
     object-fit: cover;
 }
 
+/* Make screenshot section visible in both edit and add URL modals */
+.modal#editModal .screenshot-preview,
+.modal#addUrlModal .screenshot-preview {
+    display: block;
+}
+
 /* Dark mode */
 .dark-mode .screenshot-preview {
     background: var(--dark-secondary-bg);
@@ -417,4 +434,108 @@
 
 .details-modal .visit-link:hover {
     background-color: var(--primary-color-dark);
+}
+
+/* Kategori Grupları Stillemesi */
+.category-groups-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.category-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #f5f5f5;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.dark-mode .category-group {
+    background-color: #333;
+    border-color: #444;
+}
+
+.category-group-content {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.category-label {
+    font-size: 14px;
+}
+
+.main-category-label {
+    font-weight: 500;
+    color: #2196F3;
+}
+
+.subcategory-label {
+    color: #555;
+}
+
+.dark-mode .main-category-label {
+    color: #64b5f6;
+}
+
+.dark-mode .subcategory-label {
+    color: #bbb;
+}
+
+.category-separator {
+    color: #888;
+    font-weight: 400;
+    margin: 0 3px;
+}
+
+.remove-category-group {
+    cursor: pointer;
+    color: #888;
+    transition: color 0.2s ease;
+}
+
+.remove-category-group:hover {
+    color: #f44336;
+}
+
+/* Kategori Ekleme Alanı */
+.add-category-group {
+    margin-top: 10px;
+}
+
+.category-group-inputs {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.input-group {
+    flex: 1;
+}
+
+.input-group label {
+    font-size: 13px;
+    margin-bottom: 5px;
+}
+
+.add-category-group-btn {
+    background: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.add-category-group-btn:hover {
+    background: #1976D2;
 } 

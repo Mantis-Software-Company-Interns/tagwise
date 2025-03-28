@@ -510,6 +510,21 @@ Lütfen yukarıdaki bilgilere göre videoyu analiz et ve uygun kategoriler ve et
             # Thumbnail URL'sini ekle
             json_result['thumbnail_url'] = video_info.get('thumbnail_url')
             
+            # Kategori sayısını kontrol et - en az 1, en fazla 3 kategori olmalı
+            if 'categories' in json_result and isinstance(json_result['categories'], list):
+                # Eğer 3'ten fazla kategori varsa, sadece ilk 3'ünü al
+                if len(json_result['categories']) > 3:
+                    json_result['categories'] = json_result['categories'][:3]
+                
+                # Eğer hiç kategori yoksa, varsayılan bir kategori ekle
+                if len(json_result['categories']) == 0:
+                    json_result['categories'] = [{
+                        'main_category': 'Medya',
+                        'subcategory': 'Video'
+                    }]
+                    json_result['main_category'] = 'Medya'
+                    json_result['subcategory'] = 'Video'
+            
             print(f"YouTube video analizi tamamlandı: {json_result}")
             return json_result
             
@@ -555,6 +570,12 @@ Lütfen yukarıdaki bilgilere göre videoyu analiz et ve uygun kategoriler ve et
                 tags = [tag.strip().strip('"').strip("'") for tag in tags_text.split(',')]
                 manual_json['tags'] = [tag for tag in tags if tag]  # Boş etiketleri filtrele
             
+            # Manuel JSON için kategorileri ayarla
+            manual_json['categories'] = [{
+                'main_category': manual_json.get('main_category', 'Medya'),
+                'subcategory': manual_json.get('subcategory', 'Video')
+            }]
+            
             return manual_json
             
     except Exception as e:
@@ -568,6 +589,12 @@ Lütfen yukarıdaki bilgilere göre videoyu analiz et ve uygun kategoriler ve et
             "description": "Video analiz edilirken bir hata oluştu.",
             "main_category": "Medya",
             "subcategory": "Video",
+            "categories": [
+                {
+                    "main_category": "Medya",
+                    "subcategory": "Video"
+                }
+            ],
             "tags": ["youtube", "video"],
             "thumbnail_url": f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg" if video_id else None
         } 

@@ -196,3 +196,24 @@ pyrightconfig.json
 .env
 
 # End of https://www.toptal.com/developers/gitignore/api/python,visualstudiocode
+
+# Project specific
+/media/
+/media/*
+/thumbnails/
+/thumbnails/*
+*.sqlite3
+*.sqlite
+*.db
+
+# Local development settings
+local_settings.py
+
+# Static files collected
+/static/collected/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*~

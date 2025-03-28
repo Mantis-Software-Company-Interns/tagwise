@@ -517,6 +517,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log("Gemini yanıtı bulunamadı, ham veriyi kullanmaya çalışıyorum:", data);
                     processGeminiResponse(data, categoryGroupsList, reviewTagsList);
                 }
+                
+                // Display screenshot
+                displayScreenshot(data);
             })
             .catch(error => {
                 console.error("Fetch hatası:", error);
@@ -1049,46 +1052,6 @@ function showUrlReviewModal(data, url) {
     if (reviewTitle) reviewTitle.value = data.title || '';
     if (reviewDescription) reviewDescription.value = data.description || '';
     
-    // Update the screenshot preview and field
-    if (reviewScreenshotData && screenshotPreview) {
-        const screenshotData = data.screenshot_data;
-        reviewScreenshotData.value = screenshotData || '';
-        
-        // Clear any previous custom data
-        reviewScreenshotData.dataset.content = '';
-        
-        // Update the screenshot preview
-        if (screenshotData) {
-            screenshotPreview.src = `/static/${screenshotData}`;
-            
-            // Update status message based on screenshot source
-            const statusEl = document.getElementById('screenshotStatus');
-            if (statusEl) {
-                if (data.screenshot_used) {
-                    statusEl.innerHTML = `
-                        <i class="material-icons" style="color: #4caf50;">check_circle</i>
-                        <span>Screenshot captured automatically</span>
-                    `;
-                } else {
-                    statusEl.innerHTML = `
-                        <i class="material-icons" style="color: #2196f3;">image</i>
-                        <span>Screenshot available</span>
-                    `;
-                }
-            }
-        } else {
-            // No screenshot available
-            screenshotPreview.src = '/media/default-thumbnail.png';
-            const statusEl = document.getElementById('screenshotStatus');
-            if (statusEl) {
-                statusEl.innerHTML = `
-                    <i class="material-icons" style="color: #f44336;">error_outline</i>
-                    <span>No screenshot available</span>
-                `;
-            }
-        }
-    }
-    
     // Clear previous data
     if (categoryGroupsList) categoryGroupsList.innerHTML = '';
     if (reviewTagsList) reviewTagsList.innerHTML = '';
@@ -1096,6 +1059,123 @@ function showUrlReviewModal(data, url) {
     // Process the Gemini response
     processGeminiResponse(data, categoryGroupsList, reviewTagsList);
     
+    // Display screenshot using our new function
+    displayScreenshot(data);
+    
     // Show the review modal
     urlReviewModal.classList.add('active');
+}
+
+// New function to properly display the screenshot
+function displayScreenshot(data) {
+    const screenshotPreview = document.getElementById('screenshotPreview');
+    const screenshotData = data.screenshot_data;
+    const reviewScreenshotData = document.getElementById('reviewScreenshotData');
+    
+    if (!screenshotPreview) {
+        console.error("Screenshot preview element not found");
+        return;
+    }
+    
+    // Add a loading indicator first
+    const screenshotContainer = screenshotPreview.closest('.screenshot-container');
+    if (screenshotContainer) {
+        const loadingElement = document.createElement('div');
+        loadingElement.className = 'screenshot-loading';
+        loadingElement.innerHTML = '<div class="spinner"></div> Loading screenshot...';
+        screenshotContainer.appendChild(loadingElement);
+    }
+    
+    if (reviewScreenshotData) {
+        reviewScreenshotData.value = screenshotData || '';
+    }
+    
+    // Update the status message
+    const statusEl = document.getElementById('screenshotStatus');
+    if (statusEl) {
+        if (data.screenshot_used) {
+            statusEl.innerHTML = `
+                <i class="material-icons" style="color: #4caf50;">check_circle</i>
+                <span>Screenshot captured automatically</span>
+            `;
+        } else if (screenshotData) {
+            statusEl.innerHTML = `
+                <i class="material-icons" style="color: #2196f3;">image</i>
+                <span>Screenshot available</span>
+            `;
+        } else {
+            statusEl.innerHTML = `
+                <i class="material-icons" style="color: #f44336;">error_outline</i>
+                <span>No screenshot available</span>
+            `;
+        }
+    }
+    
+    // Set the screenshot image
+    if (screenshotData) {
+        // Determine the correct path format
+        let imgSrc = '';
+        if (screenshotData.startsWith('http')) {
+            imgSrc = screenshotData;
+        } else if (screenshotData.startsWith('/')) {
+            imgSrc = screenshotData;
+        } else if (screenshotData.startsWith('media/')) {
+            imgSrc = `/${screenshotData}`;
+        } else if (screenshotData.startsWith('thumbnails/')) {
+            imgSrc = `/media/${screenshotData}`;
+        } else {
+            imgSrc = `/media/thumbnails/${screenshotData}`;
+        }
+        
+        // Create a new image to test loading
+        const imgTest = new Image();
+        imgTest.onload = function() {
+            // Image loaded successfully, set it to the preview
+            screenshotPreview.src = imgSrc;
+            console.log("Screenshot loaded successfully:", imgSrc);
+            
+            // Remove loading indicator if it exists
+            const loadingIndicator = screenshotContainer ? 
+                screenshotContainer.querySelector('.screenshot-loading') : null;
+            if (loadingIndicator) {
+                loadingIndicator.remove();
+            }
+        };
+        
+        imgTest.onerror = function() {
+            console.error("Failed to load screenshot:", imgSrc);
+            // Use default thumbnail
+            screenshotPreview.src = '/media/default-thumbnail.png';
+            
+            // Update status
+            if (statusEl) {
+                statusEl.innerHTML = `
+                    <i class="material-icons" style="color: #f44336;">error_outline</i>
+                    <span>Screenshot failed to load</span>
+                `;
+            }
+            
+            // Remove loading indicator
+            const loadingIndicator = screenshotContainer ? 
+                screenshotContainer.querySelector('.screenshot-loading') : null;
+            if (loadingIndicator) {
+                loadingIndicator.remove();
+            }
+        };
+        
+        // Start loading the image
+        console.log("Attempting to load screenshot from:", imgSrc);
+        imgTest.src = imgSrc;
+    } else {
+        // No screenshot data
+        screenshotPreview.src = '/media/default-thumbnail.png';
+        console.log("No screenshot data available, using default");
+        
+        // Remove loading indicator
+        const loadingIndicator = screenshotContainer ? 
+            screenshotContainer.querySelector('.screenshot-loading') : null;
+        if (loadingIndicator) {
+            loadingIndicator.remove();
+        }
+    }
 } 
