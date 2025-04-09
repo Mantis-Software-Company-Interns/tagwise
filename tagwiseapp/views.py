@@ -78,8 +78,11 @@ def index(request):
         if bookmark.screenshot_data:
             bookmark.screenshot_path = normalize_thumbnail_path(bookmark.screenshot_data)
     
-    # Ana kategorileri getir
-    main_categories = Category.objects.filter(parent=None)
+    # Ana kategorileri getir (kullanıcıya özgü ve genel kategoriler)
+    main_categories = Category.objects.filter(
+        parent=None,
+        user__in=[request.user, None]
+    )
     
     # NOT: Varsayılan kategorileri otomatik oluşturmayı kaldırdık
     # Kategoriler artık sadece bookmark eklendiğinde, gerçekten kullanıldıklarında oluşturulacak
@@ -94,8 +97,12 @@ def index(request):
     })
 
 def tags(request):
-    # Get all tags with bookmark count
-    tags = Tag.objects.annotate(bookmark_count=models.Count('bookmark')).order_by('name')
+    # Get all tags with bookmark count (both user's tags and general tags)
+    tags = Tag.objects.filter(
+        user__in=[request.user, None]
+    ).annotate(
+        bookmark_count=models.Count('bookmark', filter=models.Q(bookmark__user=request.user))
+    ).order_by('name')
     
     # Get recent tags (those with bookmarks added in the last 7 days)
     from django.utils import timezone
@@ -111,8 +118,11 @@ def tags(request):
     for bookmark in recent_bookmarks:
         recent_tag_ids.extend(bookmark.tags.values_list('id', flat=True))
     
-    recent_tags = Tag.objects.filter(id__in=recent_tag_ids).annotate(
-        bookmark_count=models.Count('bookmark')
+    recent_tags = Tag.objects.filter(
+        id__in=recent_tag_ids, 
+        user__in=[request.user, None]
+    ).annotate(
+        bookmark_count=models.Count('bookmark', filter=models.Q(bookmark__user=request.user))
     ).order_by('name')
     
     # Group tags by first letter for organization
@@ -157,8 +167,18 @@ def topics(request):
     if not category_name or not subcategory_name:
         return redirect('tagwiseapp:categories')
     
-    category = Category.objects.filter(name=category_name).first()
-    subcategory = Category.objects.filter(name=subcategory_name, parent=category).first()
+    # Önce kullanıcıya özgü kategori ve alt kategorileri ara, yoksa genel olanlara bak
+    category = Category.objects.filter(name=category_name, user=request.user).first() or \
+               Category.objects.filter(name=category_name, user=None).first()
+               
+    if category:
+        subcategory = Category.objects.filter(
+            name=subcategory_name, 
+            parent=category,
+            user__in=[request.user, None]
+        ).first()
+    else:
+        subcategory = None
     
     if not category or not subcategory:
         return redirect('tagwiseapp:categories')
@@ -177,7 +197,10 @@ def topics(request):
             bookmark.screenshot_path = normalize_thumbnail_path(bookmark.screenshot_data)
     
     # Get other subcategories in the same category for navigation
-    related_subcategories = Category.objects.filter(parent=category)
+    related_subcategories = Category.objects.filter(
+        parent=category,
+        user__in=[request.user, None]
+    )
     
     # MEDIA_URL'i context'e ekle
     from django.conf import settings
@@ -194,7 +217,10 @@ def topics(request):
 def tagged_bookmarks(request):
     tag_name = request.GET.get('tag')
     if tag_name:
-        tag = Tag.objects.filter(name=tag_name).first()
+        # Önce kullanıcıya özgü etiket ara, yoksa genel etikete bak
+        tag = Tag.objects.filter(name=tag_name, user=request.user).first() or \
+              Tag.objects.filter(name=tag_name, user=None).first()
+        
         if tag:
             bookmarks = Bookmark.objects.filter(user=request.user, tags=tag).order_by('-created_at')
             
@@ -498,11 +524,13 @@ def save_bookmark(request):
             
             # Add main categories - only those that are actually used
             for main_category_name in main_categories:
-                # Try to find existing category first
-                main_category = Category.objects.filter(name=main_category_name).first()
+                # Try to find existing category first (önce kullanıcının kendi kategorisi, sonra genel)
+                main_category = Category.objects.filter(name=main_category_name, user=request.user).first() or \
+                                Category.objects.filter(name=main_category_name, user=None).first()
+                
                 if not main_category:
-                    # Create new if not exists
-                    main_category = Category.objects.create(name=main_category_name)
+                    # Create new if not exists (kullanıcının kendi kategorisi olarak oluştur)
+                    main_category = Category.objects.create(name=main_category_name, user=request.user)
                 bookmark.main_categories.add(main_category)
                 used_main_categories.append(main_category)
             
@@ -529,10 +557,12 @@ def save_bookmark(request):
                 for main_category in used_main_categories:
                     if main_category.name in category_subcategory_map and subcategory_name in category_subcategory_map[main_category.name]:
                         # Try to find existing subcategory first
-                        subcategory = Category.objects.filter(name=subcategory_name).first()
+                        subcategory = Category.objects.filter(name=subcategory_name, user=request.user).first() or \
+                                      Category.objects.filter(name=subcategory_name, user=None).first()
+                                      
                         if not subcategory:
                             # Create new if not exists
-                            subcategory = Category.objects.create(name=subcategory_name, parent=main_category)
+                            subcategory = Category.objects.create(name=subcategory_name, parent=main_category, user=request.user)
                         elif not subcategory.parent:
                             # Update parent if not set
                             subcategory.parent = main_category
@@ -548,10 +578,12 @@ def save_bookmark(request):
                 if not parent_found and used_main_categories:
                     main_category = used_main_categories[0]
                     # Try to find existing subcategory first
-                    subcategory = Category.objects.filter(name=subcategory_name).first()
+                    subcategory = Category.objects.filter(name=subcategory_name, user=request.user).first() or \
+                                  Category.objects.filter(name=subcategory_name, user=None).first()
+                                  
                     if not subcategory:
                         # Create new if not exists
-                        subcategory = Category.objects.create(name=subcategory_name, parent=main_category)
+                        subcategory = Category.objects.create(name=subcategory_name, parent=main_category, user=request.user)
                     elif not subcategory.parent:
                         # Update parent if not set
                         subcategory.parent = main_category
@@ -564,10 +596,12 @@ def save_bookmark(request):
             # Add tags - only those that are actually used
             for tag_name in tags:
                 # Try to find existing tag first
-                tag = Tag.objects.filter(name=tag_name).first()
+                tag = Tag.objects.filter(name=tag_name, user=request.user).first() or \
+                      Tag.objects.filter(name=tag_name, user=None).first()
+                      
                 if not tag:
                     # Create new if not exists
-                    tag = Tag.objects.create(name=tag_name)
+                    tag = Tag.objects.create(name=tag_name, user=request.user)
                 bookmark.tags.add(tag)
             
             return JsonResponse({'success': True, 'bookmark_id': bookmark.id})
@@ -600,13 +634,16 @@ def test_url(request):
 def categories(request):
     category_name = request.GET.get('category')
     if category_name:
-        category = Category.objects.filter(name=category_name).first()
+        category = Category.objects.filter(name=category_name, user=request.user).first() or Category.objects.filter(name=category_name, user=None).first()
         if category:
             bookmarks = Bookmark.objects.filter(user=request.user, main_categories=category).order_by('-created_at')
             return render(request, 'categories/categories.html', {'category': category, 'bookmarks': bookmarks})
     
     # Get all main categories (those without a parent)
-    categories = Category.objects.filter(parent=None)
+    categories = Category.objects.filter(
+        parent=None,
+        user__in=[request.user, None]  # Kullanıcının kendi kategorileri ve genel kategoriler
+    )
     
     # Get recent categories (those with bookmarks added in the last 7 days)
     from django.utils import timezone
@@ -623,7 +660,7 @@ def categories(request):
     for bookmark in recent_bookmarks:
         recent_category_ids.extend(bookmark.main_categories.values_list('id', flat=True))
     recent_category_ids = list(set(recent_category_ids))  # Duplicate'leri kaldır
-    recent_categories = Category.objects.filter(id__in=recent_category_ids)
+    recent_categories = Category.objects.filter(id__in=recent_category_ids, user__in=[request.user, None])
     
     return render(request, 'categories/categories.html', {
         'categories': categories,
@@ -634,9 +671,13 @@ def categories(request):
 def subcategories(request):
     category_name = request.GET.get('category')
     if category_name:
-        category = Category.objects.filter(name=category_name).first()
+        # Önce kullanıcıya özgü kategori ara, yoksa genel kategoriye bak
+        category = Category.objects.filter(name=category_name, user=request.user).first() or \
+                  Category.objects.filter(name=category_name, user=None).first()
+                  
         if category:
-            subcategories = Category.objects.filter(parent=category)
+            # Kullanıcıya özgü ve genel alt kategorileri getir
+            subcategories = Category.objects.filter(parent=category, user__in=[request.user, None])
             return render(request, 'categories/subcategories.html', {'category': category, 'subcategories': subcategories})
     
     return redirect('tagwiseapp:categories')
@@ -703,21 +744,21 @@ def clean_orphan_data(user):
     }
     
     # Orphan tag'leri temizle
-    orphan_tags = Tag.objects.annotate(bookmark_count=models.Count('bookmark')).filter(bookmark_count=0)
+    orphan_tags = Tag.objects.annotate(bookmark_count=models.Count('bookmark')).filter(bookmark_count=0, user=user)
     deleted_counts['tags'] = orphan_tags.count()
     for tag in orphan_tags:
-        print(f"Orphan tag siliniyor: {tag.name}")
+        print(f"Orphan tag siliniyor: {tag.name} (user: {tag.user})")
     orphan_tags.delete()
     
     # Orphan alt kategorileri temizle (önce alt kategorileri temizle)
     orphan_subcategories = Category.objects.exclude(parent=None).annotate(
         main_bookmark_count=models.Count('main_bookmarks'),
         sub_bookmark_count=models.Count('sub_bookmarks')
-    ).filter(main_bookmark_count=0, sub_bookmark_count=0)
+    ).filter(main_bookmark_count=0, sub_bookmark_count=0, user=user)
     
     deleted_counts['subcategories'] = orphan_subcategories.count()
     for subcategory in orphan_subcategories:
-        print(f"Orphan alt kategori siliniyor: {subcategory.name}")
+        print(f"Orphan alt kategori siliniyor: {subcategory.name} (user: {subcategory.user})")
     orphan_subcategories.delete()
     
     # Orphan ana kategorileri temizle
@@ -725,11 +766,11 @@ def clean_orphan_data(user):
         main_bookmark_count=models.Count('main_bookmarks'),
         sub_bookmark_count=models.Count('sub_bookmarks'),
         children_count=models.Count('children')
-    ).filter(main_bookmark_count=0, sub_bookmark_count=0, children_count=0)
+    ).filter(main_bookmark_count=0, sub_bookmark_count=0, children_count=0, user=user)
     
     deleted_counts['main_categories'] = orphan_main_categories.count()
     for category in orphan_main_categories:
-        print(f"Orphan ana kategori siliniyor: {category.name}")
+        print(f"Orphan ana kategori siliniyor: {category.name} (user: {category.user})")
     orphan_main_categories.delete()
     
     return deleted_counts
@@ -779,8 +820,12 @@ def api_related_tags(request):
         return JsonResponse({'success': False, 'error': 'Tag name is required'})
     
     try:
-        # Get the tag
-        tag = Tag.objects.get(name=tag_name)
+        # Get the tag (user's or general)
+        tag = Tag.objects.filter(name=tag_name, user=request.user).first() or \
+              Tag.objects.filter(name=tag_name, user=None).first()
+              
+        if not tag:
+            return JsonResponse({'success': False, 'error': 'Tag not found'})
         
         # Get bookmarks with this tag
         bookmarks = Bookmark.objects.filter(tags=tag, user=request.user)
@@ -795,14 +840,15 @@ def api_related_tags(request):
         most_common_tag_ids = [tag_id for tag_id, _ in tag_counter.most_common(10)]
         
         # Get related tags and order them alphabetically
-        related_tags = Tag.objects.filter(id__in=most_common_tag_ids).order_by('name').values_list('name', flat=True)
+        related_tags = Tag.objects.filter(
+            id__in=most_common_tag_ids,
+            user__in=[request.user, None]
+        ).order_by('name').values_list('name', flat=True)
         
         return JsonResponse({
             'success': True,
             'related_tags': list(related_tags)
         })
-    except Tag.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Tag not found'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
@@ -813,8 +859,12 @@ def api_tagged_bookmarks(request):
         return JsonResponse({'success': False, 'error': 'Tag name is required'})
     
     try:
-        # Get the tag
-        tag = Tag.objects.get(name=tag_name)
+        # Get the tag (user's or general)
+        tag = Tag.objects.filter(name=tag_name, user=request.user).first() or \
+              Tag.objects.filter(name=tag_name, user=None).first()
+              
+        if not tag:
+            return JsonResponse({'success': False, 'error': 'Tag not found'})
         
         # Get bookmarks with this tag
         bookmarks = Bookmark.objects.filter(tags=tag, user=request.user).order_by('-created_at')
@@ -844,8 +894,6 @@ def api_tagged_bookmarks(request):
             'success': True,
             'bookmarks': bookmark_data
         })
-    except Tag.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Tag not found'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
@@ -922,11 +970,13 @@ def update_bookmark(request):
             # Update main categories
             bookmark.main_categories.clear()
             for main_category_name in main_categories:
-                # Try to find existing category first
-                main_category = Category.objects.filter(name=main_category_name).first()
+                # Try to find existing category first (önce kullanıcının kendi kategorisi, sonra genel)
+                main_category = Category.objects.filter(name=main_category_name, user=request.user).first() or \
+                                Category.objects.filter(name=main_category_name, user=None).first()
+                
                 if not main_category:
-                    # Create new if not exists
-                    main_category = Category.objects.create(name=main_category_name)
+                    # Create new if not exists (kullanıcının kendi kategorisi olarak oluştur)
+                    main_category = Category.objects.create(name=main_category_name, user=request.user)
                 bookmark.main_categories.add(main_category)
                 used_main_categories.append(main_category)
             
@@ -954,10 +1004,12 @@ def update_bookmark(request):
                 for main_category in used_main_categories:
                     if main_category.name in category_subcategory_map and subcategory_name in category_subcategory_map[main_category.name]:
                         # Try to find existing subcategory first
-                        subcategory = Category.objects.filter(name=subcategory_name).first()
+                        subcategory = Category.objects.filter(name=subcategory_name, user=request.user).first() or \
+                                      Category.objects.filter(name=subcategory_name, user=None).first()
+                                      
                         if not subcategory:
                             # Create new if not exists
-                            subcategory = Category.objects.create(name=subcategory_name, parent=main_category)
+                            subcategory = Category.objects.create(name=subcategory_name, parent=main_category, user=request.user)
                         elif not subcategory.parent:
                             # Update parent if not set
                             subcategory.parent = main_category
@@ -973,10 +1025,12 @@ def update_bookmark(request):
                 if not parent_found and used_main_categories:
                     main_category = used_main_categories[0]
                     # Try to find existing subcategory first
-                    subcategory = Category.objects.filter(name=subcategory_name).first()
+                    subcategory = Category.objects.filter(name=subcategory_name, user=request.user).first() or \
+                                  Category.objects.filter(name=subcategory_name, user=None).first()
+                                  
                     if not subcategory:
                         # Create new if not exists
-                        subcategory = Category.objects.create(name=subcategory_name, parent=main_category)
+                        subcategory = Category.objects.create(name=subcategory_name, parent=main_category, user=request.user)
                     elif not subcategory.parent:
                         # Update parent if not set
                         subcategory.parent = main_category
@@ -990,10 +1044,12 @@ def update_bookmark(request):
             bookmark.tags.clear()
             for tag_name in tags:
                 # Try to find existing tag first
-                tag = Tag.objects.filter(name=tag_name).first()
+                tag = Tag.objects.filter(name=tag_name, user=request.user).first() or \
+                      Tag.objects.filter(name=tag_name, user=None).first()
+                      
                 if not tag:
                     # Create new if not exists
-                    tag = Tag.objects.create(name=tag_name)
+                    tag = Tag.objects.create(name=tag_name, user=request.user)
                 bookmark.tags.add(tag)
             
             return JsonResponse({'success': True, 'bookmark_id': bookmark.id})
@@ -1486,8 +1542,11 @@ def search_tags(request):
     if not query:
         return redirect('tagwiseapp:tags')
     
-    # Search in tags
-    tags = Tag.objects.filter(name__icontains=query).order_by('name')
+    # Search in tags (both user's tags and general tags)
+    tags = Tag.objects.filter(
+        name__icontains=query,
+        user__in=[request.user, None]
+    ).order_by('name')
     
     # Get bookmark count for each tag
     for tag in tags:
@@ -1509,7 +1568,10 @@ def search_tags(request):
         grouped_tags[letter] = sorted(grouped_tags[letter], key=lambda x: x.name)
     
     # Get recent tags
-    recent_tags = Tag.objects.filter(bookmark__user=request.user).annotate(
+    recent_tags = Tag.objects.filter(
+        bookmark__user=request.user,
+        user__in=[request.user, None]
+    ).annotate(
         bookmark_count=Count('bookmark', filter=Q(bookmark__user=request.user))
     ).order_by('name')[:10]
     
