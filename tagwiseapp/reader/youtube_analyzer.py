@@ -388,13 +388,6 @@ def analyze_youtube_video(url):
         print("Geçerli YouTube video ID'si bulunamadı")
         return None
     
-    # API anahtarını yükle ve Gemini'yi yapılandır
-    load_dotenv()
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not configure_gemini(api_key):
-        print("Gemini API yapılandırılamadı")
-        return None
-    
     try:
         # Video bilgilerini al (başlık, açıklama, meta veriler)
         video_info = get_youtube_video_info(url)
@@ -425,29 +418,16 @@ def analyze_youtube_video(url):
         existing_categories = get_existing_categories()
         existing_tags = get_existing_tags()
         
-        # System instruction'ı güncelleyerek mevcut kategori ve etiketleri ekle
-        custom_system_instruction = YOUTUBE_SYSTEM_INSTRUCTION + f"""
-
-MEVCUT ANA KATEGORİLER: {existing_categories['main_categories']}
-
-MEVCUT ALT KATEGORİLER: {existing_categories['subcategories']}
-
-MEVCUT ETİKETLER: {existing_tags}
-"""
+        # Kategorileri main ve sub olarak ayır
+        main_categories = [cat.get('name') for cat in existing_categories if cat.get('is_main', False)]
+        sub_categories = [cat.get('name') for cat in existing_categories if not cat.get('is_main', True)]
+        tag_names = [tag.get('name') for tag in existing_tags]
         
-        # Modeli seç
-        model = genai.GenerativeModel(
-            model_name='gemini-2.0-flash',
-            system_instruction=custom_system_instruction
-        )   
+        # LangChain kullanarak LLM Chain oluştur
+        from .prompts import YOUTUBE_SYSTEM_INSTRUCTION
+        from .llm_factory import LLMChain
         
-        # Generation config
-        generation_config = {
-            "response_mime_type": "application/json",
-            "temperature": 0.2
-        }
-        
-        # Prompt hazırla - video bilgileri ve transcript'i daha vurgulu bir şekilde içerir
+        # Özel prompt oluştur
         prompt = f"""
 YOUTUBE VİDEO ANALİZİ:
 
@@ -466,6 +446,11 @@ YouTube Kategorileri: {video_info.get('categories', [])}
 İzlenme: {video_info.get('views', 'Bilinmiyor')}
 Yayın Tarihi: {video_info.get('publish_date', 'Bilinmiyor')}
 
+MEVCUT ANA KATEGORİLER: {main_categories}
+
+MEVCUT ALT KATEGORİLER: {sub_categories}
+
+MEVCUT ETİKETLER: {tag_names}
 """
         
         # Transcript varsa ekle
@@ -484,18 +469,15 @@ VİDEO ALTYAZISI (TRANSKRİPT):
 Lütfen yukarıdaki bilgilere göre videoyu analiz et ve uygun kategoriler ve etiketler belirle.
 """
         
-        # Gemini'ye istek gönder
-        print(f"YouTube videosu analiz ediliyor: {url} (başlık, açıklama ve transcript verileriyle)")
-        response = model.generate_content(
-            prompt,
-            generation_config=generation_config
-        )
+        # LLM Chain oluştur
+        chain = LLMChain(system_prompt=YOUTUBE_SYSTEM_INSTRUCTION)
         
-        # Yanıtı al
-        result = response.text 
+        # LLM Chain'i çalıştır
+        print(f"YouTube videosu analiz ediliyor: {url} (başlık, açıklama ve transcript verileriyle)")
+        response = chain.run(prompt)
         
         # JSON formatını düzelt
-        result = correct_json_format(result)
+        result = correct_json_format(response)
         
         try:
             # JSON'ı ayrıştır
@@ -505,7 +487,7 @@ Lütfen yukarıdaki bilgilere göre videoyu analiz et ve uygun kategoriler ve et
             json_result = ensure_correct_json_structure(json_result, url)
             
             # Kategorileri ve etiketleri eşleştir
-            json_result = match_categories_and_tags(json_result, existing_categories, existing_tags)
+            json_result = match_categories_and_tags(json_result, json_result, existing_categories, existing_tags)
             
             # Thumbnail URL'sini ekle
             json_result['thumbnail_url'] = video_info.get('thumbnail_url')
@@ -576,7 +558,10 @@ Lütfen yukarıdaki bilgilere göre videoyu analiz et ve uygun kategoriler ve et
                 'subcategory': manual_json.get('subcategory', 'Video')
             }]
             
-            return manual_json
+            # Etiketleri match_categories_and_tags fonksiyonu ile eşleştir
+            matched_result = match_categories_and_tags(manual_json, manual_json, existing_categories, existing_tags)
+            
+            return matched_result
             
     except Exception as e:
         print(f"YouTube video analizi sırasında hata: {e}")
@@ -584,7 +569,7 @@ Lütfen yukarıdaki bilgilere göre videoyu analiz et ve uygun kategoriler ve et
         print(traceback.format_exc())
         
         # Hata durumunda varsayılan değerleri döndür
-        return {
+        default_json = {
             "title": "YouTube Video",
             "description": "Video analiz edilirken bir hata oluştu.",
             "main_category": "Medya",
@@ -597,7 +582,17 @@ Lütfen yukarıdaki bilgilere göre videoyu analiz et ve uygun kategoriler ve et
             ],
             "tags": ["youtube", "video"],
             "thumbnail_url": f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg" if video_id else None
-        } 
+        }
+        
+        # Varsayılan etiketleri eşleştir
+        try:
+            existing_categories = get_existing_categories()
+            existing_tags = get_existing_tags()
+            matched_result = match_categories_and_tags(default_json, default_json, existing_categories, existing_tags)
+            return matched_result
+        except Exception:
+            # Eşleştirme de başarısız olursa orijinal varsayılan değerleri döndür
+            return default_json
 
 def get_youtube_thumbnail(video_id, prefer_high_quality=True):
     """

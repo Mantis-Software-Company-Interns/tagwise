@@ -1,76 +1,77 @@
-# TagWise - Akıllı Yer İmi Yönetim Sistemi
+# TagWise - LLM-Powered Content Analyzer
 
-TagWise, web sayfalarınızı akıllıca organize etmenizi, kategorilendirmenizi ve etiketlemenizi sağlayan modern bir yer imi yönetim sistemidir.
+TagWise is a Django web application that uses AI to analyze web content, extract meaningful information, and categorize it for easier organization and navigation.
 
-## Özellikler
+## New Features with LangChain Integration
 
-- 📑 Yer imlerini kategoriler ve alt kategorilerle organize etme
-- 🏷️ Etiketleme sistemi ile kolay erişim
-- 📸 Web sayfası önizleme görüntüleri
-- 📚 Koleksiyonlar oluşturma ve yönetme
-- 👤 Kullanıcı profili ve tercihler
-- 🔍 Gelişmiş arama ve filtreleme özellikleri
+The codebase has been refactored to use LangChain, providing the following benefits:
 
-## Kurulum
+- **Provider-agnostic architecture**: Easily switch between different LLM providers (Gemini, OpenAI, Anthropic)
+- **Automatic failover**: If one LLM provider fails, the system automatically tries another
+- **Centralized configuration**: All LLM settings are managed in a central location
+- **Enhanced error handling**: Better exception handling and logging
 
-1. Projeyi klonlayın:
-```bash
-git clone https://github.com/yourusername/tagwise.git
-cd tagwise
+## Setup
+
+1. Clone the repository
+2. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+3. Configure your environment variables in `.env`:
+   ```
+   GEMINI_API_KEY=your_gemini_api_key
+   OPENAI_API_KEY=your_openai_api_key
+   ANTHROPIC_API_KEY=your_anthropic_api_key
+   DEFAULT_LLM_PROVIDER=gemini  # Options: gemini, openai, anthropic
+   FALLBACK_LLM_PROVIDERS=openai,anthropic  # Comma-separated list
+   ```
+4. Run migrations:
+   ```
+   python manage.py migrate
+   ```
+5. Start the development server:
+   ```
+   python manage.py runserver
+   ```
+
+## Architecture
+
+The refactored code uses a provider-agnostic approach with LangChain:
+
+- `settings.py`: Central configuration for LLM providers
+- `llm_factory.py`: Factory pattern for creating LLM instances with fallback support
+- `content_analyzer.py`: Main module for content analysis features
+- `gemini_analyzer.py`: Legacy module for backward compatibility
+
+## Usage
+
+The application maintains backward compatibility, so existing code will continue to work. For new code, it's recommended to use the new content_analyzer module directly:
+
+```python
+from tagwiseapp.reader.content_analyzer import (
+    generate_summary_from_content,
+    categorize_content,
+    analyze_screenshot
+)
+
+# Example: Categorize content
+result = categorize_content(
+    content="Your HTML or text content",
+    url="https://example.com",
+    existing_title="Optional title",
+    existing_description="Optional description"
+)
 ```
 
-2. Sanal ortam oluşturun ve aktifleştirin:
-```bash
-python -m venv venv
-source venv/bin/activate  # Linux/Mac için
-# veya
-venv\Scripts\activate  # Windows için
-```
+## Extending with New LLM Providers
 
-3. Gerekli paketleri yükleyin:
-```bash
-pip install -r requirements.txt
-```
+To add a new LLM provider:
 
-4. Veritabanı migrationlarını yapın:
-```bash
-python manage.py migrate
-```
+1. Update settings.py to include the new provider configuration
+2. Add the provider to the LLMFactory class in llm_factory.py
+3. Install the required LangChain integration package
 
-5. Superuser oluşturun:
-```bash
-python manage.py createsuperuser
-```
+## License
 
-6. Uygulamayı çalıştırın:
-```bash
-python manage.py runserver
-```
-
-## Ortam Değişkenleri
-
-Projenin düzgün çalışması için aşağıdaki ortam değişkenlerini `.env` dosyasında tanımlamanız gerekmektedir:
-
-- `SECRET_KEY`: Django secret key
-- `DEBUG`: Debug modu (True/False)
-- `ALLOWED_HOSTS`: İzin verilen host adresleri
-- `DATABASE_URL`: Veritabanı bağlantı URL'i (opsiyonel)
-
-## Teknolojiler
-
-- Django
-- SQLite (varsayılan veritabanı)
-- HTML/CSS/JavaScript
-- Bootstrap
-
-## Lisans
-
-Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakınız.
-
-## Katkıda Bulunma
-
-1. Bu repository'yi fork edin
-2. Feature branch'i oluşturun (`git checkout -b feature/AmazingFeature`)
-3. Değişikliklerinizi commit edin (`git commit -m 'Add some AmazingFeature'`)
-4. Branch'inizi push edin (`git push origin feature/AmazingFeature`)
-5. Pull Request oluşturun
+This project is licensed under the MIT License - see the LICENSE file for details.

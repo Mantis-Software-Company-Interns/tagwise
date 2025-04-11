@@ -14,7 +14,7 @@ from .django_setup import setup_django
 from .html_fetcher import fetch_html
 from .screenshot import capture_screenshot
 from .content_extractor import extract_content
-from .gemini_analyzer import configure_gemini, analyze_screenshot_with_gemini, categorize_with_gemini
+from .content_analyzer import analyze_screenshot, categorize_content
 from .utils import load_api_key
 
 def normalize_url(url):
@@ -53,10 +53,8 @@ def analyze_url(url):
     
     print(f"\nURL analiz ediliyor: {url}")
     
-    # API anahtarını yükle ve Gemini'yi yapılandır
+    # API anahtarını yükle
     api_key = load_api_key()
-    if not configure_gemini(api_key):
-        return f"URL: {url}\nSonuç: Gemini API yapılandırılamadı."
     
     # YouTube URL kontrolü yap
     try:
@@ -93,13 +91,13 @@ def analyze_url(url):
         if screenshot:
             # PNG verisini base64'e dönüştür
             screenshot_base64 = base64.b64encode(screenshot).decode('utf-8')
-            # Ekran görüntüsünü Gemini ile analiz et ve kategorize et
-            category_json = analyze_screenshot_with_gemini(screenshot_base64, url)
+            # Ekran görüntüsünü analiz et ve kategorize et
+            category_json = analyze_screenshot(screenshot_base64, url)
     
     # Eğer ekran görüntüsü analizi yapılmadıysa veya başarısız olduysa, HTML içeriğini kategorize et
     if not category_json and content:
         # İçeriği kategorize et
-        category_json = categorize_with_gemini(content, url)
+        category_json = categorize_content(content, url)
     
     if not content and not category_json:
         return f"URL: {url}\nSonuç: İçerik alınamadı veya analiz edilemedi."

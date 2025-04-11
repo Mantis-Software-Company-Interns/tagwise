@@ -1,8 +1,30 @@
-Django>=4.2.0,<5.0.0
+# Django and related packages
+Django==5.1.6
+django-extensions==3.2.3
+
+# Common utilities
+python-dotenv==1.0.0
+requests==2.31.0
+Pillow==10.1.0
+
+# LLM libraries (Core functionality)
+langchain>=0.1.4
+langchain-core>=0.1.18
+langchain-google-genai>=0.0.5
+langchain-openai>=0.0.5
+langchain-anthropic>=0.1.1
+
+# Provider-specific packages
+google-generativeai>=0.3.2
+openai>=1.10.0  # Updated to meet langchain-openai dependency
+anthropic>=0.8.1
+
+# Error handling and utilities
+tenacity>=8.2.3
+MarkupSafe>=2.1.3
+
+# Additional packages
 django-environ>=0.11.0
-Pillow>=10.0.0  # for image handling
-requests>=2.31.0
-python-dotenv>=1.0.0
 django-crispy-forms>=2.0
 crispy-bootstrap5>=0.7
 whitenoise>=6.5.0  # for serving static files
@@ -14,7 +36,6 @@ beautifulsoup4>=4.12.0  # for web scraping
 selenium>=4.15.0  # for screenshot capture
 webdriver_manager>=4.0.0
 django-cleanup>=8.0.0  # for automatic file cleanup
-google-generativeai>=0.3.0  # for Gemini AI integration
 youtube-transcript-api>=0.6.1  # for YouTube transcripts
 yt-dlp>=2023.10.0  # for YouTube video data extraction
 pytube>=15.0.0  # for YouTube video info (fallback) 

@@ -13,6 +13,11 @@ import io
 from dotenv import load_dotenv
 import re
 import requests
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def load_api_key():
     """
@@ -32,441 +37,132 @@ def load_api_key():
 
 def correct_json_format(text):
     """
-    Gemini'den gelen metni düzgün JSON formatına dönüştürür.
+    Gemini AI tarafından döndürülen metni düzgün JSON formatına dönüştürür.
+    
+    Markdown code blocks, başlangıç ve bitiş karakterlerini temizler.
     
     Args:
-        text (str): Gemini'den gelen metin
+        text (str): Düzeltilecek metin
         
     Returns:
         str: Düzeltilmiş JSON metni
     """
-    # Markdown kod bloklarını temizle
-    text = text.replace('```json', '').replace('```', '').strip()
+    logger.info(f"Correcting JSON format for text length: {len(text)}")
     
-    # Başlangıç ve bitiş süslü parantezlerini bul
+    if not text:
+        return "{}"
+    
+    # Log the first and last 100 characters of input for debugging
+    logger.debug(f"Input text starts with: {text[:100]}")
+    logger.debug(f"Input text ends with: {text[-100:] if len(text) > 100 else text}")
+    
+    # Replace markdown code block delimiters if they exist
+    text = re.sub(r'```json\s*', '', text)
+    text = re.sub(r'```\s*', '', text)
+    
+    # Find the first { and last } to extract the JSON part
     start_idx = text.find('{')
     end_idx = text.rfind('}')
     
-    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-        # Sadece JSON kısmını al
+    if start_idx >= 0 and end_idx >= 0 and start_idx < end_idx:
         text = text[start_idx:end_idx+1]
+    else:
+        logger.warning(f"Could not find valid JSON structure in text: {text[:50]}...")
+        return "{}"
     
-    # Description alanını özel olarak işle
+    # Try to validate the extracted JSON
     try:
-        # Önce description alanını bul ve ayır
-        desc_start = text.find('"description"')
-        if desc_start != -1:
-            # Description değerinin başlangıcını bul
-            value_start = text.find(':', desc_start) + 1
-            # İlk tırnak işaretini bul
-            quote_start = text.find('"', value_start)
-            if quote_start != -1:
-                # Kapanış tırnağını bul (escape edilmiş tırnakları atla)
-                pos = quote_start + 1
-                while pos < len(text):
-                    if text[pos] == '"' and text[pos-1] != '\\':
-                        # Doğru kapanış tırnağını bulduk
-                        quote_end = pos
-                        # Description değerini al
-                        desc_value = text[quote_start+1:quote_end]
-                        # Türkçe karakter sorunlarını düzelt
-                        desc_value = desc_value.replace('",', '')
-                        desc_value = desc_value.replace(',"', '')
-                        desc_value = desc_value.replace('"u,n', '"un')
-                        desc_value = desc_value.replace('"ı,n', '"ın')
-                        desc_value = desc_value.replace('"i,n', '"in')
-                        # İç tırnakları escape et
-                        desc_value = desc_value.replace('"', '\\"')
-                        # Düzeltilmiş description'ı metne yerleştir
-                        text = text[:quote_start+1] + desc_value + text[quote_end:]
-                        break
-                    pos += 1
-    except Exception as e:
-        print(f"Description düzeltme hatası: {e}")
-    
-    # Tek tırnak yerine çift tırnak kullan
-    text = text.replace("'", '"')
-    
-    # Tag dizisindeki tırnak işareti sorunlarını düzelt
-    try:
-        tags_start = text.find('"tags"')
-        if tags_start != -1:
-            # Tags array başlangıcını bul
-            array_start = text.find('[', tags_start)
-            if array_start != -1:
-                # Array sonunu bul
-                bracket_count = 1
-                pos = array_start + 1
-                while pos < len(text) and bracket_count > 0:
-                    if text[pos] == '[':
-                        bracket_count += 1
-                    elif text[pos] == ']':
-                        bracket_count -= 1
-                    pos += 1
-                
-                if bracket_count == 0:
-                    array_end = pos - 1
-                    # Tags içeriğini al
-                    tags_content = text[array_start+1:array_end]
-                    # Tırnak işaretlerini düzelt
-                    tags_items = re.findall(r'"[^"]*"|\S+', tags_content)
-                    fixed_tags = []
-                    for item in tags_items:
-                        item = item.strip().strip(',').strip('"').strip("'")
-                        if item:
-                            fixed_tags.append(f'"{item}"')
-                    # Düzeltilmiş tags array'ini yerleştir
-                    text = text[:array_start+1] + ', '.join(fixed_tags) + text[array_end:]
-    except Exception as e:
-        print(f"Tags düzeltme hatası: {e}")
-    
-    # Gereksiz boşlukları ve satır sonlarını temizle
-    text = re.sub(r'\s+', ' ', text)
-    text = text.strip()
-    
-    print(f"Düzeltilmiş JSON: {text[:100]}...")
-    
-    return text
+        json_obj = json.loads(text)
+        valid_json = json.dumps(json_obj)
+        logger.info("Successfully parsed and validated JSON")
+        return valid_json
+    except json.JSONDecodeError as e:
+        logger.warning(f"JSON validation error: {str(e)}")
+        
+        # Additional recovery attempts for malformed JSON
+        try:
+            # Try to fix common JSON errors:
+            
+            # 1. Fix trailing commas in objects and arrays
+            text = re.sub(r',\s*}', '}', text)
+            text = re.sub(r',\s*\]', ']', text)
+            
+            # 2. Fix missing quotes around keys
+            text = re.sub(r'(\{|\,)\s*([a-zA-Z0-9_]+)\s*:', r'\1 "\2":', text)
+            
+            # 3. Escape unescaped quotes in string values
+            # This is a complex problem that would require more sophisticated parsing
+            
+            # 4. Fix boolean and null values (true/false/null without quotes)
+            text = re.sub(r':\s*True\s*([,}])', r': true\1', text)
+            text = re.sub(r':\s*False\s*([,}])', r': false\1', text)
+            text = re.sub(r':\s*None\s*([,}])', r': null\1', text)
+            
+            # Try parsing again
+            json_obj = json.loads(text)
+            valid_json = json.dumps(json_obj)
+            logger.info("Successfully parsed JSON after corrections")
+            return valid_json
+        except json.JSONDecodeError as e2:
+            logger.error(f"Failed to correct JSON: {str(e2)}")
+            logger.error(f"Problematic JSON: {text}")
+            return "{}"
 
-def ensure_correct_json_structure(json_result, url, existing_title=None, existing_description=None):
+def ensure_correct_json_structure(json_data, url, existing_title=None, existing_description=None):
     """
-    Gemini AI'dan dönen JSON yapısını doğru formatta olmasını sağlar.
+    Gemini AI'dan dönen JSON yapısının doğru formatta olmasını sağlar.
     
     Args:
-        json_result (dict): Gemini AI'dan gelen sonuç
-        url (str): İşlenen URL
+        json_data (dict): Kontrol edilecek JSON verisi
+        url (str): URL bilgisi
         existing_title (str, optional): Mevcut başlık
         existing_description (str, optional): Mevcut açıklama
         
     Returns:
-        dict: Düzeltilmiş JSON yapısı
+        dict: Düzeltilmiş JSON verisi
     """
-    print("JSON yapısı düzeltiliyor...")
+    # Boş JSON kontrolü
+    if not json_data or not isinstance(json_data, dict):
+        json_data = {}
     
-    # Doğru yapıdaki JSON
+    # Temel alanların varlığını kontrol et
     corrected_json = {
-        'url': url,
-        'title': existing_title or json_result.get('title', ''),
-        'description': existing_description or json_result.get('description', ''),
-        'main_category': '',
-        'subcategory': '',
-        'categories': [],
-        'tags': []
+        "url": url,
+        "title": json_data.get("title", existing_title or ""),
+        "description": json_data.get("description", existing_description or ""),
+        "categories": [],
+        "tags": []
     }
     
-    # Eğer kullanıcı bir başlık ve açıklama vermişse, bunları kullan
-    if existing_title:
-        corrected_json['title'] = existing_title
-    else:
-        corrected_json['title'] = json_result.get('title', '')
-    
-    if existing_description:
-        corrected_json['description'] = existing_description
-    else:
-        corrected_json['description'] = json_result.get('description', '')
-    
-    # Kategori bilgisi, çoklu kategoriler formatında mı?
-    if 'categories' in json_result and isinstance(json_result['categories'], list):
-        # Kategori dizisini kopyala
-        corrected_json['categories'] = []
-        
-        for category in json_result['categories']:
-            # Her bir kategori öğesi için ana ve alt kategori bilgisini kontrol et
-            if isinstance(category, dict) and 'main_category' in category:
-                category_item = {
-                    'main_category': category['main_category']
-                }
-                
-                if 'subcategory' in category:
-                    category_item['subcategory'] = category['subcategory']
-                else:
-                    category_item['subcategory'] = ""
-                
-                # Düzeltilmiş kategorilere ekle
-                corrected_json['categories'].append(category_item)
-                
-                # Maksimum 3 kategori sınırı
-                if len(corrected_json['categories']) >= 3:
-                    break
-        
-        # Eğer en az bir kategori varsa, ilk kategoriyi ana ve alt kategori olarak kullan
-        if corrected_json['categories']:
-            corrected_json['main_category'] = corrected_json['categories'][0]['main_category']
-            corrected_json['subcategory'] = corrected_json['categories'][0].get('subcategory', "")
-        else:
-            # Hiç kategori yoksa varsayılan bir kategori ekle
-            default_category = {
-                'main_category': 'Medya',
-                'subcategory': 'Video'
-            }
-            corrected_json['categories'].append(default_category)
-            corrected_json['main_category'] = default_category['main_category']
-            corrected_json['subcategory'] = default_category['subcategory']
-    
-    else:
-        # Eski tarz JSON yanıtlarından categories dizisi oluştur
-        corrected_json['categories'] = []
-        
-        # Tek bir kategori verisi varsa ekle
-        if 'main_category' in json_result and json_result['main_category']:
-            category_item = {
-                'main_category': json_result['main_category']
-            }
-            
-            if 'subcategory' in json_result and json_result['subcategory']:
-                category_item['subcategory'] = json_result['subcategory']
-            
-            corrected_json['categories'].append(category_item)
-            
-            # Geri uyumluluk için ayrıca tekil alanlara da ekle
-            corrected_json['main_category'] = json_result['main_category']
-            corrected_json['subcategory'] = json_result.get('subcategory', "")
-        else:
-            # Hiç kategori yoksa varsayılan bir kategori ekle
-            default_category = {
-                'main_category': 'Medya',
-                'subcategory': 'Video'
-            }
-            corrected_json['categories'].append(default_category)
-            corrected_json['main_category'] = default_category['main_category']
-            corrected_json['subcategory'] = default_category['subcategory']
-    
-    # Etiketler kontrolü - daha sıkı kontrol ve temizleme
-    if 'tags' in json_result and isinstance(json_result['tags'], list):
-        # Boş olmayan ve string olan etiketleri al
-        valid_tags = []
-        for tag in json_result['tags']:
-            if tag and isinstance(tag, str):
-                # Tırnak işaretlerini temizle ve boşlukları kırp
-                clean_tag = tag.strip().strip('"').strip("'").strip()
-                if clean_tag:
-                    valid_tags.append(clean_tag)
-        
-        # Varsayılan genel etiketleri temizle
-        default_tags = ['içerik', 'web', 'analiz', 'sayfa']
-        valid_tags = [tag for tag in valid_tags if tag.lower() not in default_tags]
-        
-        corrected_json['tags'] = valid_tags
-        
-        # Eğer etiketler boş çıktıysa başlık ve açıklamadan etiket çıkar
-        if not valid_tags:
-            print("Etiketler listesi boş veya sadece varsayılan etiketler içeriyor. İçerikten etiketler oluşturuluyor...")
-            
-            # İçerikten etiket çıkar
-            from collections import Counter
-            import re
-            
-            # Başlık ve açıklamayı birleştir
-            title = corrected_json.get('title', '')
-            description = corrected_json.get('description', '')
-            combined_text = (title + " " + description).lower()
-            
-            # Noktalama işaretlerini kaldır
-            combined_text = re.sub(r'[^\w\s]', ' ', combined_text)
-            
-            # Stopwords - genel, yaygın, anlamsız kelimeler
-            stopwords = ["ve", "veya", "ile", "için", "bu", "bir", "o", "de", "da", "ki", "ne", "ya", "çok", 
-                        "nasıl", "en", "içinde", "üzerinde", "arasında", "olarak", "dolayı", "kadar", "önce", 
-                        "sonra", "göre", "her", "the", "and", "or", "for", "in", "on", "at", "with", "from", 
-                        "to", "a", "an", "by", "is", "are", "was", "were", "içerik", "web", "analiz", "sayfa"]
-            
-            # Kelimelere böl
-            words = combined_text.split()
-            
-            # Yaygın kelimeleri kaldır
-            filtered_words = [word for word in words if word not in stopwords and len(word) > 3]
-            
-            # En sık geçen anlamlı kelimeleri bul
-            word_counter = Counter(filtered_words)
-            common_words = word_counter.most_common(20)
-            
-            # Anlamlı kelimeleri etiket olarak kullan
-            content_tags = []
-            for word, count in common_words:
-                # İlk harfi büyüt
-                tag = word.capitalize()
-                if tag and tag not in content_tags:
-                    content_tags.append(tag)
-            
-            # Ana kategoriyi de etiket olarak ekle
-            if corrected_json['main_category'] and corrected_json['main_category'] not in content_tags:
-                content_tags.append(corrected_json['main_category'])
-            
-            # Alt kategoriyi de etiket olarak ekle
-            if corrected_json['subcategory'] and corrected_json['subcategory'] not in content_tags:
-                content_tags.append(corrected_json['subcategory'])
-            
-            # İçerikten çıkarılan etiketleri kullan
-            if content_tags:
-                corrected_json['tags'] = content_tags
-                print(f"İçerikten oluşturulan etiketler: {content_tags}")
+    # Kategorileri kontrol et
+    categories = json_data.get("categories", [])
+    if isinstance(categories, list):
+        corrected_json["categories"] = categories
+    elif isinstance(categories, dict):
+        # Dict formatındaki kategorileri array formatına dönüştür
+        category_array = []
+        for main_cat, sub_cats in categories.items():
+            if isinstance(sub_cats, list):
+                for sub_cat in sub_cats:
+                    category_array.append({"main": main_cat, "sub": sub_cat})
             else:
-                # Gerçekten hiç ipucu bulunamadıysa, domain adını kullan
-                from urllib.parse import urlparse
-                domain = urlparse(url).netloc
-                domain_parts = domain.split('.')
-                
-                # Alan adının anlamlı kısmını etiket olarak kullan (genellikle ikinci seviye domain)
-                domain_tags = []
-                for part in domain_parts:
-                    if part not in ['www', 'com', 'net', 'org', 'io', 'co', 'gov', 'edu'] and len(part) > 2:
-                        domain_tags.append(part.capitalize())
-                
-                if domain_tags:
-                    corrected_json['tags'] = domain_tags
-                    print(f"Alan adından oluşturulan etiketler: {domain_tags}")
-                else:
-                    # Son çare olarak URL'den ipucu çıkar
-                    path_parts = urlparse(url).path.split('/')
-                    path_tags = []
-                    for part in path_parts:
-                        if part and len(part) > 3:
-                            # Tire ve alt çizgi ile ayrılmış kelimeleri ayır
-                            words = re.split(r'[-_]', part)
-                            for word in words:
-                                if word and len(word) > 3:
-                                    path_tags.append(word.capitalize())
-                    
-                    if path_tags:
-                        corrected_json['tags'] = path_tags
-                        print(f"URL yolundan oluşturulan etiketler: {path_tags}")
-                    else:
-                        # En son çare olarak URL temel etiketleri
-                        corrected_json['tags'] = ["Site", "Web", "Sayfa", "Bilgi", "İnternet"]
-                        print("Hiç ipucu bulunamadı, URL temel etiketleri kullanılıyor")
-    else:
-        print("Tags anahtarı bulunamadı veya liste değil, içerikten etiketler oluşturuluyor...")
-        
-        # İçerikten etiket çıkar
-        from collections import Counter
-        import re
-        
-        # Başlık ve açıklamayı birleştir
-        title = corrected_json.get('title', '')
-        description = corrected_json.get('description', '')
-        combined_text = (title + " " + description).lower()
-        
-        # Eğer içerik çok kısaysa, kategorileri kullan
-        if len(combined_text) < 20:
-            content_tags = []
-            
-            # Ana kategoriyi etiket olarak ekle
-            if corrected_json['main_category']:
-                content_tags.append(corrected_json['main_category'])
-            
-            # Alt kategoriyi etiket olarak ekle
-            if corrected_json['subcategory'] and corrected_json['subcategory'] != corrected_json['main_category']:
-                content_tags.append(corrected_json['subcategory'])
-                
-            # URL'den ipucu çıkar
-            from urllib.parse import urlparse
-            domain = urlparse(url).netloc
-            domain_parts = domain.split('.')
-            
-            # Alan adının anlamlı kısmını etiket olarak kullan
-            for part in domain_parts:
-                if part not in ['www', 'com', 'net', 'org', 'io', 'co', 'gov', 'edu'] and len(part) > 2:
-                    content_tags.append(part.capitalize())
-            
-            if len(content_tags) >= 3:
-                corrected_json['tags'] = content_tags
-                print(f"Kategoriler ve alan adından oluşturulan etiketler: {content_tags}")
-            else:
-                # URL yolundan ipucu çıkar
-                path_parts = urlparse(url).path.split('/')
-                path_tags = []
-                for part in path_parts:
-                    if part and len(part) > 3:
-                        # Tire ve alt çizgi ile ayrılmış kelimeleri ayır
-                        words = re.split(r'[-_]', part)
-                        for word in words:
-                            if word and len(word) > 3:
-                                path_tags.append(word.capitalize())
-                
-                if path_tags:
-                    corrected_json['tags'] = content_tags + path_tags
-                    print(f"Kategoriler ve URL yolundan oluşturulan etiketler: {content_tags + path_tags}")
-                else:
-                    # En son çare olarak site bazlı etiketler
-                    corrected_json['tags'] = ["Site", "Web", "Sayfa", "Bilgi", "İnternet"]
-                    print("Hiç ipucu bulunamadı, site bazlı etiketler kullanılıyor")
-        else:
-            # Noktalama işaretlerini kaldır
-            combined_text = re.sub(r'[^\w\s]', ' ', combined_text)
-            
-            # Stopwords - genel, yaygın, anlamsız kelimeler
-            stopwords = ["ve", "veya", "ile", "için", "bu", "bir", "o", "de", "da", "ki", "ne", "ya", "çok", 
-                        "nasıl", "en", "içinde", "üzerinde", "arasında", "olarak", "dolayı", "kadar", "önce", 
-                        "sonra", "göre", "her", "the", "and", "or", "for", "in", "on", "at", "with", "from", 
-                        "to", "a", "an", "by", "is", "are", "was", "were", "içerik", "web", "analiz", "sayfa"]
-            
-            # Kelimelere böl
-            words = combined_text.split()
-            
-            # Yaygın kelimeleri kaldır
-            filtered_words = [word for word in words if word not in stopwords and len(word) > 3]
-            
-            # En sık geçen anlamlı kelimeleri bul
-            word_counter = Counter(filtered_words)
-            common_words = word_counter.most_common(20)
-            
-            # Anlamlı kelimeleri etiket olarak kullan
-            content_tags = []
-            for word, count in common_words:
-                # İlk harfi büyüt
-                tag = word.capitalize()
-                if tag and tag not in content_tags:
-                    content_tags.append(tag)
-            
-            # Eğer yeterli sayıda etiket bulunamadıysa, ana ve alt kategoriyi ekle
-            # Ana kategoriyi etiket olarak ekle
-            if corrected_json['main_category'] and corrected_json['main_category'] not in content_tags:
-                content_tags.append(corrected_json['main_category'])
-            
-            # Alt kategoriyi etiket olarak ekle
-            if corrected_json['subcategory'] and corrected_json['subcategory'] not in content_tags and corrected_json['subcategory'] != corrected_json['main_category']:
-                content_tags.append(corrected_json['subcategory'])
-            
-            if content_tags:
-                corrected_json['tags'] = content_tags
-                print(f"İçerikten oluşturulan etiketler: {content_tags}")
-            else:
-                # Alan adından ipucu çıkar
-                from urllib.parse import urlparse
-                domain = urlparse(url).netloc
-                domain_parts = domain.split('.')
-                
-                # Alan adının anlamlı kısmını etiket olarak kullan
-                domain_tags = []
-                for part in domain_parts:
-                    if part not in ['www', 'com', 'net', 'org', 'io', 'co', 'gov', 'edu'] and len(part) > 2:
-                        domain_tags.append(part.capitalize())
-                
-                if domain_tags:
-                    corrected_json['tags'] = domain_tags
-                    print(f"Alan adından oluşturulan etiketler: {domain_tags}")
-                else:
-                    # Son çare olarak URL temel etiketleri
-                    corrected_json['tags'] = ["Site", "Web", "Sayfa", "Bilgi", "İnternet"]
-                    print("Hiç ipucu bulunamadı, URL temel etiketleri kullanılıyor")
+                category_array.append({"main": main_cat, "sub": str(sub_cats)})
+        corrected_json["categories"] = category_array
     
-    # Debug için etiketleri yazdır
-    print(f"Düzeltilmiş JSON'daki etiketler: {corrected_json.get('tags', [])}")
+    # Etiketleri kontrol et
+    tags = json_data.get("tags", [])
+    if isinstance(tags, list):
+        corrected_json["tags"] = tags
+    elif isinstance(tags, str):
+        # Virgülle ayrılmış string formatındaki etiketleri array'e dönüştür
+        corrected_json["tags"] = [tag.strip() for tag in tags.split(",") if tag.strip()]
     
-    # Etiketlerden en az birini ana kategori ve alt kategori olarak kaydır
-    # eğer her ikisi de boşsa ve etiketler varsa
-    if (not corrected_json['main_category'] or corrected_json['main_category'] == "") and (not corrected_json['subcategory'] or corrected_json['subcategory'] == "") and corrected_json['tags'] and not corrected_json['categories']:
-        # İlk etiketi ana kategori olarak kullan
-        corrected_json['main_category'] = corrected_json['tags'][0]
-        # Eğer birden fazla etiket varsa, ikincisini alt kategori olarak kullan
-        if len(corrected_json['tags']) > 1:
-            corrected_json['subcategory'] = corrected_json['tags'][1]
-        
-        # categories dizisini de güncelle
-        corrected_json['categories'] = [{
-            'main_category': corrected_json['main_category'],
-            'subcategory': corrected_json.get('subcategory', "")
-        }]
+    # Boş kategori ve etiket kontrolü
+    if not corrected_json["categories"]:
+        corrected_json["categories"] = [{"main": "Genel", "sub": "Diğer"}]
+    
+    if not corrected_json["tags"]:
+        corrected_json["tags"] = ["genel"]
     
     return corrected_json
 

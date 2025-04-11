@@ -8,9 +8,9 @@ import json
 import os
 from .reader.html_fetcher import fetch_html
 from .reader.content_extractor import extract_content
-from .reader.gemini_analyzer import categorize_with_gemini
+from .reader.content_analyzer import categorize_content
 from .reader.screenshot import capture_screenshot
-from .reader.gemini_analyzer import analyze_screenshot_with_gemini
+from .reader.content_analyzer import analyze_screenshot
 from .models import Bookmark, Category, Tag, Collection, Profile
 from django.db import models
 from collections import Counter
@@ -305,7 +305,8 @@ def analyze_url(request):
                         result['screenshot_used'] = False  # Ekran görüntüsü değil, orijinal thumbnail
                     
                     # YouTube analizinden gelen sonucu döndür
-                    return JsonResponse(result)
+                    converted_result = convert_api_format_for_frontend(result)
+                    return JsonResponse(converted_result)
                 else:
                     print("YouTube analizi başarısız oldu, standart analiz deneniyor...")
             
@@ -388,14 +389,14 @@ def analyze_url(request):
                     # Convert binary screenshot to base64 for analysis
                     screenshot_base64 = base64.b64encode(screenshot).decode('utf-8')
                     # Ekran görüntüsünü Gemini ile analiz et ve kategorize et
-                    category_json = analyze_screenshot_with_gemini(screenshot_base64, url)
+                    category_json = analyze_screenshot(screenshot_base64, url)
                     screenshot_used = True
             
             # Eğer ekran görüntüsü analizi yapılmadıysa veya başarısız olduysa, HTML içeriğini kategorize et
             if not category_json and content:
                 print("İçerik çıkarıldı, kategorize ediliyor...")
                 # Categorize content
-                category_json = categorize_with_gemini(content, url)
+                category_json = categorize_content(content, url)
             
             if not content and not category_json:
                 return JsonResponse({'error': 'İçerik alınamadı veya analiz edilemedi'}, status=400)
@@ -421,7 +422,9 @@ def analyze_url(request):
                     else:
                         print("Result'ta tags yok.")
                 
-                return JsonResponse(result)
+                # Frontend'in beklediği formata dönüştür
+                converted_result = convert_api_format_for_frontend(result)
+                return JsonResponse(converted_result)
             except json.JSONDecodeError:
                 # If JSON parsing fails, try to use the corrected JSON from the categorization function
                 print("JSON ayrıştırma hatası: Hata düzeltme mekanizması deneniyor...")
@@ -444,7 +447,8 @@ def analyze_url(request):
                         fallback_json['tags'] = []
                     
                     print(f"Düzeltilmiş fallback JSON: {fallback_json}")
-                    return JsonResponse(fallback_json)
+                    converted_fallback = convert_api_format_for_frontend(fallback_json)
+                    return JsonResponse(converted_fallback)
                 except Exception as fallback_error:
                     print(f"Fallback JSON hatası: {fallback_error}")
                     # If everything fails, return the raw string
@@ -460,6 +464,57 @@ def analyze_url(request):
     
     return JsonResponse({'error': 'Geçersiz istek'}, status=400)
 
+def convert_api_format_for_frontend(data):
+    """
+    API'dan gelen veri formatını frontend'in beklediği formata dönüştürür.
+    
+    Args:
+        data (dict): API'dan gelen veri
+        
+    Returns:
+        dict: Frontend için dönüştürülmüş veri
+    """
+    if not isinstance(data, dict):
+        return data
+    
+    result = data.copy()
+    
+    # Kategorileri dönüştür
+    if 'categories' in result and isinstance(result['categories'], list):
+        categories_frontend = []
+        
+        for cat in result['categories']:
+            if isinstance(cat, dict) and 'main' in cat and 'sub' in cat:
+                # Yeni formattan eski formata dönüşüm
+                categories_frontend.append({
+                    'main_category': cat['main'],
+                    'subcategory': cat['sub']
+                })
+        
+        # Eğer dönüşüm yapıldıysa, orijinal categories'i koru ve yeni format ekle
+        if categories_frontend:
+            result['categories_original'] = result['categories']
+            result['categories'] = categories_frontend
+    
+    # Etiketleri dönüştür
+    if 'tags' in result and isinstance(result['tags'], list):
+        tags_frontend = []
+        
+        for tag in result['tags']:
+            if isinstance(tag, dict) and 'name' in tag:
+                # Kompleks etiket formatından string formatına dönüşüm
+                tags_frontend.append(tag['name'])
+            elif isinstance(tag, str):
+                # Zaten string ise direkt ekle
+                tags_frontend.append(tag)
+        
+        # Eğer dönüşüm yapıldıysa, orijinal tags'i koru ve yeni format ekle
+        if tags_frontend:
+            result['tags_original'] = result['tags']
+            result['tags'] = tags_frontend
+    
+    return result
+
 @csrf_protect
 @login_required(login_url='tagwiseapp:login')
 def save_bookmark(request):
@@ -471,19 +526,38 @@ def save_bookmark(request):
             url = data.get('url')
             title = data.get('title')
             description = data.get('description')
-            main_categories = data.get('main_categories', [])
-            subcategories = data.get('subcategories', [])
-            tags = data.get('tags', [])
+            categories = data.get('categories', [])  # Yeni format: [{"main": "...", "sub": "..."}, ...]
+            tags = data.get('tags', [])  # Yeni format: [{"name": "..."}, ...]
             screenshot_data = data.get('screenshot_data')
             custom_screenshot = data.get('custom_screenshot')  # Base64 encoded custom screenshot
             
             # Backward compatibility for old format
-            if 'main_category' in data and not main_categories:
-                main_categories = [data.get('main_category')]
+            main_categories = data.get('main_categories', [])
+            subcategories = data.get('subcategories', [])
+            category_subcategory_map = data.get('category_subcategory_map', {})
+            old_tags = data.get('tags_old', [])  # Eski format taglarını ayrı bir değişkene alıyoruz
+            
+            # Yeni ve eski formatların birleştirilmesi
+            if not categories and main_categories:
+                # Eski format kullanılmış, bunu yeni formata dönüştür
+                for main_cat in main_categories:
+                    sub_cats = category_subcategory_map.get(main_cat, [])
+                    if not sub_cats:
+                        # Alt kategori yoksa ana kategoriye "Diğer" ekle
+                        categories.append({"main": main_cat, "sub": "Diğer"})
+                    else:
+                        # Her alt kategori için bir kayıt ekle
+                        for sub_cat in sub_cats:
+                            categories.append({"main": main_cat, "sub": sub_cat})
+            
+            # Eski format etiketler kullanılmışsa, yeni formata dönüştür
+            if not tags and old_tags:
+                for tag_name in old_tags:
+                    tags.append({"name": tag_name})
             
             # Validate required fields
-            if not url or not title or not main_categories:
-                return JsonResponse({'error': 'URL, title, and at least one main category are required'}, status=400)
+            if not url or not title or not categories:
+                return JsonResponse({'error': 'URL, title, and at least one category are required'}, status=400)
             
             # Process custom screenshot if provided
             if custom_screenshot and screenshot_data:
@@ -522,86 +596,79 @@ def save_bookmark(request):
             used_main_categories = []
             used_subcategories = []
             
-            # Add main categories - only those that are actually used
-            for main_category_name in main_categories:
-                # Try to find existing category first (önce kullanıcının kendi kategorisi, sonra genel)
-                main_category = Category.objects.filter(name=main_category_name, user=request.user).first() or \
-                                Category.objects.filter(name=main_category_name, user=None).first()
-                
-                if not main_category:
-                    # Create new if not exists (kullanıcının kendi kategorisi olarak oluştur)
-                    main_category = Category.objects.create(name=main_category_name, user=request.user)
-                bookmark.main_categories.add(main_category)
-                used_main_categories.append(main_category)
+            # Kategori listeleri için dictionary'ler oluştur
+            main_category_dict = {}  # Ana kategori adı -> Category objesi
             
-            # Alt kategorileri ve ana kategorileri eşleştirmek için kategori-alt kategori ilişkilerini al
-            category_subcategory_map = {}
-            
-            # JavaScript'ten gelen kategori-alt kategori ilişkilerini analiz et
-            if 'category_subcategory_map' in data:
-                category_subcategory_map = data.get('category_subcategory_map', {})
-            else:
-                # Eski format için geriye dönük uyumluluk - her alt kategoriyi tüm ana kategorilere ekle
-                for subcategory_name in subcategories:
-                    for main_category in used_main_categories:
-                        if main_category.name not in category_subcategory_map:
-                            category_subcategory_map[main_category.name] = []
-                        category_subcategory_map[main_category.name].append(subcategory_name)
-            
-            # Add subcategories - only once for each subcategory and only if they have a parent
-            for subcategory_name in subcategories:
-                # Her alt kategori için doğru ana kategoriyi bul
-                parent_found = False
+            # Kategorileri ekle - yeni format
+            for category_item in categories:
+                main_category_name = category_item.get('main')
+                sub_category_name = category_item.get('sub')
                 
-                # Kategori-alt kategori haritasını kullan
-                for main_category in used_main_categories:
-                    if main_category.name in category_subcategory_map and subcategory_name in category_subcategory_map[main_category.name]:
-                        # Try to find existing subcategory first
-                        subcategory = Category.objects.filter(name=subcategory_name, user=request.user).first() or \
-                                      Category.objects.filter(name=subcategory_name, user=None).first()
-                                      
-                        if not subcategory:
-                            # Create new if not exists
-                            subcategory = Category.objects.create(name=subcategory_name, parent=main_category, user=request.user)
-                        elif not subcategory.parent:
-                            # Update parent if not set
-                            subcategory.parent = main_category
-                            subcategory.save()
-                        
-                        # Add to bookmark
-                        bookmark.subcategories.add(subcategory)
-                        used_subcategories.append(subcategory_name)
-                        parent_found = True
-                        break
+                if not main_category_name:
+                    continue  # Ana kategori adı yoksa, bu kategoriyi atla
                 
-                # Eğer haritada bulunamazsa, ilk ana kategoriyi kullan (geriye dönük uyumluluk)
-                if not parent_found and used_main_categories:
-                    main_category = used_main_categories[0]
-                    # Try to find existing subcategory first
-                    subcategory = Category.objects.filter(name=subcategory_name, user=request.user).first() or \
-                                  Category.objects.filter(name=subcategory_name, user=None).first()
-                                  
+                # Ana kategoriyi işle
+                if main_category_name in main_category_dict:
+                    # Bu ana kategori daha önce işlendi
+                    main_category = main_category_dict[main_category_name]
+                else:
+                    # Ana kategoriyi bul veya oluştur
+                    main_category = Category.objects.filter(name=main_category_name, user=request.user).first() or \
+                                    Category.objects.filter(name=main_category_name, user=None).first()
+                    
+                    if not main_category:
+                        # Ana kategori yoksa oluştur
+                        main_category = Category.objects.create(name=main_category_name, user=request.user)
+                    
+                    # Bookmark'a ana kategori ekle
+                    bookmark.main_categories.add(main_category)
+                    used_main_categories.append(main_category)
+                    main_category_dict[main_category_name] = main_category
+                
+                # Alt kategoriyi işle
+                if sub_category_name and sub_category_name != "Diğer":
+                    # Alt kategoriyi bul veya oluştur
+                    subcategory = Category.objects.filter(name=sub_category_name, user=request.user).first() or \
+                                  Category.objects.filter(name=sub_category_name, user=None).first()
+                    
                     if not subcategory:
-                        # Create new if not exists
-                        subcategory = Category.objects.create(name=subcategory_name, parent=main_category, user=request.user)
+                        # Alt kategori yoksa oluştur
+                        subcategory = Category.objects.create(
+                            name=sub_category_name, 
+                            parent=main_category, 
+                            user=request.user
+                        )
                     elif not subcategory.parent:
-                        # Update parent if not set
+                        # Alt kategorinin parent'ı yoksa ekle
                         subcategory.parent = main_category
                         subcategory.save()
                     
-                    # Add to bookmark
+                    # Bookmark'a alt kategori ekle
                     bookmark.subcategories.add(subcategory)
-                    used_subcategories.append(subcategory_name)
+                    used_subcategories.append(sub_category_name)
             
-            # Add tags - only those that are actually used
-            for tag_name in tags:
-                # Try to find existing tag first
+            # Etiketleri ekle - yeni format
+            for tag_item in tags:
+                # Etiket formatını kontrol et - string veya dict olabilir
+                if isinstance(tag_item, dict):
+                    tag_name = tag_item.get('name')
+                elif isinstance(tag_item, str):
+                    tag_name = tag_item
+                else:
+                    continue  # Geçersiz format
+                
+                if not tag_name:
+                    continue  # Etiket adı yoksa, bu etiketi atla
+                
+                # Etiketi bul veya oluştur
                 tag = Tag.objects.filter(name=tag_name, user=request.user).first() or \
                       Tag.objects.filter(name=tag_name, user=None).first()
                       
                 if not tag:
-                    # Create new if not exists
+                    # Etiket yoksa oluştur
                     tag = Tag.objects.create(name=tag_name, user=request.user)
+                
+                # Bookmark'a etiket ekle
                 bookmark.tags.add(tag)
             
             return JsonResponse({'success': True, 'bookmark_id': bookmark.id})
@@ -1042,14 +1109,27 @@ def update_bookmark(request):
             
             # Update tags
             bookmark.tags.clear()
-            for tag_name in tags:
-                # Try to find existing tag first
+            for tag_item in tags:
+                # Etiket formatını kontrol et - string veya dict olabilir
+                if isinstance(tag_item, dict):
+                    tag_name = tag_item.get('name')
+                elif isinstance(tag_item, str):
+                    tag_name = tag_item
+                else:
+                    continue  # Geçersiz format
+                
+                if not tag_name:
+                    continue  # Etiket adı yoksa, bu etiketi atla
+                
+                # Etiketi bul veya oluştur
                 tag = Tag.objects.filter(name=tag_name, user=request.user).first() or \
                       Tag.objects.filter(name=tag_name, user=None).first()
                       
                 if not tag:
-                    # Create new if not exists
+                    # Etiket yoksa oluştur
                     tag = Tag.objects.create(name=tag_name, user=request.user)
+                
+                # Bookmark'a etiket ekle
                 bookmark.tags.add(tag)
             
             return JsonResponse({'success': True, 'bookmark_id': bookmark.id})
