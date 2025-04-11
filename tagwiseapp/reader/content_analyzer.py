@@ -26,6 +26,7 @@ from .prompts import TEXT_SYSTEM_INSTRUCTION, IMAGE_SYSTEM_INSTRUCTION
 from .category_prompt_factory import CategoryPromptFactory
 from .llm_factory import LLMFactory
 from .settings import get_model_config
+from .schemas import ContentAnalysisModel, get_content_analysis_json_schema
 
 # Import LangChain message types for invoking LLMs
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -137,7 +138,7 @@ def generate_summary_from_content(content: str, url: str) -> str:
         return f"URL: {url} için HTML içeriğinden özet oluşturulamadı."
 
 
-def categorize_content(content: str, url: str, existing_title: Optional[str] = None, existing_description: Optional[str] = None) -> Dict:
+def categorize_content(content: str, url: str, existing_title: Optional[str] = None, existing_description: Optional[str] = None, use_structured_output: bool = True) -> Dict:
     """
     HTML içeriğini kategorize eder ve etiketler.
 
@@ -146,6 +147,7 @@ def categorize_content(content: str, url: str, existing_title: Optional[str] = N
         url (str): URL adresi
         existing_title (Optional[str], optional): Mevcut başlık. Defaults to None.
         existing_description (Optional[str], optional): Mevcut açıklama. Defaults to None.
+        use_structured_output (bool, optional): Whether to use structured output. Defaults to True.
 
     Returns:
         Dict: Kategorize edilmiş sonuçlar
@@ -185,44 +187,70 @@ def categorize_content(content: str, url: str, existing_title: Optional[str] = N
             existing_tags=tags
         )
         
-        # LLM'den kategori ve etiket analizi iste
-        llm = LLMFactory.create_llm(
-            provider=settings.get('provider', 'gemini'),
-            model_name=settings.get('model_name', 'gemini-2.0-flash'),
-            temperature=0.2
-        )
-
-        # İstek gönder ve cevabı al
         logger = logging.getLogger(__name__)
         logger.info(f"Sending categorization request to LLM for URL: {url}")
-
+        
         try:
-            # Eski: response = llm(prompt)
-            # Yeni: LangChain API'sine uygun yapıda bir çağrı
-            response = llm.invoke([HumanMessage(content=prompt)])
-            
-            # LangChain yanıt nesnesinden içeriği çıkar
-            if hasattr(response, 'content'):
-                response_text = response.content
+            if use_structured_output:
+                # Use structured output with JSON schema
+                output_schema = get_content_analysis_json_schema()
+                
+                # Create LLMChain with structured output
+                llm_chain = LLMChain(
+                    system_prompt=TEXT_SYSTEM_INSTRUCTION,
+                    output_schema=output_schema,
+                    model_type="text"
+                )
+                
+                # Run the chain
+                structured_result = llm_chain.run(prompt)
+                
+                # Check if we got a structured output or a string
+                if isinstance(structured_result, dict):
+                    logger.info("Successfully received structured output")
+                    # Add URL if not present
+                    if 'url' not in structured_result:
+                        structured_result['url'] = url
+                    
+                    # Structured output already has the right format,
+                    # but we still need to match categories and tags with existing ones
+                    result = structured_result
+                else:
+                    logger.warning("Structured output failed, falling back to text parsing")
+                    # Fallback to text parsing
+                    corrected_json_text = correct_json_format(str(structured_result))
+                    json_result = json.loads(corrected_json_text)
+                    result = ensure_correct_json_structure(json_result, url, existing_title, existing_description)
             else:
-                response_text = str(response)
+                # Use traditional approach
+                llm = LLMFactory.create_llm(
+                    provider=settings.get('provider', 'gemini'),
+                    model_name=settings.get('model_name', 'gemini-2.0-flash'),
+                    temperature=0.2
+                )
                 
-            logger.info(f"Received response from LLM, length: {len(response_text)}")
-            
-            # LLM yanıtını JSON formatına çevirir
-            corrected_json_text = correct_json_format(response_text)
-            
-            # JSON metnini dict'e dönüştür
-            try:
-                json_result = json.loads(corrected_json_text)
-                logger.info("Successfully parsed JSON from LLM response")
-            except json.JSONDecodeError as e:
-                logger.error(f"JSON parse error: {str(e)}")
-                # Boş bir dict ile devam et
-                json_result = {}
+                # Invoke LLM
+                response = llm.invoke([HumanMessage(content=prompt)])
                 
-            # JSON yapısının doğru olduğundan emin ol
-            result = ensure_correct_json_structure(json_result, url, existing_title, existing_description)
+                # Extract content from response
+                if hasattr(response, 'content'):
+                    response_text = response.content
+                else:
+                    response_text = str(response)
+                    
+                logger.info(f"Received response from LLM, length: {len(response_text)}")
+                
+                # LLM yanıtını JSON formatına çevirir
+                corrected_json_text = correct_json_format(response_text)
+                
+                # JSON metnini dict'e dönüştür
+                try:
+                    json_result = json.loads(corrected_json_text)
+                    logger.info("Successfully parsed JSON from LLM response")
+                except json.JSONDecodeError as e:
+                    logger.error(f"JSON parse error: {str(e)}")
+                    # Boş bir dict ile devam et
+                    json_result = {}
             
             # Kategori eşleştirme için veritabanındaki kategorilerle karşılaştır
             if result.get('categories'):
@@ -314,7 +342,7 @@ def categorize_content(content: str, url: str, existing_title: Optional[str] = N
         return default_result
 
 
-def analyze_screenshot(screenshot_base64: str, url: str, existing_title: Optional[str] = None, existing_description: Optional[str] = None) -> Dict:
+def analyze_screenshot(screenshot_base64: str, url: str, existing_title: Optional[str] = None, existing_description: Optional[str] = None, use_structured_output: bool = True) -> Dict:
     """
     Ekran görüntüsünü analiz eder ve kategorize eder.
 
@@ -323,6 +351,7 @@ def analyze_screenshot(screenshot_base64: str, url: str, existing_title: Optiona
         url (str): URL adresi
         existing_title (Optional[str], optional): Mevcut başlık. Defaults to None.
         existing_description (Optional[str], optional): Mevcut açıklama. Defaults to None.
+        use_structured_output (bool, optional): Whether to use structured output. Defaults to True.
 
     Returns:
         Dict: Analiz sonuçları
@@ -346,21 +375,21 @@ def analyze_screenshot(screenshot_base64: str, url: str, existing_title: Optiona
             existing_tags=tags
         )
         
-        # Multimodal LLM oluştur
-        # Model adını ve provider'ı düzgün kullan
-        multimodal_llm = LLMFactory.create_llm(
-            provider=settings.get('provider', 'gemini'),
-            model_name=settings.get('model_name', 'gemini-2.0-flash'),
-            temperature=0.2
-        )
-        
         # İstek gönder ve cevabı al
         logger = logging.getLogger(__name__)
         logger.info(f"Sending screenshot analysis request to LLM for URL: {url}")
         
         try:
-            # Ekran görüntüsü için multimodal istek
-            llm_chain = LLMChain(system_prompt=IMAGE_SYSTEM_INSTRUCTION, model_type="vision")
+            # Vision models typically don't support structured output as well,
+            # but we can try with JSON schema
+            output_schema = get_content_analysis_json_schema() if use_structured_output else None
+            
+            # Create LLM chain with optional structured output
+            llm_chain = LLMChain(
+                system_prompt=IMAGE_SYSTEM_INSTRUCTION, 
+                model_type="vision",
+                output_schema=output_schema if use_structured_output else None
+            )
             
             # Process the image
             image_data = llm_chain.process_image(screenshot_base64)
@@ -368,19 +397,28 @@ def analyze_screenshot(screenshot_base64: str, url: str, existing_title: Optiona
             # Run chain
             response = llm_chain.run(prompt, image_data=image_data)
             
-            logger.info(f"Received response from LLM, length: {len(response)}")
-            
-            # LLM yanıtını JSON formatına çevirir
-            corrected_json_text = correct_json_format(response)
-            
-            # JSON metnini dict'e dönüştür
-            try:
-                json_result = json.loads(corrected_json_text)
-                logger.info("Successfully parsed JSON from LLM response")
-            except json.JSONDecodeError as e:
-                logger.error(f"JSON parse error: {str(e)}")
-                # Boş bir dict ile devam et
-                json_result = {}
+            # Handle the response based on its type
+            if use_structured_output and isinstance(response, dict):
+                logger.info("Successfully received structured output from vision model")
+                # Add URL if not present
+                if 'url' not in response:
+                    response['url'] = url
+                json_result = response
+            else:
+                # Need to parse as text
+                logger.info(f"Received text response from LLM, length: {len(str(response))}")
+                
+                # LLM yanıtını JSON formatına çevirir
+                corrected_json_text = correct_json_format(str(response))
+                
+                # JSON metnini dict'e dönüştür
+                try:
+                    json_result = json.loads(corrected_json_text)
+                    logger.info("Successfully parsed JSON from LLM response")
+                except json.JSONDecodeError as e:
+                    logger.error(f"JSON parse error: {str(e)}")
+                    # Boş bir dict ile devam et
+                    json_result = {}
             
             # JSON yapısının doğru olduğundan emin ol
             result = ensure_correct_json_structure(json_result, url, existing_title, existing_description)

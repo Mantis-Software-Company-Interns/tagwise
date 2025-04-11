@@ -7,14 +7,15 @@ This module provides a factory for creating LLM instances using LangChain.
 import base64
 import time
 import logging
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List, Dict, Any, Union, Type
 
 # LangChain imports
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.output_parsers import StrOutputParser
+from langchain_core.output_parsers import StrOutputParser, JsonOutputParser, PydanticOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
+from pydantic import BaseModel, create_model, Field
 
 # LLM provider-specific imports
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -123,7 +124,8 @@ class LLMChain:
         self,
         system_prompt: str,
         providers: List[str] = None, 
-        model_type: str = "text"
+        model_type: str = "text",
+        output_schema: Optional[Union[Dict, Type[BaseModel]]] = None
     ):
         """
         Initialize LLM chain with fallback support.
@@ -132,9 +134,11 @@ class LLMChain:
             system_prompt (str): System instruction for the LLM
             providers (List[str], optional): List of providers to try in order
             model_type (str, optional): Type of model (text or vision)
+            output_schema (Union[Dict, Type[BaseModel]], optional): Schema for structured output
         """
         self.system_prompt = system_prompt
         self.model_type = model_type
+        self.output_schema = output_schema
         
         # Set providers - use default + fallbacks if not provided
         if not providers:
@@ -145,6 +149,25 @@ class LLMChain:
         # Remove duplicates and empty strings
         self.providers = [p for p in dict.fromkeys(self.providers) if p]
         logger.info(f"Initialized LLM chain with providers: {self.providers}")
+        
+        # Set up output parser if schema provided
+        self.output_parser = None
+        if output_schema:
+            if isinstance(output_schema, type) and issubclass(output_schema, BaseModel):
+                # Pydantic model schema
+                self.output_parser = PydanticOutputParser(pydantic_object=output_schema)
+                logger.info(f"Using PydanticOutputParser with schema: {output_schema.__name__}")
+            elif isinstance(output_schema, dict):
+                # JSON schema
+                self.output_parser = JsonOutputParser()
+                # We'll apply the schema validation after parsing
+                logger.info("Using JsonOutputParser with custom schema validation")
+            else:
+                logger.warning(f"Unsupported schema type: {type(output_schema)}, falling back to string output")
+                self.output_parser = StrOutputParser()
+        else:
+            # Default to string output
+            self.output_parser = StrOutputParser()
         
     def _create_messages(self, input_text: str, image_data: Optional[Dict] = None, provider: str = None):
         """
@@ -158,8 +181,14 @@ class LLMChain:
         Returns:
             List: List of messages
         """
+        # Add output parser format instructions if needed
+        system_content = self.system_prompt
+        if self.output_parser and hasattr(self.output_parser, "get_format_instructions"):
+            format_instructions = self.output_parser.get_format_instructions()
+            system_content = f"{system_content}\n\n{format_instructions}"
+        
         messages = [
-            SystemMessage(content=self.system_prompt),
+            SystemMessage(content=system_content),
             HumanMessage(content=input_text)
         ]
         
@@ -192,7 +221,7 @@ class LLMChain:
             image_data (Dict, optional): Image data for vision models
             
         Returns:
-            str: The LLM response
+            Any: The LLM response (string or structured object)
         """
         try:
             # Create LLM
@@ -214,13 +243,25 @@ class LLMChain:
             duration = time.time() - start_time
             logger.info(f"Provider {provider} responded in {duration:.2f} seconds")
             
+            # Parse the result if we have an output parser
+            if self.output_parser:
+                try:
+                    logger.info("Parsing output with parser")
+                    parsed_result = self.output_parser.parse(result)
+                    logger.info(f"Successfully parsed output: {type(parsed_result)}")
+                    return parsed_result
+                except Exception as parser_error:
+                    logger.warning(f"Error parsing output: {str(parser_error)}")
+                    logger.warning("Returning raw output instead")
+                    return result
+            
             return result
             
         except Exception as e:
             logger.error(f"Error with provider {provider}: {str(e)}")
             raise
     
-    def run(self, input_text: str, image_data: Optional[Dict] = None) -> str:
+    def run(self, input_text: str, image_data: Optional[Dict] = None) -> Any:
         """
         Run the chain with fallback support.
         
@@ -229,7 +270,7 @@ class LLMChain:
             image_data (Dict, optional): Image data for vision models
             
         Returns:
-            str: The LLM response
+            Any: The LLM response (string or structured object)
         """
         errors = []
         
@@ -272,4 +313,44 @@ class LLMChain:
                 "url": f"data:image/png;base64,{image_base64}",
                 "detail": "high"
             }
-        } 
+        }
+
+def create_pydantic_model_from_dict(schema_dict: Dict[str, Any], model_name: str = "DynamicOutputModel") -> Type[BaseModel]:
+    """
+    Create a Pydantic model from a dictionary schema.
+    
+    Args:
+        schema_dict (Dict[str, Any]): Dictionary defining the schema
+        model_name (str, optional): Name for the model. Defaults to "DynamicOutputModel".
+    
+    Returns:
+        Type[BaseModel]: A Pydantic model class
+    """
+    # Helper function to convert schema types to Python types
+    def get_field_type(field_schema):
+        if isinstance(field_schema, dict):
+            # Handle object fields
+            if field_schema.get('type') == 'object':
+                properties = field_schema.get('properties', {})
+                nested_fields = {
+                    k: (get_field_type(v), Field(...)) for k, v in properties.items()
+                }
+                return create_model(f"{model_name}_{k}", **nested_fields)
+            # Handle array fields
+            elif field_schema.get('type') == 'array':
+                items = field_schema.get('items', {})
+                return List[get_field_type(items)]
+            # Handle simple fields
+            else:
+                return str if field_schema.get('type') == 'string' else Any
+        else:
+            # Default to Any if schema is not properly defined
+            return Any
+    
+    # Create model fields
+    fields = {}
+    for field_name, field_schema in schema_dict.items():
+        fields[field_name] = (get_field_type(field_schema), Field(...))
+    
+    # Create and return the model
+    return create_model(model_name, **fields) 

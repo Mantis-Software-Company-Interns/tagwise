@@ -1,7 +1,7 @@
 """
 Text Prompt Module
 
-This module provides the system instruction for text analysis with Gemini AI.
+This module provides the system instruction for text analysis with LangChain.
 """
 
 # System instruction for text analysis
@@ -36,7 +36,7 @@ Lütfen bu web sayfasının içeriğini analiz ederek aşağıdaki bilgileri JSO
 - Sağlık sitesi: Sağlık > Tıbbi Bilgiler, Sağlık > Sağlıklı Yaşam, Yaşam > Sağlık Önerileri
 - Finans sitesi: Finans > Yatırım, Ekonomi > Finansal Hizmetler, İş Dünyası > Finans Yönetimi
 
-Yanıtını aşağıdaki JSON formatında ver:
+Yanıtını tam olarak aşağıdaki JSON formatında ver, LangChain tarafından doğrudan işlenebilmesi için bu yapıya kesinlikle uy:
 
 ```json
 {
@@ -44,26 +44,32 @@ Yanıtını aşağıdaki JSON formatında ver:
   "description": "Sayfanın detaylı açıklaması - uzunluk sınırı olmadan, içeriği kapsamlı şekilde özetleyen bir metin",
   "categories": [
     {
-      "main_category": "Ana Kategori 1",
-      "subcategory": "Alt Kategori 1"
+      "main": "Ana Kategori 1",
+      "sub": "Alt Kategori 1"
     },
     {
-      "main_category": "Ana Kategori 2",
-      "subcategory": "Alt Kategori 2"
+      "main": "Ana Kategori 2",
+      "sub": "Alt Kategori 2"
     },
     {
-      "main_category": "Ana Kategori 3",
-      "subcategory": "Alt Kategori 3"
+      "main": "Ana Kategori 3",
+      "sub": "Alt Kategori 3"
     }
   ],
   "tags": ["etiket1", "etiket2", "etiket3", "etiket4", "etiket5", "etiket6", "etiket7", "etiket8", "etiket9", "etiket10"]
 }
 ```
 
+ÖNEMLİ:
+1. JSON çıktında `categories` içindeki objelerde `main_category` ve `subcategory` değil, `main` ve `sub` alanları kullanmalısın.
+2. Yanıtında kesinlikle ekstra metin olmamalı, sadece geçerli JSON formatı olmalıdır.
+3. Çift tırnak işaretlerini (") kullan, tek tırnak işaretlerini (') kullanma.
+4. Çıktı tamamen bu formatla eşleşmeli ve geçerli JSON olmalıdır.
+
 Lütfen kategori ve alt kategori seçimlerinde mevcut kategorileri kullanmaya çalış. Eğer mevcut kategoriler arasında uygun bir eşleşme bulamazsan, içeriğe uygun yeni kategori öner.
 
 Önemli: İçeriğin kısmen ilgili olabileceği kategorileri de öner. Her sayfa için en az 2-3 kategori önermeye çalış. Eğer içerik çok spesifik değilse, daha genel kategorileri de kullanabilirsin.
-""" 
+"""
 
 IMAGE_SYSTEM_INSTRUCTION = """
 Lütfen bu web sayfasını analiz ederek aşağıdaki bilgileri JSON formatında döndür:
@@ -87,7 +93,7 @@ Lütfen bu web sayfasını analiz ederek aşağıdaki bilgileri JSON formatında
 - Etiketler, sayfanın içeriğindeki önemli anahtar kelimeleri içermeli.
 - ÖNEMLİ: Aynı alt kategoriyi farklı ana kategorilere ATAMA. Her alt kategori yalnızca bir ana kategori altında olmalıdır.
 
-Yanıtını aşağıdaki JSON formatında ver:
+Yanıtını tam olarak aşağıdaki JSON formatında ver, LangChain tarafından doğrudan işlenebilmesi için bu yapıya kesinlikle uy:
 
 ```json
 {
@@ -95,23 +101,31 @@ Yanıtını aşağıdaki JSON formatında ver:
   "description": "Sayfanın detaylı açıklaması - uzunluk sınırı olmadan, içeriği kapsamlı şekilde özetleyen bir metin",
   "categories": [
     {
-      "main_category": "Ana Kategori 1",
-      "subcategory": "Alt Kategori 1"
+      "main": "Ana Kategori 1",
+      "sub": "Alt Kategori 1"
     },
     {
-      "main_category": "Ana Kategori 2",
-      "subcategory": "Alt Kategori 2"
+      "main": "Ana Kategori 2",
+      "sub": "Alt Kategori 2"
     },
     {
-      "main_category": "Ana Kategori 3",
-      "subcategory": "Alt Kategori 3"
+      "main": "Ana Kategori 3",
+      "sub": "Alt Kategori 3"
     }
   ],
   "tags": ["etiket1", "etiket2", "etiket3", "etiket4", "etiket5", "etiket6", "etiket7", "etiket8", "etiket9", "etiket10"]
 }
 ```
 
+ÖNEMLİ:
+1. JSON çıktında `categories` içindeki objelerde `main_category` ve `subcategory` değil, `main` ve `sub` alanları kullanmalısın.
+2. Yanıtında kesinlikle ekstra metin olmamalı, sadece geçerli JSON formatı olmalıdır.
+3. Çift tırnak işaretlerini (") kullan, tek tırnak işaretlerini (') kullanma.
+4. Çıktı tamamen bu formatla eşleşmeli ve geçerli JSON olmalıdır.
+
 Lütfen kategori ve alt kategori seçimlerinde mevcut kategorileri kullanmaya çalış. Eğer mevcut kategoriler arasında uygun bir eşleşme bulamazsan, içeriğe uygun yeni kategori öner.
 
 Önemli: İçeriğin kısmen ilgili olabileceği kategorileri de öner. Her sayfa için en az 2-3 kategori önermeye çalış. Eğer içerik çok spesifik değilse, daha genel kategorileri de kullanabilirsin.
+
+Görüntüdeki metinleri ve görselleri dikkate alarak en doğru kategorilemeyi yap.
 """ 
