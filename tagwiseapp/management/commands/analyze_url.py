@@ -5,7 +5,7 @@ Django management command to analyze URLs.
 from django.core.management.base import BaseCommand, CommandError
 from tagwiseapp.reader.main import analyze_url
 from tagwiseapp.reader.utils import load_api_key
-from tagwiseapp.reader.gemini_analyzer import configure_gemini
+from tagwiseapp.reader.content_analyzer import configure_llm
 
 class Command(BaseCommand):
     help = 'Analyze URLs and categorize them'
@@ -17,10 +17,10 @@ class Command(BaseCommand):
         parser.add_argument('--debug', action='store_true', help='Enable debug output')
 
     def handle(self, *args, **options):
-        # API anahtarını yükle ve Gemini'yi yapılandır
+        # API anahtarını yükle ve LLM'yi yapılandır
         api_key = load_api_key()
-        if not configure_gemini(api_key):
-            raise CommandError("Gemini API yapılandırılamadı.")
+        if not configure_llm(api_key):
+            raise CommandError("LLM API yapılandırılamadı.")
         
         urls = []
         

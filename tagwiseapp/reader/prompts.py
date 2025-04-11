@@ -129,3 +129,6 @@ Lütfen kategori ve alt kategori seçimlerinde mevcut kategorileri kullanmaya ç
 
 Görüntüdeki metinleri ve görselleri dikkate alarak en doğru kategorilemeyi yap.
 """ 
+
+
+NEOWRITE_SYSTEM_INSTRUCTION = """ fdsaasd  """

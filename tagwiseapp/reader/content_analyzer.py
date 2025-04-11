@@ -10,6 +10,7 @@ import base64
 import logging
 from typing import Dict, Optional, Any, List, Union
 import re
+import os
 
 # Local imports
 from .llm_factory import LLMChain
@@ -34,6 +35,49 @@ from langchain_core.messages import HumanMessage, SystemMessage
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def configure_llm(api_key=None, provider=None):
+    """
+    Configure LLM settings for content analysis.
+    
+    Args:
+        api_key (str, optional): API key for the LLM provider.
+        provider (str, optional): The LLM provider name (gemini, openai, anthropic)
+        
+    Returns:
+        bool: True if configuration is successful, False otherwise
+    """
+    try:
+        # Set API key based on provider or default
+        if provider is None:
+            provider = os.getenv("DEFAULT_LLM_PROVIDER", "gemini")
+        
+        if api_key:
+            if provider == "gemini":
+                os.environ["GEMINI_API_KEY"] = api_key
+                logger.info("Gemini API anahtarı ayarlandı.")
+            elif provider == "openai":
+                os.environ["OPENAI_API_KEY"] = api_key
+                logger.info("OpenAI API anahtarı ayarlandı.")
+            elif provider == "anthropic":
+                os.environ["ANTHROPIC_API_KEY"] = api_key
+                logger.info("Anthropic API anahtarı ayarlandı.")
+            else:
+                logger.warning(f"Bilinmeyen provider: {provider}, varsayılan olarak Gemini kullanılıyor.")
+                os.environ["GEMINI_API_KEY"] = api_key
+                logger.info("Gemini API anahtarı ayarlandı.")
+        
+        # Test the configuration by creating an LLM instance
+        LLMFactory.create_llm(provider=provider)
+        logger.info(f"LLM yapılandırması başarılı. Provider: {provider}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"LLM yapılandırılırken hata oluştu: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return False
 
 
 def generate_summary_from_screenshot(screenshot_base64: str, url: str) -> str:

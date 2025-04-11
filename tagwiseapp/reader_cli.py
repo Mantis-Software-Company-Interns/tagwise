@@ -18,7 +18,7 @@ if project_dir not in sys.path:
 from tagwiseapp.reader.django_setup import setup_django
 from tagwiseapp.reader.main import analyze_url
 from tagwiseapp.reader.utils import load_api_key
-from tagwiseapp.reader.gemini_analyzer import configure_gemini
+from tagwiseapp.reader.content_analyzer import configure_llm
 
 def parse_args():
     """Parse command-line arguments."""
@@ -37,10 +37,10 @@ def main_cli():
     # Django ortamını başlat
     setup_django()
     
-    # API anahtarını yükle ve Gemini'yi yapılandır
+    # API anahtarını yükle ve LLM'yi yapılandır
     api_key = load_api_key()
-    if not configure_gemini(api_key):
-        print("Gemini API yapılandırılamadı.")
+    if not configure_llm(api_key):
+        print("LLM API yapılandırılamadı.")
         sys.exit(1)
     
     urls = []

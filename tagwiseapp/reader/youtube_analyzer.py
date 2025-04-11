@@ -17,7 +17,7 @@ import yt_dlp
 
 from .utils import correct_json_format, ensure_correct_json_structure
 from .category_matcher import match_categories_and_tags, get_existing_categories, get_existing_tags
-from .gemini_analyzer import configure_gemini
+from .content_analyzer import configure_llm
 
 # YouTube video ID extraction pattern
 YOUTUBE_ID_PATTERN = re.compile(r'((?:https?:)?//)?((?:www|m)\.)?((?:youtube\.com|youtu.be))(/(?:[\w\-]+\?v=|embed/|v/)?)([\w\-]+)(\S+)?')
