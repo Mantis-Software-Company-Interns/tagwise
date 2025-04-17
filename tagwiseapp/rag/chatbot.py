@@ -9,6 +9,7 @@ from langchain.prompts.chat import (
     HumanMessagePromptTemplate
 )
 from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.retrievers import BaseRetriever
 from .vectorstore import load_vectorstore
 from .indexer import index_user_bookmarks
 import json
@@ -144,10 +145,14 @@ class BookmarkChatbot:
             vectorstore = self._get_vectorstore()
             if vectorstore is None:
                 raise ValueError("Failed to initialize vector database")
-                
+
+            # Basit çözüm: Yerleşik VectorStoreRetriever kullan
             retriever = vectorstore.as_retriever(
-                search_type="similarity",
-                search_kwargs={"k": 3}  # Daha az sonuç almayı deneyelim
+                search_type="similarity_score_threshold",
+                search_kwargs={
+                    "k": 20,  # Maximum limit for safety
+                    "score_threshold": 0.3  # Minimum similarity score (0-1)
+                }
             )
             
             # Basitleştirilmiş zincir oluşturma
@@ -231,14 +236,18 @@ class BookmarkChatbot:
             def filter_func(metadata):
                 return category.lower() in [c.lower() for c in metadata.get("categories", [])]
                 
-            # Update the retriever with the filter
-            self.chain.retriever = vectorstore.as_retriever(
-                search_type="similarity",
+            # Daha basit çözüm: Doğrudan as_retriever metodunu filtre ile kullan
+            retriever = vectorstore.as_retriever(
+                search_type="similarity_score_threshold",
                 search_kwargs={
-                    "k": 3,  # Daha az sonuç almayı deneyelim
+                    "k": 20,  # Maximum limit for safety
+                    "score_threshold": 0.3,  # Minimum similarity score
                     "filter": filter_func
                 }
             )
+            
+            logger.info(f"Created filtered retriever for category '{category}'")
+            self.chain.retriever = retriever
         except Exception as e:
             logger.error(f"Error filtering by category: {str(e)}")
             
@@ -246,10 +255,18 @@ class BookmarkChatbot:
         """Reset any filters on the retriever"""
         try:
             vectorstore = self._get_vectorstore()
-            self.chain.retriever = vectorstore.as_retriever(
-                search_type="similarity",
-                search_kwargs={"k": 3}  # Daha az sonuç almayı deneyelim
+            
+            # Filtre olmadan yeni retriever oluştur
+            retriever = vectorstore.as_retriever(
+                search_type="similarity_score_threshold",
+                search_kwargs={
+                    "k": 20,  # Maximum limit for safety
+                    "score_threshold": 0.3  # Minimum similarity score
+                }
             )
+            
+            logger.info("Reset retriever filters")
+            self.chain.retriever = retriever
         except Exception as e:
             logger.error(f"Error resetting filter: {str(e)}")
             

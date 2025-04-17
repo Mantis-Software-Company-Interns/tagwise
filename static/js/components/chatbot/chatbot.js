@@ -14,16 +14,24 @@ class ChatbotManager {
         this.chatInput = document.querySelector('.chatbot-input input');
         this.sendButton = document.querySelector('.send-message');
         
+        // Create fullscreen button if not already exists
+        if (!document.querySelector('.fullscreen-toggle')) {
+            this.createFullscreenButton();
+        }
+        this.fullscreenToggle = document.querySelector('.fullscreen-toggle');
+        
         // State
         this.isInitialized = false;
         this.isProcessing = false;
         this.apiError = false;
+        this.isFullscreen = false;
         
         // Bind methods
         this.toggleChatbot = this.toggleChatbot.bind(this);
         this.sendMessage = this.sendMessage.bind(this);
         this.handleInputKeypress = this.handleInputKeypress.bind(this);
         this.resetConversation = this.resetConversation.bind(this);
+        this.toggleFullscreen = this.toggleFullscreen.bind(this);
         
         // Initialize
         this.init();
@@ -36,12 +44,48 @@ class ChatbotManager {
         this.sendButton.addEventListener('click', this.sendMessage);
         this.chatInput.addEventListener('keypress', this.handleInputKeypress);
         this.resetChat.addEventListener('click', this.resetConversation);
+        this.fullscreenToggle.addEventListener('click', this.toggleFullscreen);
         
         // Log initial state for debugging
         console.log('Chatbot manager initialized');
         
         // Initialize chatbot backend - only when panel is first opened
         this.initializeLazy = true;
+    }
+    
+    // Tam ekran düğmesini oluşturma
+    createFullscreenButton() {
+        const chatbotActions = document.querySelector('.chatbot-actions');
+        if (chatbotActions) {
+            const fullscreenButton = document.createElement('button');
+            fullscreenButton.className = 'fullscreen-toggle';
+            fullscreenButton.title = 'Tam Ekran';
+            fullscreenButton.innerHTML = '<i class="material-icons">fullscreen</i>';
+            
+            // Düğmeyi resetChat düğmesinin yanına ekle
+            chatbotActions.insertBefore(fullscreenButton, chatbotActions.firstChild);
+        }
+    }
+    
+    // Tam ekran modunu açıp kapatma
+    toggleFullscreen() {
+        this.isFullscreen = !this.isFullscreen;
+        this.chatbotPanel.classList.toggle('fullscreen', this.isFullscreen);
+        
+        // İkon değiştirme
+        const icon = this.fullscreenToggle.querySelector('i');
+        if (this.isFullscreen) {
+            icon.textContent = 'fullscreen_exit';
+            this.fullscreenToggle.title = 'Tam Ekrandan Çık';
+        } else {
+            icon.textContent = 'fullscreen';
+            this.fullscreenToggle.title = 'Tam Ekran';
+        }
+        
+        // Mesaj alanını en alta kaydır (yeniden boyutlandırma sonrası)
+        setTimeout(() => {
+            this.scrollToBottom();
+        }, 100);
     }
     
     async initializeChatbot() {
@@ -100,6 +144,10 @@ class ChatbotManager {
         const isActive = this.chatbotPanel.classList.contains('active');
         
         if (isActive) {
+            // Eğer tam ekran modundaysa, önce tam ekran modundan çık
+            if (this.isFullscreen) {
+                this.toggleFullscreen();
+            }
             // If active, remove the active class to hide the panel
             this.chatbotPanel.classList.remove('active');
             console.log('Closing chatbot panel');
@@ -238,11 +286,21 @@ class ChatbotManager {
         const messageElement = document.createElement('div');
         messageElement.className = 'message bot sources';
         
-        let sourcesHtml = '<i class="material-icons bot-icon">link</i><div class="message-content"><div class="sources-header">Sources:</div><ul class="sources-list">';
+        // Limit initial visible sources if there are many
+        const initialVisibleCount = 5;
+        const hasMoreSources = sources.length > initialVisibleCount;
         
-        sources.forEach(source => {
+        let sourcesHtml = `
+            <i class="material-icons bot-icon">link</i>
+            <div class="message-content">
+                <div class="sources-header">Sources: (${sources.length} bookmark${sources.length > 1 ? 's' : ''})</div>
+                <ul class="sources-list">
+        `;
+        
+        sources.forEach((source, index) => {
+            const isHidden = index >= initialVisibleCount;
             sourcesHtml += `
-                <li class="source-item">
+                <li class="source-item${isHidden ? ' hidden-source' : ''}" data-source-index="${index}">
                     <a href="${this.escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">
                         ${this.escapeHtml(source.title)}
                     </a>
@@ -250,10 +308,57 @@ class ChatbotManager {
             `;
         });
         
-        sourcesHtml += '</ul></div>';
+        sourcesHtml += '</ul>';
+        
+        // Add "Show more" button if needed
+        if (hasMoreSources) {
+            sourcesHtml += `
+                <button type="button" class="show-more-sources">
+                    Show ${sources.length - initialVisibleCount} more sources
+                </button>
+                <button type="button" class="show-less-sources" style="display: none;">
+                    Show less
+                </button>
+            `;
+        }
+        
+        sourcesHtml += '</div>';
         messageElement.innerHTML = sourcesHtml;
         
         this.messagesContainer.appendChild(messageElement);
+        
+        // Add event listeners for show more/less buttons
+        if (hasMoreSources) {
+            const showMoreBtn = messageElement.querySelector('.show-more-sources');
+            const showLessBtn = messageElement.querySelector('.show-less-sources');
+            
+            showMoreBtn.addEventListener('click', () => {
+                // Show all hidden sources
+                const hiddenSources = messageElement.querySelectorAll('.hidden-source');
+                hiddenSources.forEach(source => {
+                    source.classList.remove('hidden-source');
+                });
+                // Toggle buttons
+                showMoreBtn.style.display = 'none';
+                showLessBtn.style.display = 'block';
+            });
+            
+            showLessBtn.addEventListener('click', () => {
+                // Hide sources again
+                sources.forEach((_, index) => {
+                    if (index >= initialVisibleCount) {
+                        const sourceElement = messageElement.querySelector(`[data-source-index="${index}"]`);
+                        if (sourceElement) {
+                            sourceElement.classList.add('hidden-source');
+                        }
+                    }
+                });
+                // Toggle buttons
+                showMoreBtn.style.display = 'block';
+                showLessBtn.style.display = 'none';
+            });
+        }
+        
         this.scrollToBottom();
     }
     

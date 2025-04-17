@@ -106,7 +106,8 @@ def load_vectorstore(user_id):
                 return None
                 
             # Load using LangChain's FAISS native method
-            vectorstore = FAISS.load_local(path, embeddings)
+            # Güvenli olmayan serileştirme izni ver - bu güvenli çünkü kendi sunucumuzda oluşturulan dosyalardır
+            vectorstore = FAISS.load_local(path, embeddings, allow_dangerous_deserialization=True)
             logger.info(f"Vectorstore loaded for user {user_id}")
             return vectorstore
         except Exception as e:
