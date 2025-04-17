@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="{% static 'css/themes/dark-mode.css' %}">
     <link rel="stylesheet" href="{% static 'css/pages/url-analyzer/url-analyzer.css' %}">
     <link rel="stylesheet" href="{% static 'css/pages/admin/admin.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components/chatbot.css' %}">
     {% block extra_css %}{% endblock %}
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
@@ -128,15 +129,18 @@
 
     <!-- Chatbot -->
     <div class="chatbot-container">
-        <button class="chatbot-toggle">
+        <button type="button" class="chatbot-toggle">
             <i class="material-icons">chat</i>
         </button>
         <div class="chatbot-panel">
             <div class="chatbot-header">
                 <h3>TagWise Assistant</h3>
-                <button class="close-chat">
-                    <i class="material-icons">close</i>
-                </button>
+                <div class="chatbot-actions">
+                    <button type="button" class="reset-chat" title="Reset conversation">Reset</button>
+                    <button type="button" class="close-chat">
+                        <i class="material-icons">close</i>
+                    </button>
+                </div>
             </div>
             <div class="chatbot-messages">
                 <div class="message bot">
@@ -148,7 +152,7 @@
             </div>
             <div class="chatbot-input">
                 <input type="text" placeholder="Type your message...">
-                <button class="send-message">
+                <button type="button" class="send-message">
                     <i class="material-icons">send</i>
                 </button>
             </div>
@@ -185,6 +189,9 @@
     
     <!-- Url-Analyzer -->
     <script src="{% static 'js/components/url-analyzer/url-analyzer.js' %}"></script>
+    
+    <!-- Chatbot -->
+    <script src="{% static 'js/components/chatbot/chatbot.js' %}"></script>
     
     <!-- Core App -->
     <script src="{% static 'js/core/app.js' %}"></script>

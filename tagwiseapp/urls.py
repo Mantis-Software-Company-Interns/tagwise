@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import views_chatbot
 app_name = 'tagwiseapp'
 
 urlpatterns = [
@@ -42,4 +43,9 @@ urlpatterns = [
     path('api/delete-collection/', views.delete_collection, name='delete_collection'),
     path('api/add-bookmarks-to-collection/', views.add_bookmarks_to_collection, name='add_bookmarks_to_collection'),
     path('api/remove-bookmark-from-collection/', views.remove_bookmark_from_collection, name='remove_bookmark_from_collection'),
+    
+    # Chatbot endpoints
+    path('chatbot/init/', views_chatbot.chatbot_init, name='chatbot_init'),
+    path('chatbot/ask/', views_chatbot.chatbot_ask, name='chatbot_ask'),
+    path('chatbot/reset/', views_chatbot.chatbot_reset, name='chatbot_reset'),
 ] 
