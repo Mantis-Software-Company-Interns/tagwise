@@ -247,7 +247,7 @@ class ChatbotManager {
             isFirstMessage = true;
         } else {
             // Var olan bir konuşma için, bunun ilk mesaj olup olmadığını kontrol et
-            isFirstMessage = document.querySelectorAll('.message').length <= 1;
+            isFirstMessage = document.querySelectorAll('.message:not(.typing)').length <= 1;
         }
         
         // Show user message
@@ -256,14 +256,54 @@ class ChatbotManager {
         // Clear input
         this.chatInput.value = '';
         
-        // Show typing indicator
-        this.addTypingIndicator(isFirstMessage ? "Thinking and generating a title..." : "Thinking...");
-        
-        // Mark as processing
+        // Mark as processing (önce bunu yapalım ki kullanıcı birden fazla mesaj gönderemesin)
         this.isProcessing = true;
         
+        // Bot mesajı için placeholder oluştur (typing göstergesi göstermek yerine)
+        const botMessageElement = this.createEmptyBotMessage();
+        
         try {
-            // Send message to backend
+            // For modern browsers, use streaming response
+            if (typeof ReadableStream !== 'undefined' && typeof TextDecoder !== 'undefined') {
+                await this.sendStreamingMessage(message, isFirstMessage, botMessageElement);
+            } else {
+                // Fallback to traditional request for older browsers
+                await this.sendTraditionalMessage(message, isFirstMessage);
+            }
+        } catch (error) {
+            // Eğer bot mesajı hala düşünme animasyonu gösteriyorsa, hata mesajıyla değiştir
+            if (botMessageElement) {
+                const messageContent = botMessageElement.querySelector('.message-content');
+                if (messageContent) {
+                    messageContent.innerHTML = this.formatMessage('Sorry, I encountered an error connecting to the server. Please try again later.');
+                }
+            } else {
+                // Remove typing indicator if exists
+                this.removeTypingIndicator();
+                
+                // Add standard error message
+                this.addBotMessage('Sorry, I encountered an error connecting to the server. Please try again later.');
+            }
+            
+            console.error('Error sending message:', error);
+            this.apiError = true;
+        } finally {
+            // Mark as not processing
+            this.isProcessing = false;
+        }
+    }
+    
+    async sendStreamingMessage(message, isFirstMessage, botMessageElement) {
+        try {
+            // Başlık bildirim elementi için referans
+            let titleNotificationElement = null;
+            let conversationId = null;
+            let sources = [];
+            
+            // Bot mesaj içeriğine referans
+            const botMessageContent = botMessageElement.querySelector('.message-content');
+            
+            // Send request with stream flag
             const response = await fetch('/chatbot/ask/', {
                 method: 'POST',
                 headers: {
@@ -273,12 +313,211 @@ class ChatbotManager {
                 body: JSON.stringify({
                     message: message,
                     conversation_id: this.currentConversationId,
-                    generate_title: isFirstMessage  // İlk mesaj için AI ile başlık oluştur
+                    generate_title: isFirstMessage,
+                    stream: true  // Request streaming response
                 })
             });
             
-            // Remove typing indicator
-            this.removeTypingIndicator();
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+            
+            // Basit içerik alanı oluştur
+            if (botMessageContent) {
+                // Clear thinking animation
+                botMessageContent.innerHTML = '';
+                
+                // Basit metin konteynerı
+                const formattedTextContainer = document.createElement('div');
+                formattedTextContainer.className = 'streamed-content';
+                botMessageContent.appendChild(formattedTextContainer);
+            }
+            
+            // Timeout for response - eğer 15 saniye içinde yanıt gelmezse hata döndür
+            let timeoutId = setTimeout(() => {
+                if (botMessageContent && botMessageContent.querySelector('.thinking-animation')) {
+                    // Hala düşünme animasyonu gösteriliyorsa, hata mesajı göster
+                    botMessageContent.innerHTML = this.formatMessage("The server is taking too long to respond. Please try again.");
+                }
+            }, 15000);
+            
+            // Stream response processing
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let fullResponse = '';
+            
+            while (true) {
+                const { done, value } = await reader.read();
+                
+                // Zamanlayıcıyı her veri alındığında sıfırla
+                clearTimeout(timeoutId);
+                
+                if (done) {
+                    break;
+                }
+                
+                // Process chunks from the stream
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n').filter(line => line.trim());
+                
+                for (const line of lines) {
+                    try {
+                        const data = JSON.parse(line);
+                        
+                        // Handle different types of streaming data
+                        switch (data.type) {
+                            case 'metadata':
+                                // Initial metadata with conversation ID
+                                conversationId = data.conversation_id;
+                                this.currentConversationId = conversationId;
+                                break;
+                                
+                            case 'content':
+                                // Simple approach: Just append the content and format
+                                const contentChunk = data.chunk;
+                                fullResponse += contentChunk;
+                                
+                                // Update the content directly - much simpler approach
+                                if (botMessageContent) {
+                                    const streamedContent = botMessageContent.querySelector('.streamed-content');
+                                    if (streamedContent) {
+                                        // Format and display the accumulated response so far
+                                        streamedContent.innerHTML = this.formatMessage(fullResponse);
+                                        
+                                        // Apply highlight to new content for better UX
+                                        streamedContent.classList.add('highlight-new');
+                                        setTimeout(() => {
+                                            streamedContent.classList.remove('highlight-new');
+                                        }, 700); // Shorter highlight duration
+                                    } else {
+                                        // Fallback if container missing
+                                        botMessageContent.innerHTML = this.formatMessage(fullResponse);
+                                    }
+                                }
+                                
+                                this.scrollToBottom();
+                                break;
+                                
+                            case 'status':
+                                // Status updates shown simply
+                                if (isFirstMessage && data.message === "Generating title...") {
+                                    // Title Generation notification - simple approach
+                                    if (titleNotificationElement && titleNotificationElement.parentNode) {
+                                        titleNotificationElement.remove();
+                                    }
+                                    
+                                    // Create simple notification
+                                    titleNotificationElement = document.createElement('div');
+                                    titleNotificationElement.className = 'message bot title-notice';
+                                    titleNotificationElement.innerHTML = `
+                                        <i class="material-icons bot-icon">autorenew</i>
+                                        <div class="message-content">
+                                            <p>Creating a title...</p>
+                                        </div>
+                                    `;
+                                    this.messagesContainer.appendChild(titleNotificationElement);
+                                    this.scrollToBottom();
+                                }
+                                break;
+                                
+                            case 'title':
+                                // Update title directly without animations
+                                if (this.currentChatTitle) {
+                                    this.currentChatTitle.textContent = data.title;
+                                }
+                                
+                                // Show notification about the title
+                                if (titleNotificationElement && titleNotificationElement.parentNode) {
+                                    titleNotificationElement.innerHTML = `
+                                        <i class="material-icons bot-icon">check_circle</i>
+                                        <div class="message-content">
+                                            <p>Created a title: <strong>${this.escapeHtml(data.title)}</strong></p>
+                                        </div>
+                                    `;
+                                    
+                                    // Auto-remove after short delay
+                                    setTimeout(() => {
+                                        if (titleNotificationElement && titleNotificationElement.parentNode) {
+                                            titleNotificationElement.remove();
+                                        }
+                                    }, 3000);
+                                }
+                                break;
+                                
+                            case 'completion':
+                                // Final data with sources
+                                sources = data.sources || [];
+                                
+                                // Ensure the final formatting is applied
+                                if (botMessageContent) {
+                                    // Format the message one last time
+                                    botMessageContent.innerHTML = this.formatMessage(fullResponse);
+                                }
+                                break;
+                                
+                            case 'error':
+                                // Error in processing - simple display
+                                if (botMessageContent) {
+                                    botMessageContent.innerHTML = this.formatMessage(data.message);
+                                }
+                                console.error('Error from chatbot:', data.message);
+                                
+                                // Clean up any title notification
+                                if (titleNotificationElement && titleNotificationElement.parentNode) {
+                                    titleNotificationElement.remove();
+                                }
+                                break;
+                        }
+                    } catch (e) {
+                        console.error('Error parsing streaming response:', e, line);
+                    }
+                }
+            }
+            
+            // Add sources if any
+            if (sources && sources.length > 0) {
+                this.addSourcesMessage(sources);
+            }
+            
+            // Clean up any remaining title notification
+            if (titleNotificationElement && titleNotificationElement.parentNode) {
+                titleNotificationElement.remove();
+            }
+            
+            // Reload conversations list
+            this.loadConversations();
+            
+        } catch (error) {
+            // Clean up on error
+            if (botMessageElement) {
+                const messageContent = botMessageElement.querySelector('.message-content');
+                if (messageContent) {
+                    messageContent.innerHTML = this.formatMessage('Sorry, I encountered an error processing your request. Please try again later.');
+                }
+            }
+            
+            console.error('Error in streaming message:', error);
+        }
+    }
+    
+    async sendTraditionalMessage(message, isFirstMessage) {
+        // Create a placeholder message
+        const botMessageElement = this.createEmptyBotMessage();
+        const botMessageContent = botMessageElement.querySelector('.message-content');
+        
+        try {
+            const response = await fetch('/chatbot/ask/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCsrfToken()
+                },
+                body: JSON.stringify({
+                    message: message,
+                    conversation_id: this.currentConversationId,
+                    generate_title: isFirstMessage
+                })
+            });
             
             if (!response.ok) {
                 throw new Error(`Server responded with status: ${response.status}`);
@@ -287,8 +526,13 @@ class ChatbotManager {
             const data = await response.json();
             
             if (data.status === 'success') {
-                // Add bot response
-                this.addBotMessage(data.message);
+                // Update the placeholder message instead of creating a new one
+                if (botMessageContent) {
+                    botMessageContent.innerHTML = this.formatMessage(data.message);
+                } else {
+                    // Fallback if somehow the element was removed
+                    this.addBotMessage(data.message);
+                }
                 
                 // Add sources if any
                 if (data.sources && data.sources.length > 0) {
@@ -300,24 +544,24 @@ class ChatbotManager {
                     this.currentConversationId = data.conversation_id;
                 }
                 
-                // Update header title with conversation title from server
+                // Update title silently
                 if (data.conversation_title && this.currentChatTitle) {
                     this.currentChatTitle.textContent = data.conversation_title;
                     
-                    // Kullanıcıya başlık oluşturulduğunu bildiren bir mesaj ekle (sadece ilk mesajsa)
+                    // Show title notification only on first message
                     if (isFirstMessage) {
                         const titleNotice = document.createElement('div');
                         titleNotice.className = 'message bot title-notice';
                         titleNotice.innerHTML = `
-                            <i class="material-icons bot-icon">info</i>
+                            <i class="material-icons bot-icon">check_circle</i>
                             <div class="message-content">
-                                <p>I've created a title for this conversation: <strong>${data.conversation_title}</strong></p>
+                                <p>Created a title: <strong>${this.escapeHtml(data.conversation_title)}</strong></p>
                             </div>
                         `;
                         this.messagesContainer.appendChild(titleNotice);
                         this.scrollToBottom();
                         
-                        // Bu bildirimi bir süre sonra kaldır
+                        // Auto-remove after delay
                         setTimeout(() => {
                             titleNotice.classList.add('fading-out');
                             setTimeout(() => {
@@ -325,31 +569,95 @@ class ChatbotManager {
                                     titleNotice.remove();
                                 }
                             }, 500);
-                        }, 5000);
+                        }, 3000);
                     }
                 }
                 
-                // Reload conversations to show the new one and ensure list is updated
+                // Reload conversations list
                 this.loadConversations();
             } else {
-                this.addBotMessage('Sorry, I encountered an error processing your request. ' + data.message);
+                // Show error in the placeholder message
+                if (botMessageContent) {
+                    botMessageContent.innerHTML = this.formatMessage('Sorry, I encountered an error processing your request. ' + data.message);
+                } else {
+                    this.addBotMessage('Sorry, I encountered an error processing your request. ' + data.message);
+                }
+                
                 console.error('Error from chatbot:', data.message);
                 if (data.status === 'error') {
                     this.apiError = true;
                 }
             }
         } catch (error) {
-            // Remove typing indicator
-            this.removeTypingIndicator();
+            // Show error in the placeholder message
+            if (botMessageContent) {
+                botMessageContent.innerHTML = this.formatMessage('Sorry, I encountered an error connecting to the server. Please try again later.');
+            } else {
+                this.addBotMessage('Sorry, I encountered an error connecting to the server. Please try again later.');
+            }
             
-            // Show error message
-            this.addBotMessage('Sorry, I encountered an error connecting to the server. Please try again later.');
-            console.error('Error sending message:', error);
-            this.apiError = true;
-        } finally {
-            // Mark as not processing
-            this.isProcessing = false;
+            console.error('Error in traditional message:', error);
         }
+    }
+    
+    createEmptyBotMessage() {
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message bot';
+        
+        messageElement.innerHTML = `
+            <i class="material-icons bot-icon">smart_toy</i>
+            <div class="message-content">
+                <div class="thinking-animation">
+                    <span class="thinking-dot" style="--delay: 0s"></span>
+                    <span class="thinking-dot" style="--delay: 0.1s"></span>
+                    <span class="thinking-dot" style="--delay: 0.2s"></span>
+                    <span class="thinking-text">Thinking</span>
+                </div>
+            </div>
+        `;
+        
+        this.messagesContainer.appendChild(messageElement);
+        this.scrollToBottom();
+        
+        // Add CSS for the thinking animation if it doesn't exist
+        if (!document.getElementById('thinking-animation-style')) {
+            const style = document.createElement('style');
+            style.id = 'thinking-animation-style';
+            style.textContent = `
+                .thinking-animation {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+                .thinking-dot {
+                    width: 8px;
+                    height: 8px;
+                    background-color: #2196F3;
+                    border-radius: 50%;
+                    display: inline-block;
+                    animation: pulse-thinking 1.5s infinite ease-in-out;
+                    animation-delay: var(--delay);
+                }
+                .thinking-text {
+                    font-size: 14px;
+                    color: #757575;
+                    margin-left: 4px;
+                }
+                @keyframes pulse-thinking {
+                    0%, 100% { transform: scale(0.75); opacity: 0.6; }
+                    50% { transform: scale(1); opacity: 1; }
+                }
+                body.dark-mode .thinking-dot {
+                    background-color: #64B5F6;
+                }
+                body.dark-mode .thinking-text {
+                    color: #B0B0B0;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        return messageElement;
     }
     
     addUserMessage(message) {
@@ -523,35 +831,35 @@ class ChatbotManager {
         // Markdown formatlamasını uygula
         
         // 1. Bold (** ** veya __ __)
-        text = text.replace(/\*\*(.*?)\*\*|__(.*?)__/g, '<strong>$1$2</strong>');
+        text = text.replace(/\*\*(.*?)\*\*|__(.*?)__/g, '<strong class="format-animation">$1$2</strong>');
         
         // 2. Italik (* * veya _ _)
-        text = text.replace(/\*(.*?)\*|_(.*?)_/g, '<em>$1$2</em>');
+        text = text.replace(/\*(.*?)\*|_(.*?)_/g, '<em class="format-animation">$1$2</em>');
         
         // 3. Kod bloğu (``` ```)
-        text = text.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+        text = text.replace(/```([\s\S]*?)```/g, '<pre class="format-animation"><code>$1</code></pre>');
         
         // 4. Inline kod (` `)
-        text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+        text = text.replace(/`([^`]+)`/g, '<code class="format-animation">$1</code>');
         
         // 5. Satır içi liste maddeleri
-        text = text.replace(/^- (.*)/gm, '<li>$1</li>');
-        text = text.replace(/^([0-9]+)\. (.*)/gm, '<li>$1. $2</li>');
+        text = text.replace(/^- (.*)/gm, '<li class="format-animation">$1</li>');
+        text = text.replace(/^([0-9]+)\. (.*)/gm, '<li class="format-animation">$1. $2</li>');
         
         // 6. Başlıklar
-        text = text.replace(/^### (.*)/gm, '<h3>$1</h3>');
-        text = text.replace(/^## (.*)/gm, '<h2>$1</h2>');
-        text = text.replace(/^# (.*)/gm, '<h1>$1</h1>');
+        text = text.replace(/^### (.*)/gm, '<h3 class="format-animation">$1</h3>');
+        text = text.replace(/^## (.*)/gm, '<h2 class="format-animation">$1</h2>');
+        text = text.replace(/^# (.*)/gm, '<h1 class="format-animation">$1</h1>');
         
         // 7. URL'leri linkleştirme
-        text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+        text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="format-animation">$1</a>');
         
         // Tekli/çiftli satır atlamaları için paragraf ve line break
-        text = text.replace(/\n\n/g, '</p><p>');
+        text = text.replace(/\n\n/g, '</p><p class="format-animation">');
         text = text.replace(/\n/g, '<br>');
         
         // Tüm metni başlangıçta ve sonunda <p> ile sarmala
-        text = '<p>' + text + '</p>';
+        text = '<p class="format-animation">' + text + '</p>';
         
         return text;
     }

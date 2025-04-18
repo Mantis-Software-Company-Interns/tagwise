@@ -12,14 +12,25 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
+import logging
 from dotenv import load_dotenv
 
-# Load environment variables from .env file with priority
-load_dotenv(override=True)
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load environment variables from .env file
+dotenv_path = os.path.join(BASE_DIR, '.env')
+load_dotenv(dotenv_path=dotenv_path, override=True)
+
+# Log API key presence for debugging (without exposing the actual key)
+if os.environ.get("GEMINI_API_KEY"):
+    logger.info("GEMINI_API_KEY loaded successfully")
+else:
+    logger.warning("GEMINI_API_KEY not found in environment variables")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/

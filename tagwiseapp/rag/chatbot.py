@@ -40,7 +40,21 @@ class BookmarkChatbot:
     def __init__(self, user_id):
         """Initialize the chatbot with user-specific settings"""
         self.user_id = user_id
+        
+        # API anahtarını .env dosyasından al
         self.api_key = os.environ.get("GEMINI_API_KEY")
+        if not self.api_key:
+            logger.error("GEMINI_API_KEY environment variable is not set")
+            # Acil durum için .env dosyasını doğrudan kontrol et
+            try:
+                with open('.env') as f:
+                    for line in f:
+                        if line.startswith('GEMINI_API_KEY='):
+                            self.api_key = line.split('=')[1].strip()
+                            logger.warning("API key loaded directly from .env file as fallback")
+                            break
+            except Exception as e:
+                logger.error(f"Failed to load API key from .env file: {str(e)}")
         
         # Güncellenmiş bellek kullanımı - deprecated warning'i gidermek için
         self.memory = ConversationBufferMemory(
@@ -56,6 +70,12 @@ class BookmarkChatbot:
     def _create_llm(self):
         """Create and configure the LLM"""
         try:
+            if not self.api_key:
+                logger.error("Cannot create LLM: No API key available")
+                raise ValueError("Missing API key for Gemini")
+                
+            logger.info(f"Creating LLM with API key (starts with): {self.api_key[:5]}...")
+            
             return ChatGoogleGenerativeAI(
                 model="gemini-2.0-flash",
                 google_api_key=self.api_key,
@@ -180,19 +200,27 @@ class BookmarkChatbot:
             dict: Contains 'answer' and optionally 'sources'
         """
         try:
-            # Basit test yanıtı - API henüz düzgün çalışmıyorsa
+            # API anahtarı kontrolü
             if not self.api_key:
                 logger.error("No API key provided for Gemini")
                 return {
                     "answer": "I can't search your bookmarks right now. API configuration is missing.",
                     "sources": []
                 }
-                
+            
+            logger.info(f"Processing query: '{query[:50]}...' (if longer)")
+            
             # Güvenli bir şekilde chain'i çağır
             try:
+                logger.info("Calling LLM chain")
                 result = self.chain({"question": query})
+                logger.info("LLM chain response received")
             except Exception as e:
                 logger.error(f"Chain execution error: {str(e)}")
+                # Daha detaylı hata günlüğü
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                
                 # Fallback yanıt
                 return {
                     "answer": "I'm sorry, I encountered an error searching your bookmarks. Please try again later.",
@@ -200,13 +228,17 @@ class BookmarkChatbot:
                 }
             
             # Format the response
+            answer = result.get("answer", "I couldn't find an answer to your question.")
+            logger.info(f"LLM response (truncated): '{answer[:100]}...' (if longer)")
+            
             response = {
-                "answer": result.get("answer", "I couldn't find an answer to your question."),
+                "answer": answer,
                 "sources": []
             }
             
             # Add sources if available
             if "source_documents" in result:
+                source_count = 0
                 for doc in result["source_documents"]:
                     if hasattr(doc, "metadata") and "url" in doc.metadata and "title" in doc.metadata:
                         if doc.metadata.get("source") not in ["empty", "error"]:
@@ -215,12 +247,124 @@ class BookmarkChatbot:
                                 "url": doc.metadata["url"],
                                 "id": doc.metadata.get("id")
                             })
+                            source_count += 1
+                
+                logger.info(f"Found {source_count} sources for the query")
             
             return response
             
         except Exception as e:
             logger.error(f"Error getting response: {str(e)}")
+            # Daha detaylı hata günlüğü
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            
             return {"answer": "I'm sorry, I encountered an error trying to process your question.", "sources": []}
+            
+    def ask(self, query):
+        """
+        Direct query to the LLM without RAG context, used for title generation.
+        
+        Args:
+            query: User's question string
+            
+        Returns:
+            dict: Contains 'answer'
+        """
+        try:
+            if not self.api_key:
+                logger.error("No API key provided for Gemini")
+                return {"answer": "API configuration is missing."}
+            
+            logger.info(f"Processing direct LLM query for title generation: '{query[:50]}...' (if longer)")
+            
+            # Direct query to LLM without RAG context
+            try:
+                # Create a simple template for direct questions
+                from langchain.chains import LLMChain
+                from langchain.prompts import PromptTemplate
+                
+                template = """
+                {query}
+                """
+                prompt = PromptTemplate(template=template, input_variables=["query"])
+                chain = LLMChain(llm=self.llm, prompt=prompt)
+                
+                # Get response
+                result = chain.invoke({"query": query})
+                return {"answer": result.get("text", "")}
+                
+            except Exception as e:
+                logger.error(f"Direct LLM query error: {str(e)}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                return {"answer": "Failed to generate title."}
+            
+        except Exception as e:
+            logger.error(f"Error in direct query: {str(e)}")
+            return {"answer": "Error processing request."}
+    
+    def stream_response(self, query):
+        """
+        Stream a response from the chatbot for a user query
+        
+        Args:
+            query: User's question string
+            
+        Returns:
+            generator: Yields chunks of the answer as they are generated
+        """
+        if not self.api_key:
+            logger.error("No API key provided for Gemini")
+            yield "I can't search your bookmarks right now. API configuration is missing."
+            return
+        
+        logger.info(f"Streaming response for query: '{query[:50]}...' (if longer)")
+        
+        try:
+            # Use stream method from LangChain's ConversationalRetrievalChain
+            for chunk in self.chain.stream({"question": query}):
+                if "answer" in chunk:
+                    yield chunk["answer"]
+        except Exception as e:
+            logger.error(f"Error streaming response: {str(e)}")
+            yield "I'm sorry, I encountered an error processing your request."
+    
+    def stream_title_generation(self, title_prompt):
+        """
+        Stream the title generation process
+        
+        Args:
+            title_prompt: Prompt for title generation
+            
+        Returns:
+            generator: Yields chunks of the title as it is generated
+        """
+        if not self.api_key:
+            logger.error("No API key provided for Gemini")
+            yield "Untitled Chat"
+            return
+        
+        logger.info("Streaming title generation")
+        
+        try:
+            # Create a simple template for direct questions
+            from langchain.chains import LLMChain
+            from langchain.prompts import PromptTemplate
+            
+            template = """
+            {query}
+            """
+            prompt = PromptTemplate(template=template, input_variables=["query"])
+            chain = LLMChain(llm=self.llm, prompt=prompt)
+            
+            # Stream the title generation
+            for chunk in chain.stream({"query": title_prompt}):
+                if "text" in chunk:
+                    yield chunk["text"]
+        except Exception as e:
+            logger.error(f"Error streaming title generation: {str(e)}")
+            yield "Untitled Chat"
             
     def filter_by_category(self, category):
         """

@@ -90,7 +90,7 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
 class ChatConversation(models.Model):
     """Model to store chat conversations"""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_conversations')
-    title = models.CharField(max_length=255, default="New conversation")
+    title = models.CharField(max_length=255, default="New Chat Session")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
