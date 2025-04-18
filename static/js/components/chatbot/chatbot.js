@@ -13,6 +13,9 @@ class ChatbotManager {
         this.messagesContainer = document.querySelector('.chatbot-messages');
         this.chatInput = document.querySelector('.chatbot-input input');
         this.sendButton = document.querySelector('.send-message');
+        this.conversationsList = document.querySelector('.conversations-list');
+        this.currentChatTitle = document.getElementById('current-chat-title');
+        this.editChatTitleBtn = document.querySelector('.edit-chat-title');
         
         // Create fullscreen button if not already exists
         if (!document.querySelector('.fullscreen-toggle')) {
@@ -25,6 +28,7 @@ class ChatbotManager {
         this.isProcessing = false;
         this.apiError = false;
         this.isFullscreen = false;
+        this.currentConversationId = null;
         
         // Bind methods
         this.toggleChatbot = this.toggleChatbot.bind(this);
@@ -32,6 +36,8 @@ class ChatbotManager {
         this.handleInputKeypress = this.handleInputKeypress.bind(this);
         this.resetConversation = this.resetConversation.bind(this);
         this.toggleFullscreen = this.toggleFullscreen.bind(this);
+        this.loadConversations = this.loadConversations.bind(this);
+        this.toggleSidebar = this.toggleSidebar.bind(this);
         
         // Initialize
         this.init();
@@ -45,6 +51,23 @@ class ChatbotManager {
         this.chatInput.addEventListener('keypress', this.handleInputKeypress);
         this.resetChat.addEventListener('click', this.resetConversation);
         this.fullscreenToggle.addEventListener('click', this.toggleFullscreen);
+        
+        // Add event listener for new chat button
+        const newChatBtn = document.querySelector('.new-chat-btn');
+        if (newChatBtn) {
+            newChatBtn.addEventListener('click', () => this.startNewConversation());
+        }
+        
+        // Add sidebar toggle functionality
+        const sidebarToggleBtn = document.querySelector('.toggle-sidebar-btn');
+        if (sidebarToggleBtn) {
+            sidebarToggleBtn.addEventListener('click', () => this.toggleSidebar());
+        }
+        
+        // Add chat title edit functionality
+        if (this.editChatTitleBtn) {
+            this.editChatTitleBtn.addEventListener('click', () => this.editChatTitle());
+        }
         
         // Log initial state for debugging
         console.log('Chatbot manager initialized');
@@ -156,6 +179,9 @@ class ChatbotManager {
             this.chatbotPanel.classList.add('active');
             console.log('Opening chatbot panel');
             
+            // Load conversations when opening
+            this.loadConversations();
+            
             // Focus on input field when opening
             setTimeout(() => {
                 this.chatInput.focus();
@@ -190,10 +216,38 @@ class ChatbotManager {
         
         // Make sure we're initialized
         if (!this.isInitialized) {
+            // Kullanıcıya başlatma işlemi hakkında bilgi ver
+            this.addTypingIndicator("Initializing the chatbot first...");
+            
             await this.initializeChatbot();
+            
             if (!this.isInitialized) {
+                this.removeTypingIndicator();
+                this.addBotMessage("I couldn't initialize properly. Please try refreshing the page or contact support if the issue persists.");
                 return; // Failed to initialize
             }
+            
+            this.removeTypingIndicator();
+        }
+        
+        // Eğer konuşma ID'si yoksa yeni bir konuşma başlat
+        let isFirstMessage = false;
+        if (!this.currentConversationId) {
+            // Bilgilendirme mesajı ekle
+            this.addTypingIndicator("Creating a new conversation...");
+            
+            const newConversation = await this.startNewConversation();
+            
+            this.removeTypingIndicator();
+            
+            if (!newConversation) {
+                this.addBotMessage("Failed to create a new conversation. Please try again.");
+                return;
+            }
+            isFirstMessage = true;
+        } else {
+            // Var olan bir konuşma için, bunun ilk mesaj olup olmadığını kontrol et
+            isFirstMessage = document.querySelectorAll('.message').length <= 1;
         }
         
         // Show user message
@@ -203,7 +257,7 @@ class ChatbotManager {
         this.chatInput.value = '';
         
         // Show typing indicator
-        this.addTypingIndicator();
+        this.addTypingIndicator(isFirstMessage ? "Thinking and generating a title..." : "Thinking...");
         
         // Mark as processing
         this.isProcessing = true;
@@ -217,7 +271,9 @@ class ChatbotManager {
                     'X-CSRFToken': this.getCsrfToken()
                 },
                 body: JSON.stringify({
-                    message: message
+                    message: message,
+                    conversation_id: this.currentConversationId,
+                    generate_title: isFirstMessage  // İlk mesaj için AI ile başlık oluştur
                 })
             });
             
@@ -238,6 +294,43 @@ class ChatbotManager {
                 if (data.sources && data.sources.length > 0) {
                     this.addSourcesMessage(data.sources);
                 }
+                
+                // Update conversation ID if it has changed
+                if (data.conversation_id && this.currentConversationId !== data.conversation_id) {
+                    this.currentConversationId = data.conversation_id;
+                }
+                
+                // Update header title with conversation title from server
+                if (data.conversation_title && this.currentChatTitle) {
+                    this.currentChatTitle.textContent = data.conversation_title;
+                    
+                    // Kullanıcıya başlık oluşturulduğunu bildiren bir mesaj ekle (sadece ilk mesajsa)
+                    if (isFirstMessage) {
+                        const titleNotice = document.createElement('div');
+                        titleNotice.className = 'message bot title-notice';
+                        titleNotice.innerHTML = `
+                            <i class="material-icons bot-icon">info</i>
+                            <div class="message-content">
+                                <p>I've created a title for this conversation: <strong>${data.conversation_title}</strong></p>
+                            </div>
+                        `;
+                        this.messagesContainer.appendChild(titleNotice);
+                        this.scrollToBottom();
+                        
+                        // Bu bildirimi bir süre sonra kaldır
+                        setTimeout(() => {
+                            titleNotice.classList.add('fading-out');
+                            setTimeout(() => {
+                                if (titleNotice.parentNode) {
+                                    titleNotice.remove();
+                                }
+                            }, 500);
+                        }, 5000);
+                    }
+                }
+                
+                // Reload conversations to show the new one and ensure list is updated
+                this.loadConversations();
             } else {
                 this.addBotMessage('Sorry, I encountered an error processing your request. ' + data.message);
                 console.error('Error from chatbot:', data.message);
@@ -262,9 +355,13 @@ class ChatbotManager {
     addUserMessage(message) {
         const messageElement = document.createElement('div');
         messageElement.className = 'message user';
+        
         messageElement.innerHTML = `
-            <div class="message-content">${this.escapeHtml(message)}</div>
+            <div class="message-content">
+                ${this.formatMessage(message)}
+            </div>
         `;
+        
         this.messagesContainer.appendChild(messageElement);
         this.scrollToBottom();
     }
@@ -272,10 +369,14 @@ class ChatbotManager {
     addBotMessage(message) {
         const messageElement = document.createElement('div');
         messageElement.className = 'message bot';
+        
         messageElement.innerHTML = `
             <i class="material-icons bot-icon">smart_toy</i>
-            <div class="message-content">${this.formatMessage(message)}</div>
+            <div class="message-content">
+                ${this.formatMessage(message)}
+            </div>
         `;
+        
         this.messagesContainer.appendChild(messageElement);
         this.scrollToBottom();
     }
@@ -414,16 +515,45 @@ class ChatbotManager {
     }
     
     formatMessage(text) {
-        // Convert URLs to links
-        let formattedText = text.replace(
-            /(https?:\/\/[^\s]+)/g, 
-            '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
-        );
+        if (!text) return '';
         
-        // Convert newlines to <br>
-        formattedText = formattedText.replace(/\n/g, '<br>');
+        // HTML tag'lerini güvenli bir şekilde escape et
+        text = this.escapeHtml(text);
         
-        return formattedText;
+        // Markdown formatlamasını uygula
+        
+        // 1. Bold (** ** veya __ __)
+        text = text.replace(/\*\*(.*?)\*\*|__(.*?)__/g, '<strong>$1$2</strong>');
+        
+        // 2. Italik (* * veya _ _)
+        text = text.replace(/\*(.*?)\*|_(.*?)_/g, '<em>$1$2</em>');
+        
+        // 3. Kod bloğu (``` ```)
+        text = text.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+        
+        // 4. Inline kod (` `)
+        text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+        
+        // 5. Satır içi liste maddeleri
+        text = text.replace(/^- (.*)/gm, '<li>$1</li>');
+        text = text.replace(/^([0-9]+)\. (.*)/gm, '<li>$1. $2</li>');
+        
+        // 6. Başlıklar
+        text = text.replace(/^### (.*)/gm, '<h3>$1</h3>');
+        text = text.replace(/^## (.*)/gm, '<h2>$1</h2>');
+        text = text.replace(/^# (.*)/gm, '<h1>$1</h1>');
+        
+        // 7. URL'leri linkleştirme
+        text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+        
+        // Tekli/çiftli satır atlamaları için paragraf ve line break
+        text = text.replace(/\n\n/g, '</p><p>');
+        text = text.replace(/\n/g, '<br>');
+        
+        // Tüm metni başlangıçta ve sonunda <p> ile sarmala
+        text = '<p>' + text + '</p>';
+        
+        return text;
     }
     
     getCsrfToken() {
@@ -483,6 +613,465 @@ class ChatbotManager {
             this.addBotMessage('Sorry, I could not reset the conversation due to a server error.');
         } finally {
             this.isProcessing = false;
+        }
+    }
+    
+    // Konuşma geçmişini yükleme metodu
+    async loadConversations() {
+        try {
+            console.log('Loading conversations');
+            
+            // Mevcut konuşmalar listesinde bir yükleme göstergesi görüntüle
+            if (this.conversationsList.children.length === 0) {
+                this.conversationsList.innerHTML = '<div class="loading-conversations">Loading...</div>';
+            }
+            
+            const response = await fetch('/chatbot/conversations/');
+            
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // Yükleme göstergesini kaldır
+            const loadingIndicator = this.conversationsList.querySelector('.loading-conversations');
+            if (loadingIndicator) {
+                loadingIndicator.remove();
+            }
+            
+            if (data.status === 'success') {
+                // Önce aktif konuşmanın ID'sini sakla
+                const activeConversationId = this.currentConversationId;
+                
+                if (data.conversations && data.conversations.length > 0) {
+                    // Var olan konuşma öğelerini kontrol et ve gerekirse güncelle
+                    const existingItems = {};
+                    const conversationElements = this.conversationsList.querySelectorAll('.conversation-item');
+                    
+                    // Mevcut öğeleri haritala
+                    conversationElements.forEach(item => {
+                        existingItems[item.dataset.id] = item;
+                    });
+                    
+                    // Yeni liste içeriğini hazırla
+                    let updatedList = document.createDocumentFragment();
+                    
+                    // Konuşmaları ekle/güncelle
+                    data.conversations.forEach(conversation => {
+                        if (existingItems[conversation.id]) {
+                            // Var olan öğeyi güncelle
+                            const item = existingItems[conversation.id];
+                            const titleEl = item.querySelector('.conversation-title');
+                            if (titleEl && titleEl.textContent !== conversation.title) {
+                                titleEl.textContent = conversation.title;
+                            }
+                            
+                            // Aktif sınıfı doğru ayarla
+                            if (activeConversationId === conversation.id) {
+                                item.classList.add('active');
+                            } else {
+                                item.classList.remove('active');
+                            }
+                            
+                            updatedList.appendChild(item);
+                            delete existingItems[conversation.id];
+                        } else {
+                            // Yeni öğe oluştur
+                            this.addConversationToList(conversation, updatedList);
+                        }
+                    });
+                    
+                    // Listeyi güncelle
+                    this.conversationsList.innerHTML = '';
+                    this.conversationsList.appendChild(updatedList);
+                } else {
+                    // Konuşma yoksa bilgi mesajı göster
+                    this.conversationsList.innerHTML = '<div class="no-conversations">No conversations yet.</div>';
+                }
+            } else {
+                // Hata durumunda liste boşsa bilgi mesajı göster
+                if (this.conversationsList.children.length === 0) {
+                    this.conversationsList.innerHTML = '<div class="no-conversations">Error loading conversations.</div>';
+                }
+                console.error('Error loading conversations:', data.message);
+            }
+        } catch (error) {
+            // Hata durumunda liste boşsa bilgi mesajı göster
+            if (this.conversationsList.children.length === 0) {
+                this.conversationsList.innerHTML = '<div class="no-conversations">Error loading conversations.</div>';
+            }
+            console.error('Error loading conversations:', error);
+        }
+    }
+    
+    // Konuşmayı listeye ekleme metodu (güncellenmiş)
+    addConversationToList(conversation, parentElement = null) {
+        const conversationItem = document.createElement('div');
+        conversationItem.className = 'conversation-item';
+        conversationItem.dataset.id = conversation.id;
+        
+        if (this.currentConversationId === conversation.id) {
+            conversationItem.classList.add('active');
+        }
+        
+        conversationItem.innerHTML = `
+            <div class="conversation-title">${this.escapeHtml(conversation.title)}</div>
+            <div class="conversation-actions">
+                <button type="button" class="conversation-action-btn rename-conversation" title="Rename">
+                    <i class="material-icons">edit</i>
+                </button>
+                <button type="button" class="conversation-action-btn delete-conversation" title="Delete">
+                    <i class="material-icons">delete</i>
+                </button>
+            </div>
+        `;
+        
+        // Konuşmaya tıklama olayı ekle
+        conversationItem.addEventListener('click', (e) => {
+            if (!e.target.closest('.conversation-actions')) {
+                this.loadConversation(conversation.id);
+            }
+        });
+        
+        // Silme butonu olayı
+        const deleteBtn = conversationItem.querySelector('.delete-conversation');
+        deleteBtn.addEventListener('click', () => {
+            this.deleteConversation(conversation.id, conversationItem);
+        });
+        
+        // Yeniden adlandırma butonu olayı
+        const renameBtn = conversationItem.querySelector('.rename-conversation');
+        renameBtn.addEventListener('click', () => {
+            const titleEl = conversationItem.querySelector('.conversation-title');
+            const currentTitle = titleEl.textContent;
+            const newTitle = prompt('Enter new conversation title:', currentTitle);
+            
+            if (newTitle && newTitle !== currentTitle) {
+                this.renameConversation(conversation.id, conversationItem, newTitle);
+            }
+        });
+        
+        // Eğer bir parentElement verildiyse, ona ekle
+        if (parentElement) {
+            parentElement.appendChild(conversationItem);
+            return conversationItem;
+        }
+        
+        // Aksi halde doğrudan listeye ekle
+        this.conversationsList.appendChild(conversationItem);
+        return conversationItem;
+    }
+    
+    // Belirli bir konuşmayı yükle
+    async loadConversation(conversationId) {
+        if (this.isProcessing || this.currentConversationId === conversationId) return;
+        
+        this.isProcessing = true;
+        
+        try {
+            // Aktif konuşma sınıfını güncelle
+            const conversationItems = document.querySelectorAll('.conversation-item');
+            conversationItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.id === conversationId.toString()) {
+                    item.classList.add('active');
+                }
+            });
+            
+            // Mesaj yükleme göstergesi
+            this.messagesContainer.innerHTML = '';
+            this.addTypingIndicator('Loading conversation...');
+            
+            const response = await fetch(`/chatbot/conversations/${conversationId}/`);
+            
+            // Yükleme göstergesini kaldır
+            this.removeTypingIndicator();
+            
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                // Mesajları temizle
+                this.messagesContainer.innerHTML = '';
+                
+                // Konuşma ID'sini kaydet
+                this.currentConversationId = conversationId;
+                
+                // Sohbet başlığını güncelle
+                if (this.currentChatTitle) {
+                    this.currentChatTitle.textContent = data.conversation.title || 'Current Chat';
+                }
+                
+                // Mesajları ekle
+                if (data.conversation.messages && data.conversation.messages.length > 0) {
+                    data.conversation.messages.forEach(message => {
+                        if (message.is_user) {
+                            this.addUserMessage(message.content);
+                        } else {
+                            this.addBotMessage(message.content);
+                        }
+                    });
+                } else {
+                    // Hoş geldin mesajı
+                    this.addBotMessage('Hello! I can help you search through your bookmarks. What are you looking for?');
+                }
+                
+                // En alta kaydır
+                this.scrollToBottom();
+            } else {
+                this.addBotMessage('Error loading conversation: ' + data.message);
+                console.error('Error loading conversation:', data.message);
+            }
+        } catch (error) {
+            this.messagesContainer.innerHTML = '';
+            this.addBotMessage('Error loading conversation. Please try again later.');
+            console.error('Error loading conversation:', error);
+        } finally {
+            this.isProcessing = false;
+        }
+    }
+    
+    // Konuşmayı sil
+    async deleteConversation(conversationId, conversationEl) {
+        if (this.isProcessing) return;
+        
+        if (!confirm('Are you sure you want to delete this conversation?')) {
+            return;
+        }
+        
+        this.isProcessing = true;
+        
+        try {
+            const response = await fetch(`/chatbot/conversations/${conversationId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCsrfToken()
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                // Öğeyi kaldır
+                conversationEl.remove();
+                
+                // Aktif konuşmaydıysa mesajları temizle
+                if (this.currentConversationId === conversationId) {
+                    this.messagesContainer.innerHTML = '';
+                    this.addBotMessage('Hello! I can help you search through your bookmarks. What are you looking for?');
+                    this.currentConversationId = null;
+                }
+                
+                // Konuşma listesi boşsa bilgi mesajı göster
+                if (this.conversationsList.children.length === 0) {
+                    this.conversationsList.innerHTML = '<div class="no-conversations">No conversations yet.</div>';
+                }
+            } else {
+                alert('Error deleting conversation: ' + data.message);
+                console.error('Error deleting conversation:', data.message);
+            }
+        } catch (error) {
+            alert('Error deleting conversation. Please try again later.');
+            console.error('Error deleting conversation:', error);
+        } finally {
+            this.isProcessing = false;
+        }
+    }
+    
+    // Konuşma başlığını düzenle
+    editChatTitle() {
+        // Eğer aktif konuşma yoksa, yeni bir konuşma başlat ve sonra düzenle
+        if (!this.currentConversationId) {
+            this.startNewConversation().then(() => {
+                // Konuşma oluşturulduktan sonra başlığı düzenle
+                setTimeout(() => this.editChatTitle(), 500);
+            });
+            return;
+        }
+        
+        const currentTitle = this.currentChatTitle ? this.currentChatTitle.textContent : 'Current Chat';
+        const newTitle = prompt('Enter a new title for this conversation:', currentTitle);
+        
+        if (!newTitle || newTitle === currentTitle) {
+            return;
+        }
+        
+        this.renameConversation(this.currentConversationId, null, newTitle);
+    }
+    
+    // Konuşmayı yeniden adlandır (güncellendi)
+    async renameConversation(conversationId, conversationEl, newTitle) {
+        try {
+            const response = await fetch(`/chatbot/conversations/${conversationId}/rename/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCsrfToken()
+                },
+                body: JSON.stringify({
+                    title: newTitle
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                // Başlığı güncelle (eğer varsa)
+                if (conversationEl) {
+                    const titleEl = conversationEl.querySelector('.conversation-title');
+                    if (titleEl) {
+                        titleEl.textContent = newTitle;
+                    }
+                }
+                
+                // Listedeki tüm öğeleri kontrol et ve gerekirse güncelle
+                if (!conversationEl) {
+                    const allConversationItems = document.querySelectorAll('.conversation-item');
+                    allConversationItems.forEach(item => {
+                        if (item.dataset.id === conversationId.toString()) {
+                            const titleEl = item.querySelector('.conversation-title');
+                            if (titleEl) {
+                                titleEl.textContent = newTitle;
+                            }
+                        }
+                    });
+                }
+                
+                // Eğer bu aktif konuşma ise, header'daki başlığı da güncelle
+                if (this.currentConversationId === conversationId && this.currentChatTitle) {
+                    this.currentChatTitle.textContent = newTitle;
+                }
+            } else {
+                alert('Error renaming conversation: ' + data.message);
+                console.error('Error renaming conversation:', data.message);
+            }
+        } catch (error) {
+            alert('Error renaming conversation. Please try again later.');
+            console.error('Error renaming conversation:', error);
+        }
+    }
+
+    // Yeni konuşma başlat (güncellendi)
+    async startNewConversation() {
+        if (this.isProcessing) return;
+        
+        this.isProcessing = true;
+        
+        try {
+            const response = await fetch('/chatbot/conversations/new/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCsrfToken()
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                // Mesajları temizle
+                this.messagesContainer.innerHTML = '';
+                
+                // Başlığı güncelle
+                if (this.currentChatTitle) {
+                    this.currentChatTitle.textContent = data.conversation.title || 'New Chat';
+                }
+                
+                // Kullanıcı ID'sini güncelle
+                this.currentConversationId = data.conversation.id;
+                
+                // Sidebarı kapat eğer açıksa (özellikle mobil görünümde)
+                const sidebar = document.querySelector('.chatbot-sidebar');
+                if (sidebar && sidebar.classList.contains('open')) {
+                    this.toggleSidebar();
+                }
+                
+                // Input'a odaklan
+                if (this.chatInput) {
+                    this.chatInput.focus();
+                }
+                
+                // No conversations mesajını kaldır
+                const noConversations = this.conversationsList.querySelector('.no-conversations');
+                if (noConversations) {
+                    noConversations.remove();
+                }
+                
+                // Yeni konuşmayı listeye ekle
+                this.addConversationToList(data.conversation);
+                
+                // Konuşmaların listesini yükle ve güncellemeleri göster
+                this.loadConversations();
+                
+                // Hoş geldin mesajını ekle
+                this.addBotMessage('Hello! I can help you search through your bookmarks. What are you looking for?');
+                
+                // En alta kaydır
+                this.scrollToBottom();
+                
+                return data.conversation;
+            } else {
+                alert('Error creating new conversation: ' + data.message);
+                console.error('Error creating new conversation:', data.message);
+                return null;
+            }
+        } catch (error) {
+            alert('Error creating new conversation. Please try again later.');
+            console.error('Error creating new conversation:', error);
+            return null;
+        } finally {
+            this.isProcessing = false;
+        }
+    }
+    
+    // Toggle sidebar visibility for mobile
+    toggleSidebar() {
+        const sidebar = document.querySelector('.chatbot-sidebar');
+        const chatbotPanel = document.querySelector('.chatbot-panel');
+        
+        if (sidebar) {
+            const isOpen = sidebar.classList.toggle('open');
+            
+            // Overlay oluştur veya kaldır
+            if (isOpen) {
+                // Overlay oluştur - sidebarın dışına tıklandığında kapanmasını sağlar
+                const overlay = document.createElement('div');
+                overlay.className = 'sidebar-overlay';
+                overlay.addEventListener('click', () => this.toggleSidebar());
+                chatbotPanel.appendChild(overlay);
+                
+                // Overlay fade-in animasyonu
+                setTimeout(() => {
+                    overlay.style.opacity = '1';
+                }, 10);
+            } else {
+                // Overlay'i kaldır
+                const overlay = document.querySelector('.sidebar-overlay');
+                if (overlay) {
+                    overlay.style.opacity = '0';
+                    // Animasyon bittikten sonra kaldır
+                    setTimeout(() => {
+                        overlay.remove();
+                    }, 300);
+                }
+            }
         }
     }
 }

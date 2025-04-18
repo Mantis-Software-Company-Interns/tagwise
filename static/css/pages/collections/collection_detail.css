@@ -649,4 +649,32 @@
     .available-bookmarks-grid {
         grid-template-columns: 1fr;
     }
+}
+
+/* Arama için stil kuralları */
+.available-bookmarks-grid.searching {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.bookmark-item.hidden {
+    display: none !important;
+}
+
+.bookmark-item.searching:not(.hidden) {
+    display: flex;
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Bookmark Item */
+.bookmark-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+    border-radius: 8px;
+    transition: all 0.2s ease;
 } 

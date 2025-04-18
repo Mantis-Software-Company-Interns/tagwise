@@ -31,17 +31,19 @@ const BookmarkManager = {
         const cards = document.querySelectorAll('.bookmark-card');
         
         cards.forEach(card => {
-            card.style.display = 'block';
+            // Önce searching sınıfını kaldır
+            card.classList.remove('searching');
+            card.classList.remove('hidden');
             
             switch(filter) {
                 case 'favorites':
                     if (!card.classList.contains('favorite')) {
-                        card.style.display = 'none';
+                        card.classList.add('hidden');
                     }
                     break;
                 case 'archived':
                     if (!card.classList.contains('archived')) {
-                        card.style.display = 'none';
+                        card.classList.add('hidden');
                     }
                     break;
                 // Add more filters as needed
@@ -61,9 +63,23 @@ const BookmarkManager = {
     
     searchBookmarks(query) {
         const cards = document.querySelectorAll('.bookmark-card');
+        const grid = document.querySelector('.grid');
+        
+        // Arama yapılıyor mu?
+        if (grid) {
+            if (query) {
+                grid.classList.add('searching');
+            } else {
+                grid.classList.remove('searching');
+            }
+        }
         
         if (!query) {
-            cards.forEach(card => card.style.display = 'block');
+            // Arama yoksa tüm kartları göster ve arama sınıfını kaldır
+            cards.forEach(card => {
+                card.classList.remove('searching');
+                card.classList.remove('hidden');
+            });
             return;
         }
         
@@ -78,7 +94,13 @@ const BookmarkManager = {
                 description.includes(query) || 
                 tags.some(tag => tag.includes(query));
             
-            card.style.display = matchesQuery ? 'block' : 'none';
+            // display style kullanmak yerine class ekle/çıkar
+            card.classList.add('searching');
+            if (matchesQuery) {
+                card.classList.remove('hidden');
+            } else {
+                card.classList.add('hidden');
+            }
         });
     }
 }; 

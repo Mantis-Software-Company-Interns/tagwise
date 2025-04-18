@@ -6,6 +6,24 @@
     margin-top: 20px;
 }
 
+/* Arama sonuçları için grid düzeni */
+.grid.searching {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+}
+
+/* Gizli kartlar için stil */
+.bookmark-card.hidden {
+    display: none !important;
+}
+
+/* Arama yapılırken gösterilen kartlar için stil */
+.bookmark-card.searching:not(.hidden) {
+    display: flex;
+    opacity: 1;
+    visibility: visible;
+}
+
 .grid-item {
     background-color: white;
     border-radius: 8px;

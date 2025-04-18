@@ -32,13 +32,7 @@ const ThemeManager = {
                 // Save preference to localStorage
                 localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
                 
-                // Easter egg: Cat rain on 5 consecutive clicks
-                this.themeClickCount = (this.themeClickCount || 0) + 1;
-                
-                if (this.themeClickCount >= 5) {
-                    this.createCatRain();
-                    this.themeClickCount = 0;
-                }
+                // Removed cat rain Easter egg from dark mode toggle
             });
         }
     },

@@ -356,16 +356,28 @@ function loadTaggedBookmarks(tag) {
 
 function filterBookmarks(searchTerm) {
     const cards = document.querySelectorAll('.bookmark-card');
+    const grid = document.querySelector('.grid');
     searchTerm = searchTerm.toLowerCase();
+    
+    // Arama yapılıyor mu?
+    if (grid) {
+        if (searchTerm) {
+            grid.classList.add('searching');
+        } else {
+            grid.classList.remove('searching');
+        }
+    }
 
     cards.forEach(card => {
         const title = card.querySelector('.title').textContent.toLowerCase();
         const description = card.querySelector('.description').textContent.toLowerCase();
         
+        // CSS sınıflarıyla görünürlüğü kontrol et
+        card.classList.add('searching');
         if (title.includes(searchTerm) || description.includes(searchTerm)) {
-            card.style.display = '';
+            card.classList.remove('hidden');
         } else {
-            card.style.display = 'none';
+            card.classList.add('hidden');
         }
     });
 }

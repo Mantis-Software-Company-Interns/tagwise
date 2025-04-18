@@ -153,16 +153,28 @@ function setupDragAndDrop() {
 
 function filterBookmarks(searchTerm) {
     const bookmarkItems = document.querySelectorAll('.bookmark-item');
+    const bookmarksContainer = document.querySelector('.bookmarks-list');
     searchTerm = searchTerm.toLowerCase();
+    
+    // Arama yapılıyor mu işaretliyoruz
+    if (bookmarksContainer) {
+        if (searchTerm) {
+            bookmarksContainer.classList.add('searching');
+        } else {
+            bookmarksContainer.classList.remove('searching');
+        }
+    }
     
     bookmarkItems.forEach(item => {
         const title = item.querySelector('.bookmark-title').textContent.toLowerCase();
         const url = item.querySelector('.bookmark-url').textContent.toLowerCase();
         
+        // CSS sınıflarıyla görünürlüğü kontrol ediyoruz
+        item.classList.add('searching');
         if (title.includes(searchTerm) || url.includes(searchTerm)) {
-            item.style.display = '';
+            item.classList.remove('hidden');
         } else {
-            item.style.display = 'none';
+            item.classList.add('hidden');
         }
     });
 }

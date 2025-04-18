@@ -265,16 +265,28 @@ function initializeAddBookmarkModal() {
 
 function filterBookmarks(searchTerm) {
     const bookmarks = document.querySelectorAll('.available-bookmarks-grid .bookmark-item');
+    const bookmarksGrid = document.querySelector('.available-bookmarks-grid');
     searchTerm = searchTerm.toLowerCase();
+    
+    // Arama yapılıyor mu işaretliyoruz
+    if (bookmarksGrid) {
+        if (searchTerm) {
+            bookmarksGrid.classList.add('searching');
+        } else {
+            bookmarksGrid.classList.remove('searching');
+        }
+    }
     
     bookmarks.forEach(bookmark => {
         const title = bookmark.querySelector('h4').textContent.toLowerCase();
         const url = bookmark.querySelector('p').textContent.toLowerCase();
         
+        // CSS sınıflarıyla görünürlüğü kontrol ediyoruz
+        bookmark.classList.add('searching');
         if (title.includes(searchTerm) || url.includes(searchTerm)) {
-            bookmark.style.display = '';
+            bookmark.classList.remove('hidden');
         } else {
-            bookmark.style.display = 'none';
+            bookmark.classList.add('hidden');
         }
     });
 }

@@ -86,3 +86,30 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
             Profile.objects.create(user=instance)
         else:
             instance.profile.save()
+
+class ChatConversation(models.Model):
+    """Model to store chat conversations"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_conversations')
+    title = models.CharField(max_length=255, default="New conversation")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-updated_at']
+        
+    def __str__(self):
+        return f"{self.title} ({self.created_at.strftime('%d.%m.%Y')})"
+
+class ChatMessage(models.Model):
+    """Model to store chat messages within a conversation"""
+    conversation = models.ForeignKey(ChatConversation, on_delete=models.CASCADE, related_name='messages')
+    is_user = models.BooleanField(default=True)  # True if sent by user, False if bot response
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['created_at']
+        
+    def __str__(self):
+        sender = "User" if self.is_user else "Bot"
+        return f"{sender}: {self.content[:50]}..." if len(self.content) > 50 else self.content

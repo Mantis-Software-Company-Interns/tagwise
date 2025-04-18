@@ -128,36 +128,7 @@
     </div>
 
     <!-- Chatbot -->
-    <div class="chatbot-container">
-        <button type="button" class="chatbot-toggle">
-            <i class="material-icons">chat</i>
-        </button>
-        <div class="chatbot-panel">
-            <div class="chatbot-header">
-                <h3>TagWise Assistant</h3>
-                <div class="chatbot-actions">
-                    <button type="button" class="reset-chat" title="Konuşmayı sıfırla">Reset</button>
-                    <button type="button" class="close-chat">
-                        <i class="material-icons">close</i>
-                    </button>
-                </div>
-            </div>
-            <div class="chatbot-messages">
-                <div class="message bot">
-                    <i class="material-icons bot-icon">smart_toy</i>
-                    <div class="message-content">
-                        Hello! I can help you search through your bookmarks. What are you looking for?
-                    </div>
-                </div>
-            </div>
-            <div class="chatbot-input">
-                <input type="text" placeholder="Type your message...">
-                <button type="button" class="send-message">
-                    <i class="material-icons">send</i>
-                </button>
-            </div>
-        </div>
-    </div>
+    {% include 'chatbot.html' %}
 
     {% block modals %}{% endblock %}
 

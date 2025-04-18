@@ -48,4 +48,11 @@ urlpatterns = [
     path('chatbot/init/', views_chatbot.chatbot_init, name='chatbot_init'),
     path('chatbot/ask/', views_chatbot.chatbot_ask, name='chatbot_ask'),
     path('chatbot/reset/', views_chatbot.chatbot_reset, name='chatbot_reset'),
+    
+    # Chatbot conversation management
+    path('chatbot/conversations/', views_chatbot.get_conversations, name='get_conversations'),
+    path('chatbot/conversations/new/', views_chatbot.create_conversation, name='create_conversation'),
+    path('chatbot/conversations/<int:conversation_id>/', views_chatbot.get_conversation_messages, name='get_conversation_messages'),
+    path('chatbot/conversations/<int:conversation_id>/delete/', views_chatbot.delete_conversation, name='delete_conversation'),
+    path('chatbot/conversations/<int:conversation_id>/rename/', views_chatbot.rename_conversation, name='rename_conversation'),
 ] 

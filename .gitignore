@@ -217,3 +217,7 @@ local_settings.py
 *.temp
 *.swp
 *~
+
+# Chatbot Data
+data/vectorstore/
+data/vectorstore/*

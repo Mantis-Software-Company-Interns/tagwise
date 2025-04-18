@@ -151,7 +151,7 @@ class BookmarkChatbot:
                 search_type="similarity_score_threshold",
                 search_kwargs={
                     "k": 20,  # Maximum limit for safety
-                    "score_threshold": 0.3  # Minimum similarity score (0-1)
+                    "score_threshold": 0.5  # Minimum similarity score (0-1)
                 }
             )
             

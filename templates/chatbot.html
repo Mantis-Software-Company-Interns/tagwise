@@ -1,0 +1,62 @@
+{% load static %}
+<!-- Chatbot Component -->
+<div class="chatbot-container">
+    <button type="button" class="chatbot-toggle">
+        <i class="material-icons">chat</i>
+    </button>
+    <div class="chatbot-panel">
+        <div class="chatbot-layout">
+            <!-- Conversations sidebar -->
+            <div class="chatbot-sidebar">
+                <div class="sidebar-header">
+                    <h3>Conversations</h3>
+                    <button type="button" class="new-chat-btn" title="New Chat">
+                        <i class="material-icons">add</i>
+                        <span>New chat</span>
+                    </button>
+                </div>
+                <div class="conversations-list">
+                    <!-- Conversations will be loaded here -->
+                </div>
+            </div>
+            
+            <!-- Chat content area -->
+            <div class="chatbot-content">
+                <div class="chatbot-header">
+                    <div class="header-left">
+                        <button type="button" class="toggle-sidebar-btn">
+                            <i class="material-icons">menu</i>
+                        </button>
+                        <h3 id="current-chat-title">Current Chat</h3>
+                        <button type="button" class="edit-chat-title" title="Başlığı düzenle">
+                            <i class="material-icons">edit</i>
+                        </button>
+                    </div>
+                    <div class="chatbot-actions">
+                        <button type="button" class="reset-chat" title="Konuşmayı sıfırla">Reset</button>
+                        <button type="button" class="fullscreen-toggle" title="Tam Ekran">
+                            <i class="material-icons">fullscreen</i>
+                        </button>
+                        <button type="button" class="close-chat">
+                            <i class="material-icons">close</i>
+                        </button>
+                    </div>
+                </div>
+                <div class="chatbot-messages">
+                    <div class="message bot">
+                        <i class="material-icons bot-icon">smart_toy</i>
+                        <div class="message-content">
+                            <p>Hello! I can help you search through your bookmarks. What are you looking for?</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="chatbot-input">
+                    <input type="text" placeholder="Type your message...">
+                    <button type="button" class="send-message">
+                        <i class="material-icons">send</i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 
