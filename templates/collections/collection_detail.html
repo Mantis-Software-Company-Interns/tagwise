@@ -27,13 +27,18 @@
             <div class="collection-meta">
                 <span><i class="material-icons">bookmark</i> {{ bookmarks.count }} bookmarks</span>
                 <span><i class="material-icons">access_time</i> Updated {{ collection.updated_at|timesince }} ago</span>
+                <span><i class="material-icons">person</i> Created by you</span>
             </div>
         </div>
     </div>
     <div class="collection-actions">
+        <button class="share-collection-btn" id="shareCollectionBtn">
+            <i class="material-icons">share</i>
+            <span>Share</span>
+        </button>
         <button class="edit-collection-btn" id="editCollectionBtn">
             <i class="material-icons">edit</i>
-            <span>Edit Collection</span>
+            <span>Edit</span>
         </button>
         <button class="delete-collection-btn" id="deleteCollectionBtn">
             <i class="material-icons">delete</i>
@@ -44,7 +49,32 @@
 
 <div class="bookmarks-container">
     <div class="bookmarks-header">
-        <h2>Bookmarks</h2>
+        <div class="bookmarks-controls">
+            <h2>Bookmarks</h2>
+            <div class="bookmarks-actions">
+                <div class="search-control">
+                    <i class="material-icons">search</i>
+                    <input type="text" id="bookmarkSearchInput" placeholder="Search in collection...">
+                </div>
+                <div class="sort-control">
+                    <label for="sortSelect">Sort by:</label>
+                    <select id="sortSelect">
+                        <option value="date_desc">Newest first</option>
+                        <option value="date_asc">Oldest first</option>
+                        <option value="alpha_asc">Title A-Z</option>
+                        <option value="alpha_desc">Title Z-A</option>
+                    </select>
+                </div>
+                <div class="view-toggle">
+                    <button class="view-btn active" data-view="grid">
+                        <i class="material-icons">grid_view</i>
+                    </button>
+                    <button class="view-btn" data-view="list">
+                        <i class="material-icons">view_list</i>
+                    </button>
+                </div>
+            </div>
+        </div>
         {% if bookmarks.count > 0 %}
         <button class="add-bookmark-btn" id="addBookmarkBtn">
             <i class="material-icons">add_link</i>
@@ -54,22 +84,63 @@
     </div>
     
     {% if bookmarks.count > 0 %}
-    <div class="bookmarks-grid">
+    <div class="bookmarks-grid" id="bookmarksContainer">
         {% for bookmark in bookmarks %}
         <div class="bookmark-card" data-id="{{ bookmark.id }}">
             <div class="bookmark-header">
                 <div class="bookmark-icon">
                     <img src="{{ bookmark.favicon }}" alt="Favicon" onerror="this.src='{% static 'images/default-favicon.png' %}'">
                 </div>
-                <button class="bookmark-menu-btn" data-id="{{ bookmark.id }}">
-                    <i class="material-icons">more_vert</i>
-                </button>
+                <div class="bookmark-actions">
+                    <button class="action-btn visit-btn" data-url="{{ bookmark.url }}" title="Visit Website">
+                        <i class="material-icons">open_in_new</i>
+                    </button>
+                    <button class="action-btn copy-btn" data-url="{{ bookmark.url }}" title="Copy URL">
+                        <i class="material-icons">content_copy</i>
+                    </button>
+                    <button class="bookmark-menu-btn" data-id="{{ bookmark.id }}">
+                        <i class="material-icons">more_vert</i>
+                    </button>
+                    <div class="bookmark-menu">
+                        <div class="menu-item view-details" data-id="{{ bookmark.id }}">
+                            <i class="material-icons">info</i>View Details
+                        </div>
+                        <div class="menu-item edit-bookmark" data-id="{{ bookmark.id }}">
+                            <i class="material-icons">edit</i>Edit Bookmark
+                        </div>
+                        <div class="menu-item remove-from-collection" data-id="{{ bookmark.id }}">
+                            <i class="material-icons">remove_circle</i>Remove from Collection
+                        </div>
+                        <div class="menu-item delete-bookmark" data-id="{{ bookmark.id }}">
+                            <i class="material-icons">delete</i>Delete Bookmark
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="bookmark-content">
                 <h3 class="bookmark-title">{{ bookmark.title }}</h3>
-                <p class="bookmark-url">{{ bookmark.url }}</p>
+                <p class="bookmark-description">
+                    {% if bookmark.description %}
+                        {{ bookmark.description|truncatechars:120 }}
+                    {% else %}
+                        No description available
+                    {% endif %}
+                </p>
+                {% if bookmark.tags.all %}
+                <div class="bookmark-tags">
+                    {% for tag in bookmark.tags.all %}
+                    <a href="{% url 'tagwiseapp:tagged_bookmarks' %}?tag={{ tag.name|urlencode }}" class="tag">{{ tag.name }}</a>
+                    {% endfor %}
+                </div>
+                {% endif %}
                 <div class="bookmark-meta">
                     <span class="bookmark-date">Added {{ bookmark.created_at|date:"M d, Y" }}</span>
+                    {% if bookmark.category %}
+                    <span class="bookmark-category">
+                        <i class="material-icons">folder</i>
+                        {{ bookmark.category.name }}
+                    </span>
+                    {% endif %}
                 </div>
             </div>
             <a href="{{ bookmark.url }}" class="bookmark-link" target="_blank" rel="noopener noreferrer"></a>
@@ -209,6 +280,90 @@
         <div class="modal-footer">
             <button class="cancel-btn">Cancel</button>
             <button class="delete-confirm-btn">Delete Collection</button>
+        </div>
+    </div>
+</div>
+
+<!-- Share Collection Modal -->
+<div class="modal" id="shareCollectionModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Share Collection</h2>
+            <button class="close-btn"><i class="material-icons">close</i></button>
+        </div>
+        <div class="modal-body">
+            <div class="share-options">
+                <h3>Share via Link</h3>
+                <div class="form-group">
+                    <div class="share-link-container">
+                        <input type="text" id="shareLink" value="{{ request.scheme }}://{{ request.get_host }}{% url 'tagwiseapp:collection_detail' collection.id %}" readonly>
+                        <button id="copyShareLink">
+                            <i class="material-icons">content_copy</i>
+                        </button>
+                    </div>
+                    <small>Anyone with the link can view this collection</small>
+                </div>
+                
+                <h3>Share via Email</h3>
+                <div class="form-group">
+                    <input type="email" id="shareEmail" placeholder="Enter email address">
+                    <button class="send-email-btn">Send</button>
+                </div>
+                
+                <h3>Share to Social Media</h3>
+                <div class="social-share-buttons">
+                    <button class="social-btn twitter-btn" data-platform="twitter">
+                        <i class="material-icons">share</i> Twitter
+                    </button>
+                    <button class="social-btn facebook-btn" data-platform="facebook">
+                        <i class="material-icons">share</i> Facebook
+                    </button>
+                    <button class="social-btn linkedin-btn" data-platform="linkedin">
+                        <i class="material-icons">share</i> LinkedIn
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="close-modal-btn">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Bookmark Details Modal -->
+<div class="modal" id="bookmarkDetailsModal">
+    <div class="modal-content large-modal">
+        <div class="modal-header">
+            <h2>Bookmark Details</h2>
+            <button class="close-btn"><i class="material-icons">close</i></button>
+        </div>
+        <div class="modal-body bookmark-details-content">
+            <!-- Content will be loaded dynamically -->
+            <div class="loading-spinner">
+                <i class="material-icons rotating">refresh</i>
+                <span>Loading bookmark details...</span>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="close-modal-btn">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Remove from Collection Confirmation Modal -->
+<div class="modal" id="removeBookmarkModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Remove Bookmark</h2>
+            <button class="close-btn"><i class="material-icons">close</i></button>
+        </div>
+        <div class="modal-body">
+            <p>Remove this bookmark from the collection?</p>
+            <p>The bookmark will still be available in your bookmark library.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="cancel-btn">Cancel</button>
+            <button class="confirm-remove-btn">Remove</button>
         </div>
     </div>
 </div>

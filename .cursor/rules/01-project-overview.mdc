@@ -1,0 +1,29 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# TagWise Project Overview
+
+TagWise is a smart bookmarking tool that helps users organize web content using AI. It automatically analyzes webpages to generate meaningful titles, descriptions, categories, and tags.
+
+## Core Components
+
+- **Django Backend**: Main application framework
+  - [tagwisebackend/settings.py](mdc:tagwisebackend/settings.py): Core Django settings
+  - [tagwisebackend/urls.py](mdc:tagwisebackend/urls.py): Main URL routing
+  - [manage.py](mdc:manage.py): Django management script
+
+- **Main Application**: 
+  - [tagwiseapp/models.py](mdc:tagwiseapp/models.py): Data models
+  - [tagwiseapp/views.py](mdc:tagwiseapp/views.py): Main views and business logic
+  - [tagwiseapp/urls.py](mdc:tagwiseapp/urls.py): App-specific URL routing
+
+- **AI Features**:
+  - [tagwiseapp/views_chatbot.py](mdc:tagwiseapp/views_chatbot.py): Chatbot functionality
+  - [tagwiseapp/reader.py](mdc:tagwiseapp/reader.py): Content reading and processing
+
+## Getting Started
+1. Install dependencies with `pip install -r requirements.txt`
+2. Run migrations: `python manage.py migrate`
+3. Start the server: `python manage.py runserver`

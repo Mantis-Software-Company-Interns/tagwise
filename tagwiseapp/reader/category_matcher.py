@@ -152,11 +152,14 @@ def find_similar_tag(tag_name: str, existing_tags: List[Dict[str, Any]],
     
     return None
 
-def get_existing_categories():
+def get_existing_categories(user=None):
     """
     Veritabanındaki mevcut kategorileri getirir.
     
     Bu fonksiyon Django modelleri kullanarak veritabanından kategori listesini çeker.
+    
+    Args:
+        user: Kullanıcı objesi, eğer belirtilirse sadece bu kullanıcıya ait kategoriler getirilir
     
     Returns:
         List[Dict]: Kategori listesi
@@ -166,14 +169,21 @@ def get_existing_categories():
         from django.apps import apps
         Category = apps.get_model('tagwiseapp', 'Category')
         
+        # Get categories based on user filter
+        query = Category.objects.all()
+        if user:
+            # Kullanıcıya özel kategorileri ve genel (user=None) kategorileri getir
+            query = query.filter(user__in=[user, None])
+        
         # Get all categories
         categories = []
-        for cat in Category.objects.all():
+        for cat in query:
             categories.append({
                 'id': cat.id,
                 'name': cat.name,
                 'is_main': cat.parent_id is None,
-                'parent_id': cat.parent_id
+                'parent_id': cat.parent_id,
+                'user_id': cat.user_id
             })
         
         return categories
@@ -181,11 +191,14 @@ def get_existing_categories():
         logger.error(f"Error fetching categories: {str(e)}")
         return []
 
-def get_existing_tags():
+def get_existing_tags(user=None):
     """
     Veritabanındaki mevcut etiketleri getirir.
     
     Bu fonksiyon Django modelleri kullanarak veritabanından etiket listesini çeker.
+    
+    Args:
+        user: Kullanıcı objesi, eğer belirtilirse sadece bu kullanıcıya ait etiketler getirilir
     
     Returns:
         List[Dict]: Etiket listesi
@@ -195,12 +208,19 @@ def get_existing_tags():
         from django.apps import apps
         Tag = apps.get_model('tagwiseapp', 'Tag')
         
+        # Get tags based on user filter
+        query = Tag.objects.all()
+        if user:
+            # Kullanıcıya özel etiketleri ve genel (user=None) etiketleri getir
+            query = query.filter(user__in=[user, None])
+        
         # Get all tags
         tags = []
-        for tag in Tag.objects.all():
+        for tag in query:
             tags.append({
                 'id': tag.id,
-                'name': tag.name
+                'name': tag.name,
+                'user_id': tag.user_id
             })
         
         return tags

@@ -407,6 +407,7 @@
         <div class="settings-tab active" data-tab="profile">Profil</div>
         <div class="settings-tab" data-tab="password">Şifre</div>
         <div class="settings-tab" data-tab="notifications">Bildirimler</div>
+        <div class="settings-tab" data-tab="api">API</div>
     </div>
 
     {% if success_message %}
@@ -561,6 +562,93 @@
             </form>
         </div>
     </div>
+
+    <!-- API Sekmesi -->
+    <div class="tab-content" id="api-tab">
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <h2 class="settings-card-title">API Anahtarları</h2>
+                <p class="settings-description">API anahtarlarını kullanarak TagWise'a dışarıdan içerik ekleyebilirsiniz.</p>
+            </div>
+
+            <div id="api-keys-container">
+                <div class="loading-indicator" id="api-keys-loading">
+                    <div class="spinner"></div>
+                    <p>API anahtarları yükleniyor...</p>
+                </div>
+                <div id="api-keys-list" style="display: none;">
+                    <!-- API anahtarları buraya JavaScript ile eklenecek -->
+                </div>
+                <div id="no-api-keys" style="display: none;">
+                    <p>Henüz bir API anahtarınız bulunmuyor.</p>
+                </div>
+            </div>
+
+            <div class="api-key-form" style="margin-top: 30px;">
+                <button id="create-api-key-btn" class="save-btn" style="background-color: var(--primary-color); display: inline-flex; align-items: center;">
+                    <i class="material-icons" style="margin-right: 8px;">vpn_key</i> Yeni API Anahtarı Oluştur
+                </button>
+            </div>
+            
+            <!-- API Anahtarı Oluşturma Formu Modal -->
+            <div id="api-key-modal" class="crop-modal">
+                <div class="crop-modal-content" style="max-width: 600px;">
+                    <div class="crop-modal-header">
+                        <h3 class="crop-modal-title">API Anahtarı Oluştur</h3>
+                        <span class="api-key-modal-close">&times;</span>
+                    </div>
+                    <form id="create-api-key-form">
+                        <div class="form-group">
+                            <label for="api-key-description">Açıklama</label>
+                            <input type="text" id="api-key-description" name="description" placeholder="API anahtarınız için açıklayıcı bir ad" required>
+                            <small style="color: var(--text-secondary); display: block; margin-top: 5px;">Bu açıklama, anahtarı daha sonra tanımlamanıza yardımcı olacaktır.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="api-key-expires">Sona Erme Tarihi (İsteğe Bağlı)</label>
+                            <input type="date" id="api-key-expires" name="expires_at">
+                            <small style="color: var(--text-secondary); display: block; margin-top: 5px;">Boş bırakırsanız, anahtar süresiz olarak geçerli olacaktır.</small>
+                        </div>
+                        <div class="form-group" style="display: flex; align-items: center;">
+                            <input type="checkbox" id="api-key-active" name="is_active" checked style="width: auto; margin-right: 10px;">
+                            <label for="api-key-active" style="margin-bottom: 0;">Aktif</label>
+                        </div>
+                        <div class="crop-buttons">
+                            <button type="button" class="crop-btn crop-cancel-btn api-key-modal-close">İptal</button>
+                            <button type="submit" class="crop-btn crop-apply-btn">Oluştur</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Yeni API Anahtarı Görüntüleme Modal -->
+            <div id="new-api-key-modal" class="crop-modal">
+                <div class="crop-modal-content" style="max-width: 600px;">
+                    <div class="crop-modal-header">
+                        <h3 class="crop-modal-title">API Anahtarınız Oluşturuldu</h3>
+                        <span class="new-api-key-modal-close">&times;</span>
+                    </div>
+                    <div style="padding: 20px 0;">
+                        <div class="alert-box" style="background-color: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3); color: #856404; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                            <p style="margin: 0; font-weight: 500;"><i class="material-icons" style="vertical-align: middle; margin-right: 8px;">warning</i> ÖNEMLİ: Bu anahtarı güvenli bir yerde saklayın!</p>
+                            <p style="margin-top: 10px; margin-bottom: 0;">Bu ekrandan ayrıldıktan sonra anahtarın tamamını bir daha göremeyeceksiniz.</p>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-api-key-value">API Anahtarınız</label>
+                            <div style="position: relative;">
+                                <input type="text" id="new-api-key-value" readonly style="font-family: monospace; padding-right: 50px;">
+                                <button type="button" id="copy-api-key" style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--primary-color); cursor: pointer; padding: 8px; border-radius: 4px;">
+                                    <i class="material-icons" style="font-size: 20px;">content_copy</i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="crop-buttons">
+                        <button type="button" class="crop-btn crop-apply-btn new-api-key-modal-close">Tamam</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -587,8 +675,388 @@
                         content.classList.add('active');
                     }
                 });
+                
+                // API sekmesi seçildiğinde API anahtarlarını yükle
+                if (tabId === 'api') {
+                    loadApiKeys();
+                }
             });
         });
+        
+        // API anahtarı işlevleri
+        const createApiKeyBtn = document.getElementById('create-api-key-btn');
+        const apiKeyModal = document.getElementById('api-key-modal');
+        const newApiKeyModal = document.getElementById('new-api-key-modal');
+        const apiKeyModalClose = document.querySelectorAll('.api-key-modal-close');
+        const newApiKeyModalClose = document.querySelectorAll('.new-api-key-modal-close');
+        const createApiKeyForm = document.getElementById('create-api-key-form');
+        const copyApiKeyBtn = document.getElementById('copy-api-key');
+        
+        // API anahtarı modalını aç
+        createApiKeyBtn.addEventListener('click', function() {
+            apiKeyModal.style.display = 'block';
+        });
+        
+        // API anahtarı modalını kapat
+        apiKeyModalClose.forEach(btn => {
+            btn.addEventListener('click', function() {
+                apiKeyModal.style.display = 'none';
+                createApiKeyForm.reset();
+            });
+        });
+        
+        // Yeni API anahtarı modalını kapat
+        newApiKeyModalClose.forEach(btn => {
+            btn.addEventListener('click', function() {
+                newApiKeyModal.style.display = 'none';
+                loadApiKeys(); // Yeni anahtarları yükle
+            });
+        });
+        
+        // API anahtarını kopyala
+        copyApiKeyBtn.addEventListener('click', function() {
+            const apiKeyInput = document.getElementById('new-api-key-value');
+            apiKeyInput.select();
+            document.execCommand('copy');
+            
+            // Kopyalama başarılı geri bildirimi
+            this.innerHTML = '<i class="material-icons" style="font-size: 20px;">check</i>';
+            setTimeout(() => {
+                this.innerHTML = '<i class="material-icons" style="font-size: 20px;">content_copy</i>';
+            }, 2000);
+        });
+        
+        // API anahtarı oluşturma formunu gönder
+        createApiKeyForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                description: document.getElementById('api-key-description').value,
+                is_active: document.getElementById('api-key-active').checked
+            };
+            
+            // İsteğe bağlı sona erme tarihi
+            const expiryDate = document.getElementById('api-key-expires').value;
+            if (expiryDate) {
+                formData.expires_at = new Date(expiryDate + 'T23:59:59').toISOString();
+            }
+            
+            // API anahtarı oluştur
+            fetch('/api/v1/api-keys/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('API anahtarı oluşturulurken bir hata oluştu');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // API anahtarını göster
+                apiKeyModal.style.display = 'none';
+                createApiKeyForm.reset();
+                
+                // Yeni anahtarı gösterme modalını aç
+                document.getElementById('new-api-key-value').value = data.key;
+                newApiKeyModal.style.display = 'block';
+            })
+            .catch(error => {
+                alert('Hata: ' + error.message);
+            });
+        });
+        
+        // API anahtarlarını yükle
+        function loadApiKeys() {
+            const loadingIndicator = document.getElementById('api-keys-loading');
+            const apiKeysList = document.getElementById('api-keys-list');
+            const noApiKeys = document.getElementById('no-api-keys');
+            
+            loadingIndicator.style.display = 'flex';
+            apiKeysList.style.display = 'none';
+            noApiKeys.style.display = 'none';
+            
+            fetch('/api/v1/api-keys/')
+                .then(response => response.json())
+                .then(data => {
+                    loadingIndicator.style.display = 'none';
+                    
+                    if (data.length === 0) {
+                        noApiKeys.style.display = 'block';
+                    } else {
+                        apiKeysList.innerHTML = '';
+                        
+                        // API anahtarları tablosunu oluştur
+                        const table = document.createElement('table');
+                        table.className = 'api-keys-table';
+                        table.style.width = '100%';
+                        table.style.borderCollapse = 'collapse';
+                        
+                        // Tablo başlığı
+                        const thead = document.createElement('thead');
+                        thead.innerHTML = `
+                            <tr>
+                                <th style="text-align: left; padding: 12px 15px; border-bottom: 1px solid var(--border-color);">Açıklama</th>
+                                <th style="text-align: left; padding: 12px 15px; border-bottom: 1px solid var(--border-color);">Oluşturulma Tarihi</th>
+                                <th style="text-align: left; padding: 12px 15px; border-bottom: 1px solid var(--border-color);">Son Kullanma</th>
+                                <th style="text-align: left; padding: 12px 15px; border-bottom: 1px solid var(--border-color);">Durum</th>
+                                <th style="text-align: right; padding: 12px 15px; border-bottom: 1px solid var(--border-color);">İşlemler</th>
+                            </tr>
+                        `;
+                        table.appendChild(thead);
+                        
+                        // Tablo gövdesi
+                        const tbody = document.createElement('tbody');
+                        data.forEach(apiKey => {
+                            const row = document.createElement('tr');
+                            
+                            // Tarih formatla
+                            const createdDate = new Date(apiKey.created_at).toLocaleDateString('tr-TR');
+                            const expiryDate = apiKey.expires_at ? new Date(apiKey.expires_at).toLocaleDateString('tr-TR') : 'Süresiz';
+                            
+                            // Durum belirleme
+                            let statusText = 'Aktif';
+                            let statusClass = 'status-active';
+                            
+                            if (!apiKey.is_active) {
+                                statusText = 'Pasif';
+                                statusClass = 'status-inactive';
+                            } else if (apiKey.expires_at && new Date(apiKey.expires_at) < new Date()) {
+                                statusText = 'Süresi Dolmuş';
+                                statusClass = 'status-expired';
+                            }
+                            
+                            row.innerHTML = `
+                                <td style="padding: 12px 15px; border-bottom: 1px solid var(--border-color);">${apiKey.description}</td>
+                                <td style="padding: 12px 15px; border-bottom: 1px solid var(--border-color);">${createdDate}</td>
+                                <td style="padding: 12px 15px; border-bottom: 1px solid var(--border-color);">${expiryDate}</td>
+                                <td style="padding: 12px 15px; border-bottom: 1px solid var(--border-color);">
+                                    <span class="status-badge ${statusClass}" style="display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">${statusText}</span>
+                                </td>
+                                <td style="padding: 12px 15px; border-bottom: 1px solid var(--border-color); text-align: right;">
+                                    <div class="action-buttons">
+                                        ${apiKey.is_active ? 
+                                        `<button class="action-btn deactivate-btn" data-id="${apiKey.id}" title="Devre Dışı Bırak">
+                                            <i class="material-icons" style="font-size: 18px;">toggle_off</i>
+                                        </button>` : 
+                                        `<button class="action-btn activate-btn" data-id="${apiKey.id}" title="Etkinleştir">
+                                            <i class="material-icons" style="font-size: 18px;">toggle_on</i>
+                                        </button>`}
+                                        <button class="action-btn delete-btn" data-id="${apiKey.id}" title="Sil">
+                                            <i class="material-icons" style="font-size: 18px;">delete</i>
+                                        </button>
+                                    </div>
+                                </td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                        table.appendChild(tbody);
+                        
+                        apiKeysList.appendChild(table);
+                        apiKeysList.style.display = 'block';
+                        
+                        // İşlem butonlarına dinleyiciler ekle
+                        setupActionButtons();
+                    }
+                })
+                .catch(error => {
+                    loadingIndicator.style.display = 'none';
+                    apiKeysList.innerHTML = '<p class="error-message" style="display: block;">API anahtarları yüklenirken bir hata oluştu.</p>';
+                    apiKeysList.style.display = 'block';
+                    console.error('Error loading API keys:', error);
+                });
+        }
+        
+        // İşlem butonları için olay dinleyicilerini ayarla
+        function setupActionButtons() {
+            // Devre dışı bırakma butonları
+            document.querySelectorAll('.deactivate-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const apiKeyId = this.getAttribute('data-id');
+                    if (confirm('Bu API anahtarını devre dışı bırakmak istediğinize emin misiniz?')) {
+                        updateApiKeyStatus(apiKeyId, false);
+                    }
+                });
+            });
+            
+            // Etkinleştirme butonları
+            document.querySelectorAll('.activate-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const apiKeyId = this.getAttribute('data-id');
+                    updateApiKeyStatus(apiKeyId, true);
+                });
+            });
+            
+            // Silme butonları
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const apiKeyId = this.getAttribute('data-id');
+                    if (confirm('Bu API anahtarını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
+                        deleteApiKey(apiKeyId);
+                    }
+                });
+            });
+        }
+        
+        // API anahtarı durumunu güncelle (etkinleştir/devre dışı bırak)
+        function updateApiKeyStatus(apiKeyId, isActive) {
+            fetch(`/api/v1/api-keys/${apiKeyId}/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify({ is_active: isActive })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('API anahtarı güncellenirken bir hata oluştu');
+                }
+                return response.json();
+            })
+            .then(() => {
+                // Başarılı mesajı göster
+                const message = isActive ? 'API anahtarı etkinleştirildi.' : 'API anahtarı devre dışı bırakıldı.';
+                showNotification(message, 'success');
+                
+                // Listeyi yenile
+                loadApiKeys();
+            })
+            .catch(error => {
+                showNotification('Hata: ' + error.message, 'error');
+            });
+        }
+        
+        // API anahtarını sil
+        function deleteApiKey(apiKeyId) {
+            fetch(`/api/v1/api-keys/${apiKeyId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': getCSRFToken()
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('API anahtarı silinirken bir hata oluştu');
+                }
+                
+                // Başarılı mesajı göster
+                showNotification('API anahtarı başarıyla silindi.', 'success');
+                
+                // Listeyi yenile
+                loadApiKeys();
+            })
+            .catch(error => {
+                showNotification('Hata: ' + error.message, 'error');
+            });
+        }
+        
+        // Bildirim göster
+        function showNotification(message, type) {
+            // Sayfadaki mevcut bildirim alanlarını kullan
+            const notificationClass = type === 'success' ? '.success-message' : '.error-message';
+            const notificationElement = document.querySelector(notificationClass);
+            
+            if (notificationElement) {
+                notificationElement.textContent = message;
+                notificationElement.style.display = 'block';
+                
+                // 5 saniye sonra gizle
+                setTimeout(() => {
+                    notificationElement.style.display = 'none';
+                }, 5000);
+            } else {
+                // Bildirim elementi yoksa alert göster
+                alert(message);
+            }
+        }
+        
+        // CSRF token'ı al
+        function getCSRFToken() {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.startsWith('csrftoken=')) {
+                    return cookie.substring('csrftoken='.length);
+                }
+            }
+            return null;
+        }
+        
+        // CSS stilleri ekle
+        const style = document.createElement('style');
+        style.textContent = `
+            .status-badge {
+                color: white;
+            }
+            .status-active {
+                background-color: #28a745;
+            }
+            .status-inactive {
+                background-color: #6c757d;
+            }
+            .status-expired {
+                background-color: #dc3545;
+            }
+            .loading-indicator {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 30px;
+            }
+            .spinner {
+                border: 4px solid rgba(0, 0, 0, 0.1);
+                border-radius: 50%;
+                border-top: 4px solid var(--primary-color);
+                width: 30px;
+                height: 30px;
+                animation: spin 1s linear infinite;
+                margin-bottom: 10px;
+            }
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+            .api-keys-table {
+                width: 100%;
+                margin-top: 20px;
+                border-collapse: collapse;
+            }
+            .action-buttons {
+                display: flex;
+                justify-content: flex-end;
+                gap: 8px;
+            }
+            .action-btn {
+                background: none;
+                border: none;
+                cursor: pointer;
+                padding: 5px;
+                border-radius: 4px;
+                transition: background-color 0.2s;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .action-btn:hover {
+                background-color: rgba(0, 0, 0, 0.05);
+            }
+            .deactivate-btn {
+                color: #6c757d;
+            }
+            .activate-btn {
+                color: #28a745;
+            }
+            .delete-btn {
+                color: #dc3545;
+            }
+        `;
+        document.head.appendChild(style);
         
         // Cropper.js ile fotoğraf düzenleme
         const photoInput = document.getElementById('profile-photo-input');

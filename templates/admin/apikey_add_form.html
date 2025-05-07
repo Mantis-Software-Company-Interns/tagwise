@@ -1,0 +1,36 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  .important-note {
+    background-color: #fff3cd;
+    border: 1px solid #ffeeba;
+    color: #856404;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+  }
+  
+  .important-note h3 {
+    margin-top: 0;
+    color: #856404;
+  }
+</style>
+{% endblock %}
+
+{% block form_top %}
+<div class="important-note">
+  <h3>{% trans "API Key Oluşturma" %}</h3>
+  <p>
+    <strong>{% trans "Önemli Not:" %}</strong> 
+    {% trans "API anahtarı otomatik olarak oluşturulacak ve sadece bir kez gösterilecektir. Oluşturulduktan sonra güvenli bir yerde saklamanız gerekmektedir." %}
+  </p>
+  <p>
+    {% trans "Bu API anahtarı, harici sistemlerin TagWise kategorizasyon sistemine erişmesine olanak tanır. Anahtarları güvenli bir şekilde yönetin ve paylaşın." %}
+  </p>
+</div>
+
+{{ block.super }}
+{% endblock %} 

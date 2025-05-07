@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
 from . import views_chatbot
 app_name = 'tagwiseapp'
@@ -55,4 +55,7 @@ urlpatterns = [
     path('chatbot/conversations/<int:conversation_id>/', views_chatbot.get_conversation_messages, name='get_conversation_messages'),
     path('chatbot/conversations/<int:conversation_id>/delete/', views_chatbot.delete_conversation, name='delete_conversation'),
     path('chatbot/conversations/<int:conversation_id>/rename/', views_chatbot.rename_conversation, name='rename_conversation'),
+    
+    # REST API endpoints
+    path('api/v1/', include('tagwiseapp.api.urls')),
 ] 

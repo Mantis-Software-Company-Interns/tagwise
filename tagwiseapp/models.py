@@ -106,6 +106,7 @@ class ChatMessage(models.Model):
     is_user = models.BooleanField(default=True)  # True if sent by user, False if bot response
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         ordering = ['created_at']

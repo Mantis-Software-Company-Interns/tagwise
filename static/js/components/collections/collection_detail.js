@@ -10,6 +10,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialize bookmark menu functionality
     initializeBookmarkMenus();
+
+    // Initialize view toggle buttons (grid/list)
+    initializeViewToggle();
+
+    // Initialize share collection modal
+    initializeShareModal();
+
+    // Initialize action buttons (visit, copy)
+    initializeActionButtons();
 });
 
 function initializeEditModal() {
@@ -348,65 +357,84 @@ function initializeBookmarkMenus() {
             e.preventDefault();
             e.stopPropagation();
             
-            // Create menu element
-            const menu = document.createElement('div');
-            menu.className = 'bookmark-menu';
+            // Find the existing menu element
+            const menu = btn.nextElementSibling;
+            
+            // If menu doesn't exist, return
+            if (!menu || !menu.classList.contains('bookmark-menu')) {
+                console.error('Bookmark menu not found');
+                return;
+            }
+            
+            // Close any other open menus
+            document.querySelectorAll('.bookmark-menu.active').forEach(m => {
+                if (m !== menu) {
+                    m.classList.remove('active');
+                }
+            });
+            
+            // Toggle this menu
+            menu.classList.toggle('active');
             
             // Get bookmark ID and collection ID
             const bookmarkId = btn.getAttribute('data-id');
             const collectionId = window.location.pathname.split('/').filter(Boolean).pop();
             
-            // Add menu items
-            menu.innerHTML = `
-                <a href="#" class="menu-item edit-bookmark" data-id="${bookmarkId}">
-                    <i class="material-icons">edit</i>
-                    <span>Edit</span>
-                </a>
-                <a href="#" class="menu-item remove-bookmark" data-id="${bookmarkId}">
-                    <i class="material-icons">remove_circle</i>
-                    <span>Remove from Collection</span>
-                </a>
-                <a href="#" class="menu-item delete-bookmark" data-id="${bookmarkId}">
-                    <i class="material-icons">delete</i>
-                    <span>Delete</span>
-                </a>
-            `;
-            
-            // Position menu
-            const rect = btn.getBoundingClientRect();
-            menu.style.top = `${rect.bottom + window.scrollY}px`;
-            menu.style.right = `${window.innerWidth - rect.right}px`;
-            
-            // Add to document
-            document.body.appendChild(menu);
-            
-            // Add click event to edit menu item
-            menu.querySelector('.edit-bookmark').addEventListener('click', (e) => {
-                e.preventDefault();
-                // Redirect to edit page
-                window.location.href = `/tagwise/?edit=${bookmarkId}`;
-            });
-            
-            // Add click event to remove menu item
-            menu.querySelector('.remove-bookmark').addEventListener('click', (e) => {
-                e.preventDefault();
-                if (confirm('Are you sure you want to remove this bookmark from the collection?')) {
-                    removeBookmarkFromCollection(bookmarkId, collectionId);
+            // Add click event to menu items if not already added
+            if (!menu.dataset.initialized) {
+                // View details menu item
+                const viewDetailsBtn = menu.querySelector('.menu-item.view-details');
+                if (viewDetailsBtn) {
+                    viewDetailsBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        // Implement view details functionality if needed
+                        showNotification('View details functionality will be implemented soon', 'info');
+                        menu.classList.remove('active');
+                    });
                 }
-            });
-            
-            // Add click event to delete menu item
-            menu.querySelector('.delete-bookmark').addEventListener('click', (e) => {
-                e.preventDefault();
-                if (confirm('Are you sure you want to delete this bookmark? This will remove it from all collections.')) {
-                    deleteBookmark(bookmarkId);
+                
+                // Edit menu item
+                const editBookmarkBtn = menu.querySelector('.menu-item.edit-bookmark');
+                if (editBookmarkBtn) {
+                    editBookmarkBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        // Redirect to edit page
+                        window.location.href = `/tagwise/?edit=${bookmarkId}`;
+                    });
                 }
-            });
+                
+                // Remove from collection menu item
+                const removeBookmarkBtn = menu.querySelector('.menu-item.remove-from-collection');
+                if (removeBookmarkBtn) {
+                    removeBookmarkBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        if (confirm('Are you sure you want to remove this bookmark from the collection?')) {
+                            removeBookmarkFromCollection(bookmarkId, collectionId);
+                        }
+                        menu.classList.remove('active');
+                    });
+                }
+                
+                // Delete menu item
+                const deleteBookmarkBtn = menu.querySelector('.menu-item.delete-bookmark');
+                if (deleteBookmarkBtn) {
+                    deleteBookmarkBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        if (confirm('Are you sure you want to delete this bookmark? This will remove it from all collections.')) {
+                            deleteBookmark(bookmarkId);
+                        }
+                        menu.classList.remove('active');
+                    });
+                }
+                
+                // Mark as initialized
+                menu.dataset.initialized = 'true';
+            }
             
             // Close menu when clicking outside
             const closeMenu = (e) => {
                 if (!menu.contains(e.target) && e.target !== btn) {
-                    menu.remove();
+                    menu.classList.remove('active');
                     document.removeEventListener('click', closeMenu);
                 }
             };
@@ -416,6 +444,15 @@ function initializeBookmarkMenus() {
                 document.addEventListener('click', closeMenu);
             }, 10);
         });
+    });
+    
+    // Close menus when pressing escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.bookmark-menu.active').forEach(menu => {
+                menu.classList.remove('active');
+            });
+        }
     });
 }
 
@@ -556,4 +593,142 @@ function showNotification(message, type = 'info') {
             notification.remove();
         }, 300);
     }, 3000);
+}
+
+function initializeViewToggle() {
+    const viewButtons = document.querySelectorAll('.view-btn');
+    const bookmarksContainer = document.getElementById('bookmarksContainer');
+    
+    if (!viewButtons.length || !bookmarksContainer) return;
+    
+    viewButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Remove active class from all buttons
+            viewButtons.forEach(b => b.classList.remove('active'));
+            
+            // Add active class to clicked button
+            btn.classList.add('active');
+            
+            // Get view type
+            const viewType = btn.getAttribute('data-view');
+            
+            // Update container class
+            if (viewType === 'grid') {
+                bookmarksContainer.classList.remove('list-view');
+            } else if (viewType === 'list') {
+                bookmarksContainer.classList.add('list-view');
+            }
+        });
+    });
+}
+
+function initializeShareModal() {
+    const shareBtn = document.getElementById('shareCollectionBtn');
+    const modal = document.getElementById('shareCollectionModal');
+    
+    if (!shareBtn || !modal) return;
+    
+    const closeBtn = modal.querySelector('.close-btn');
+    const cancelBtn = modal.querySelector('.close-modal-btn');
+    const copyLinkBtn = document.getElementById('copyShareLink');
+    const socialButtons = modal.querySelectorAll('.social-btn');
+    
+    // Open modal
+    shareBtn.addEventListener('click', () => {
+        modal.classList.add('active');
+    });
+    
+    // Close modal
+    [closeBtn, cancelBtn].forEach(btn => {
+        if (btn) {
+            btn.addEventListener('click', () => {
+                modal.classList.remove('active');
+            });
+        }
+    });
+    
+    // Close when clicking outside
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('active');
+        }
+    });
+    
+    // Copy link button
+    if (copyLinkBtn) {
+        copyLinkBtn.addEventListener('click', () => {
+            const linkInput = document.getElementById('shareLink');
+            if (linkInput) {
+                linkInput.select();
+                document.execCommand('copy');
+                showNotification('Link copied to clipboard', 'success');
+            }
+        });
+    }
+    
+    // Social share buttons
+    socialButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const platform = btn.getAttribute('data-platform');
+            const url = encodeURIComponent(document.getElementById('shareLink').value);
+            const title = encodeURIComponent(`Check out my collection: ${document.querySelector('.collection-details h1').textContent}`);
+            
+            let shareUrl = '';
+            switch (platform) {
+                case 'twitter':
+                    shareUrl = `https://twitter.com/intent/tweet?url=${url}&text=${title}`;
+                    break;
+                case 'facebook':
+                    shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+                    break;
+                case 'linkedin':
+                    shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
+                    break;
+            }
+            
+            if (shareUrl) {
+                window.open(shareUrl, '_blank', 'width=600,height=400');
+            }
+        });
+    });
+}
+
+function initializeActionButtons() {
+    // Visit buttons
+    document.querySelectorAll('.action-btn.visit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const url = btn.getAttribute('data-url');
+            if (url) {
+                window.open(url, '_blank');
+            }
+        });
+    });
+    
+    // Copy buttons
+    document.querySelectorAll('.action-btn.copy-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const url = btn.getAttribute('data-url');
+            if (url) {
+                // Create a temporary input element
+                const temp = document.createElement('input');
+                temp.value = url;
+                document.body.appendChild(temp);
+                
+                // Select and copy
+                temp.select();
+                document.execCommand('copy');
+                
+                // Remove the temporary element
+                document.body.removeChild(temp);
+                
+                showNotification('URL copied to clipboard', 'success');
+            }
+        });
+    });
 }

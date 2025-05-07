@@ -102,7 +102,7 @@ def tags(request):
         user__in=[request.user, None]
     ).annotate(
         bookmark_count=models.Count('bookmark', filter=models.Q(bookmark__user=request.user))
-    ).order_by('name')
+    ).order_by(models.functions.Lower('name'))  # Use Lower function for case-insensitive sorting
     
     # Get recent tags (those with bookmarks added in the last 7 days)
     from django.utils import timezone
@@ -123,17 +123,35 @@ def tags(request):
         user__in=[request.user, None]
     ).annotate(
         bookmark_count=models.Count('bookmark', filter=models.Q(bookmark__user=request.user))
-    ).order_by('name')
+    ).order_by(models.functions.Lower('name'))  # Use Lower function for case-insensitive sorting
     
     # Group tags by first letter for organization
     for tag in tags:
         if tag.name:
-            tag.group = tag.name[0].upper()
+            # Use normalized first letter for proper grouping
+            first_char = tag.name[0].upper()
+            # Check if the first character is a letter
+            if first_char.isalpha():
+                tag.group = first_char
+            else:
+                tag.group = '#'  # Non-alphabetic characters go to # group
         else:
             tag.group = '#'
     
+    # Sort tags by group for consistent display
+    from itertools import groupby
+    from operator import attrgetter
+    
+    # Sort tags by group first, then by name
+    sorted_tags = sorted(tags, key=lambda t: (t.group, t.name.lower()))
+    
+    # Group by letter
+    grouped_tags = []
+    for k, g in groupby(sorted_tags, key=attrgetter('group')):
+        grouped_tags.append({'grouper': k, 'list': list(g)})
+    
     return render(request, 'tags/tags.html', {
-        'tags': tags,
+        'tags': grouped_tags,
         'recent_tags': recent_tags
     })
 
@@ -293,8 +311,8 @@ def analyze_url(request):
                         screenshot_path = normalize_thumbnail_path(thumbnail_path)
                         print(f"YouTube thumbnail kaydedildi: {screenshot_path}")
                 
-                # YouTube analizini yap
-                result = analyze_youtube_video(url)
+                # YouTube analizini yap - kullanıcıyı analize ilet
+                result = analyze_youtube_video(url, user=request.user)
                 
                 if result:
                     print(f"YouTube analizi tamamlandı: {result}")
@@ -389,14 +407,15 @@ def analyze_url(request):
                     # Convert binary screenshot to base64 for analysis
                     screenshot_base64 = base64.b64encode(screenshot).decode('utf-8')
                     # Ekran görüntüsünü Gemini ile analiz et ve kategorize et
-                    category_json = analyze_screenshot(screenshot_base64, url)
+                    # Kullanıcıyı analize ilet
+                    category_json = analyze_screenshot(screenshot_base64, url, user=request.user)
                     screenshot_used = True
             
             # Eğer ekran görüntüsü analizi yapılmadıysa veya başarısız olduysa, HTML içeriğini kategorize et
             if not category_json and content:
                 print("İçerik çıkarıldı, kategorize ediliyor...")
-                # Categorize content
-                category_json = categorize_content(content, url)
+                # Kategorize içerik - kullanıcıyı analize ilet
+                category_json = categorize_content(content, url, user=request.user)
             
             if not content and not category_json:
                 return JsonResponse({'error': 'İçerik alınamadı veya analiz edilemedi'}, status=400)

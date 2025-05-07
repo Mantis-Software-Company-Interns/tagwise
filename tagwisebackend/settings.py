@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'tagwiseapp.apps.TagwiseappConfig',
+    'rest_framework',  # Django REST Framework
 ]
 
 MIDDLEWARE = [
@@ -92,8 +93,12 @@ WSGI_APPLICATION = 'tagwisebackend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'tagwisedb'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'postgres'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
@@ -148,3 +153,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Login URL settings
 LOGIN_URL = 'tagwiseapp:login'
 LOGIN_REDIRECT_URL = 'tagwiseapp:index'
+
+# Django REST Framework settings
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'tagwiseapp.api.authentication.ApiKeyAuthentication',
+    ],
+}

@@ -182,7 +182,7 @@ def generate_summary_from_content(content: str, url: str) -> str:
         return f"URL: {url} için HTML içeriğinden özet oluşturulamadı."
 
 
-def categorize_content(content: str, url: str, existing_title: Optional[str] = None, existing_description: Optional[str] = None, use_structured_output: bool = True) -> Dict:
+def categorize_content(content: str, url: str, existing_title: Optional[str] = None, existing_description: Optional[str] = None, use_structured_output: bool = True, user=None) -> Dict:
     """
     HTML içeriğini kategorize eder ve etiketler.
 
@@ -192,6 +192,7 @@ def categorize_content(content: str, url: str, existing_title: Optional[str] = N
         existing_title (Optional[str], optional): Mevcut başlık. Defaults to None.
         existing_description (Optional[str], optional): Mevcut açıklama. Defaults to None.
         use_structured_output (bool, optional): Whether to use structured output. Defaults to True.
+        user: Kullanıcı objesi, kişiselleştirilmiş kategoriler için kullanılır. Defaults to None.
 
     Returns:
         Dict: Kategorize edilmiş sonuçlar
@@ -217,9 +218,9 @@ def categorize_content(content: str, url: str, existing_title: Optional[str] = N
         # LLM ayarlarını yükle
         settings = get_model_config()
         
-        # Kategori verilerini yükle
-        existing_categories = get_existing_categories()
-        tags = get_existing_tags()
+        # Kategori verilerini yükle - kullanıcı bazlı
+        existing_categories = get_existing_categories(user)
+        tags = get_existing_tags(user)
         
         # Kategori ve etiketler için LLM prompt'u hazırla
         prompt = CategoryPromptFactory.create_category_prompt(
@@ -386,7 +387,7 @@ def categorize_content(content: str, url: str, existing_title: Optional[str] = N
         return default_result
 
 
-def analyze_screenshot(screenshot_base64: str, url: str, existing_title: Optional[str] = None, existing_description: Optional[str] = None, use_structured_output: bool = True) -> Dict:
+def analyze_screenshot(screenshot_base64: str, url: str, existing_title: Optional[str] = None, existing_description: Optional[str] = None, use_structured_output: bool = True, user=None) -> Dict:
     """
     Ekran görüntüsünü analiz eder ve kategorize eder.
 
@@ -396,6 +397,7 @@ def analyze_screenshot(screenshot_base64: str, url: str, existing_title: Optiona
         existing_title (Optional[str], optional): Mevcut başlık. Defaults to None.
         existing_description (Optional[str], optional): Mevcut açıklama. Defaults to None.
         use_structured_output (bool, optional): Whether to use structured output. Defaults to True.
+        user: Kullanıcı objesi, kişiselleştirilmiş kategoriler için kullanılır. Defaults to None.
 
     Returns:
         Dict: Analiz sonuçları
@@ -406,9 +408,9 @@ def analyze_screenshot(screenshot_base64: str, url: str, existing_title: Optiona
         # LLM ayarlarını yükle
         settings = get_model_config()
         
-        # Kategori verilerini yükle
-        existing_categories = get_existing_categories()
-        tags = get_existing_tags()
+        # Kategori verilerini yükle - kullanıcı bazlı
+        existing_categories = get_existing_categories(user)
+        tags = get_existing_tags(user)
         
         # Multimodal LLM için prompt hazırla
         prompt = CategoryPromptFactory.create_screenshot_category_prompt(

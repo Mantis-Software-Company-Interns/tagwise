@@ -40,7 +40,7 @@
         <div class="tags-grid recent-grid">
             {% if recent_tags %}
                 {% for tag in recent_tags %}
-                <a href="{% url 'tagwiseapp:tagged_bookmarks' %}?tag={{ tag.name|urlencode }}" class="tag-card" data-tag="{{ tag.name }}">
+                <a href="{% url 'tagwiseapp:tagged_bookmarks' %}?tag={{ tag.name|urlencode }}" class="tag-card">
                     <span class="tag-name">{{ tag.name }}</span>
                     <span class="tag-count">{{ tag.bookmark_count }}</span>
                 </a>
@@ -58,13 +58,12 @@
     <!-- All Tags Section -->
     <div class="all-tags-section">
         {% if tags %}
-            {% regroup tags by group as tag_groups %}
-            {% for group in tag_groups %}
+            {% for group in tags %}
                 <div class="tag-group">
                     <h3>{{ group.grouper|default:"General" }}</h3>
                     <div class="tags-grid">
                         {% for tag in group.list %}
-                        <a href="{% url 'tagwiseapp:tagged_bookmarks' %}?tag={{ tag.name|urlencode }}" class="tag-card" data-tag="{{ tag.name }}">
+                        <a href="{% url 'tagwiseapp:tagged_bookmarks' %}?tag={{ tag.name|urlencode }}" class="tag-card">
                             <span class="tag-name">{{ tag.name }}</span>
                             <span class="tag-count">{{ tag.bookmark_count }}</span>
                         </a>
@@ -79,50 +78,6 @@
                 <p>Tags will appear here when you add bookmarks with tags.</p>
             </div>
         {% endif %}
-    </div>
-</div>
-{% endblock %}
-
-{% block modals %}
-<!-- Tagged-Bookmarks Overlay -->
-<div class="tagged-bookmarks-overlay" id="taggedBookmarksOverlay">
-    <div class="overlay-backdrop"></div>
-    <div class="overlay-container">
-        <div class="overlay-content">
-            <header class="overlay-header">
-                <div class="header-left">
-                    <button class="back-btn">
-                        <i class="material-icons">arrow_back</i>
-                    </button>
-                    <div class="tag-info">
-                        <i class="material-icons">local_offer</i>
-                        <h2 id="currentTag">javascript</h2>
-                        <span class="bookmark-count">45 bookmarks</span>
-                    </div>
-                </div>
-                <div class="header-right">
-                    <div class="search-container">
-                        <i class="material-icons">search</i>
-                        <input type="text" placeholder="Search in bookmarks...">
-                    </div>
-                </div>
-            </header>
-
-            <div class="overlay-body">
-                <aside class="related-tags-sidebar">
-                    <h3>Related Tags</h3>
-                    <div class="related-tags-list" id="relatedTags">
-                        <!-- Related tags will be populated here -->
-                    </div>
-                </aside>
-
-                <main class="bookmarks-content">
-                    <div class="bookmarks-grid" id="taggedBookmarksGrid">
-                        <!-- Bookmarks will be populated here -->
-                    </div>
-                </main>
-            </div>
-        </div>
     </div>
 </div>
 {% endblock %}

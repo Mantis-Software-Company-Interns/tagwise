@@ -531,7 +531,7 @@ class ChatbotManager {
                     botMessageContent.innerHTML = this.formatMessage(data.message);
                 } else {
                     // Fallback if somehow the element was removed
-                    this.addBotMessage(data.message);
+                this.addBotMessage(data.message);
                 }
                 
                 // Add sources if any
@@ -579,8 +579,8 @@ class ChatbotManager {
                 // Show error in the placeholder message
                 if (botMessageContent) {
                     botMessageContent.innerHTML = this.formatMessage('Sorry, I encountered an error processing your request. ' + data.message);
-                } else {
-                    this.addBotMessage('Sorry, I encountered an error processing your request. ' + data.message);
+            } else {
+                this.addBotMessage('Sorry, I encountered an error processing your request. ' + data.message);
                 }
                 
                 console.error('Error from chatbot:', data.message);
@@ -593,7 +593,7 @@ class ChatbotManager {
             if (botMessageContent) {
                 botMessageContent.innerHTML = this.formatMessage('Sorry, I encountered an error connecting to the server. Please try again later.');
             } else {
-                this.addBotMessage('Sorry, I encountered an error connecting to the server. Please try again later.');
+            this.addBotMessage('Sorry, I encountered an error connecting to the server. Please try again later.');
             }
             
             console.error('Error in traditional message:', error);

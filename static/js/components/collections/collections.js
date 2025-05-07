@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupMoreButtons();
     setupEditActions();
     setupDeleteActions();
+    setupBookmarkSelection();
 
     // Trigger initial load
     loadBookmarks(currentFilter, currentSort);
@@ -37,29 +38,45 @@ function setupCollectionCardClicks() {
 function setupMoreButtons() {
     const moreButtons = document.querySelectorAll('.more-btn');
     
+    // Close all open menus function
+    const closeAllMenus = () => {
+        document.querySelectorAll('.more-menu.active').forEach(menu => {
+            menu.classList.remove('active');
+        });
+    };
+    
     moreButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
+            e.preventDefault();
+            
             const menu = btn.nextElementSibling;
             
-            // Diğer açık menüleri kapat
-            document.querySelectorAll('.more-menu.active').forEach(m => {
-                if (m !== menu) {
-                    m.classList.remove('active');
-                }
-            });
+            // If this menu is already active, just close it
+            if (menu.classList.contains('active')) {
+                menu.classList.remove('active');
+                return;
+            }
             
-            // Bu menüyü aç/kapat
-            menu.classList.toggle('active');
+            // Close all open menus
+            closeAllMenus();
+            
+            // Open this menu
+            menu.classList.add('active');
         });
     });
     
-    // Sayfa tıklamasında açık menüleri kapat
+    // Close menus when clicking anywhere else on the page
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.more-btn') && !e.target.closest('.more-menu')) {
-            document.querySelectorAll('.more-menu.active').forEach(menu => {
-                menu.classList.remove('active');
-            });
+            closeAllMenus();
+        }
+    });
+    
+    // Close menus when pressing escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeAllMenus();
         }
     });
 }
@@ -179,12 +196,172 @@ function filterBookmarks(searchTerm) {
     });
 }
 
+// Setup bookmark selection functionality
+function setupBookmarkSelection() {
+    const bookmarks = document.querySelectorAll('.bookmark-selector');
+    const checkboxes = document.querySelectorAll('.bookmark-check');
+    const clearSelectionBtn = document.getElementById('clearSelection');
+    const selectedCountElem = document.getElementById('selectedCount');
+    const previewContent = document.querySelector('.preview-content');
+    const collapsePreviewBtn = document.getElementById('collapsePreview');
+    
+    // Track selected bookmarks
+    let selectedBookmarks = [];
+    
+    // Add click event to entire bookmark selector
+    bookmarks.forEach(bookmark => {
+        bookmark.addEventListener('click', (e) => {
+            // Don't toggle if clicking on a link
+            if (e.target.tagName === 'A') return;
+            
+            const checkbox = bookmark.querySelector('input[type="checkbox"]');
+            // Don't process if clicking directly on checkbox (it handles its own state)
+            if (e.target === checkbox) return;
+            
+            // Toggle checkbox state
+            checkbox.checked = !checkbox.checked;
+            
+            // Manually trigger change event
+            const changeEvent = new Event('change');
+            checkbox.dispatchEvent(changeEvent);
+        });
+    });
+    
+    // Add change event to checkboxes
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            const bookmark = checkbox.closest('.bookmark-selector');
+            const bookmarkId = bookmark.dataset.id;
+            const title = bookmark.dataset.title;
+            const url = bookmark.dataset.url;
+            
+            if (checkbox.checked) {
+                // Add selected class to parent
+                bookmark.classList.add('selected');
+                
+                // Add to selected array if not already there
+                if (!selectedBookmarks.some(bm => bm.id === bookmarkId)) {
+                    selectedBookmarks.push({
+                        id: bookmarkId,
+                        title: title,
+                        url: url
+                    });
+                }
+            } else {
+                // Remove selected class
+                bookmark.classList.remove('selected');
+                
+                // Remove from selected array
+                selectedBookmarks = selectedBookmarks.filter(bm => bm.id !== bookmarkId);
+            }
+            
+            // Update the counter
+            updateSelectionCount();
+            
+            // Update the preview
+            updateSelectionPreview();
+        });
+    });
+    
+    // Clear selection button
+    if (clearSelectionBtn) {
+        clearSelectionBtn.addEventListener('click', () => {
+            // Uncheck all checkboxes
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+                
+                // Remove selected class from parent
+                const bookmark = checkbox.closest('.bookmark-selector');
+                bookmark.classList.remove('selected');
+            });
+            
+            // Clear selected array
+            selectedBookmarks = [];
+            
+            // Update counter and preview
+            updateSelectionCount();
+            updateSelectionPreview();
+        });
+    }
+    
+    // Collapse/expand preview
+    if (collapsePreviewBtn) {
+        collapsePreviewBtn.addEventListener('click', () => {
+            const previewContent = document.querySelector('.preview-content');
+            const icon = collapsePreviewBtn.querySelector('i');
+            
+            if (previewContent.style.display === 'none') {
+                previewContent.style.display = 'block';
+                icon.textContent = 'expand_less';
+            } else {
+                previewContent.style.display = 'none';
+                icon.textContent = 'expand_more';
+            }
+        });
+    }
+    
+    // Update the selection counter
+    function updateSelectionCount() {
+        if (selectedCountElem) {
+            selectedCountElem.textContent = selectedBookmarks.length;
+        }
+    }
+    
+    // Update the selection preview
+    function updateSelectionPreview() {
+        if (!previewContent) return;
+        
+        if (selectedBookmarks.length === 0) {
+            previewContent.innerHTML = '<p class="empty-preview-message">No bookmarks selected</p>';
+            return;
+        }
+        
+        let previewHTML = '';
+        selectedBookmarks.forEach(bookmark => {
+            previewHTML += `
+                <div class="preview-item" data-id="${bookmark.id}">
+                    <h5 class="preview-item-title">${bookmark.title}</h5>
+                    <button class="remove-preview-item" data-id="${bookmark.id}">
+                        <i class="material-icons">close</i>
+                    </button>
+                </div>
+            `;
+        });
+        
+        previewContent.innerHTML = previewHTML;
+        
+        // Add remove buttons functionality
+        const removeButtons = previewContent.querySelectorAll('.remove-preview-item');
+        removeButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const bookmarkId = button.dataset.id;
+                
+                // Find the checkbox for this bookmark and uncheck it
+                const checkbox = document.querySelector(`.bookmark-selector[data-id="${bookmarkId}"] input[type="checkbox"]`);
+                if (checkbox) {
+                    checkbox.checked = false;
+                    
+                    // Manually trigger change event
+                    const changeEvent = new Event('change');
+                    checkbox.dispatchEvent(changeEvent);
+                }
+            });
+        });
+    }
+}
+
 function saveCollection() {
     const name = document.getElementById('collectionName').value;
     const description = document.getElementById('collectionDescription').value;
     const icon = document.getElementById('selectedIcon').textContent;
-    const selectedBookmarks = Array.from(document.querySelectorAll('#selectedBookmarks .bookmark-item'))
-        .map(item => parseInt(item.dataset.id));
+    
+    // Get selected bookmarks from checkboxes
+    const selectedBookmarks = Array.from(document.querySelectorAll('.bookmark-check:checked'))
+        .map(checkbox => {
+            const bookmarkSelector = checkbox.closest('.bookmark-selector');
+            return parseInt(bookmarkSelector.dataset.id);
+        });
 
     if (!name) {
         showNotification('Please enter a collection name', 'error');
@@ -192,7 +369,7 @@ function saveCollection() {
     }
     
     if (selectedBookmarks.length === 0) {
-        showNotification('Please add at least one bookmark to your collection', 'error');
+        showNotification('Please select at least one bookmark for your collection', 'error');
         return;
     }
 
@@ -206,6 +383,12 @@ function saveCollection() {
         icon,
         bookmarks: selectedBookmarks
     };
+
+    // Show loading indication
+    const saveBtn = document.querySelector('.save-collection-btn');
+    const originalBtnText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="material-icons rotating">refresh</i> Creating...';
+    saveBtn.disabled = true;
 
     // Make API call
     fetch('/api/create-collection/', {
@@ -230,11 +413,15 @@ function saveCollection() {
                 window.location.reload();
             }, 1500);
         } else {
+            saveBtn.innerHTML = originalBtnText;
+            saveBtn.disabled = false;
             showNotification('Error creating collection: ' + data.error, 'error');
         }
     })
     .catch(error => {
         console.error('Error creating collection:', error);
+        saveBtn.innerHTML = originalBtnText;
+        saveBtn.disabled = false;
         showNotification('Error creating collection. Please try again.', 'error');
     });
     
@@ -556,35 +743,55 @@ function setupNewCollectionModal() {
 
 // Set up icon selection
 function setupIconSelection() {
-    const modal = document.getElementById('newCollectionModal');
-    if (!modal) return;
+    const iconSelectors = document.querySelectorAll('.icon-selector');
     
-    const iconSelector = modal.querySelector('.selected-icon');
-    const iconGrid = modal.querySelector('.icon-grid');
-    
-    if (!iconSelector || !iconGrid) return;
-    
-    // Icon selector
-    iconSelector.addEventListener('click', () => {
-        iconGrid.classList.toggle('active');
-    });
-
-    iconGrid.querySelectorAll('i').forEach(icon => {
-        icon.addEventListener('click', () => {
-            const selectedIcon = document.getElementById('selectedIcon');
-            if (selectedIcon) {
-                selectedIcon.textContent = icon.textContent;
+    iconSelectors.forEach(selector => {
+        const selectedIcon = selector.querySelector('.selected-icon');
+        const iconGrid = selector.querySelector('.icon-grid');
+        const icons = iconGrid.querySelectorAll('i.material-icons');
+        
+        // Click on selected icon to show/hide grid
+        selectedIcon.addEventListener('click', (e) => {
+            e.preventDefault();
+            iconGrid.classList.toggle('active');
+        });
+        
+        // Click outside to close the icon grid
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.icon-selector') && iconGrid.classList.contains('active')) {
                 iconGrid.classList.remove('active');
             }
         });
+        
+        // Click an icon to select it
+        icons.forEach(icon => {
+            icon.addEventListener('click', () => {
+                // Update the selected icon
+                const iconContent = icon.textContent;
+                const iconToUpdate = selectedIcon.querySelector('i.material-icons');
+                iconToUpdate.textContent = iconContent;
+                
+                // Close the grid
+                iconGrid.classList.remove('active');
+                
+                // Add subtle animation
+                selectedIcon.classList.add('icon-updated');
+                setTimeout(() => {
+                    selectedIcon.classList.remove('icon-updated');
+                }, 300);
+            });
+        });
     });
-
-    // Click outside check
-    document.addEventListener('click', (e) => {
-        if (iconSelector && !iconSelector.contains(e.target)) {
-            iconGrid.classList.remove('active');
+    
+    // Add CSS for animation
+    const style = document.createElement('style');
+    style.textContent = `
+        .icon-updated {
+            transform: scale(1.1);
+            transition: transform 0.3s ease;
         }
-    });
+    `;
+    document.head.appendChild(style);
 }
 
 // Load bookmarks with current filter and sort options
@@ -596,4 +803,127 @@ function loadBookmarks(filter, sort) {
 
 // Global variables for current filter and sort
 let currentFilter = 'all';
-let currentSort = 'date'; 
+let currentSort = 'date';
+
+// Setup search and filtering for bookmarks in the new collection modal
+function setupSearchAndFiltering() {
+    const searchInput = document.getElementById('bookmarkSearch');
+    const filterButtons = document.querySelectorAll('.filter-buttons .filter-btn');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce((e) => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            filterBookmarkSelectors(searchTerm);
+        }, 300));
+    }
+    
+    if (filterButtons.length) {
+        filterButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Update active button
+                filterButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // Apply filter
+                const filter = btn.getAttribute('data-filter');
+                applyBookmarkFilter(filter);
+            });
+        });
+    }
+    
+    // Function to filter bookmarks based on search term
+    function filterBookmarkSelectors(searchTerm) {
+        const bookmarks = document.querySelectorAll('.bookmark-selector');
+        
+        bookmarks.forEach(bookmark => {
+            const title = bookmark.querySelector('.bookmark-title').textContent.toLowerCase();
+            const url = bookmark.querySelector('.bookmark-url').textContent.toLowerCase();
+            
+            if (title.includes(searchTerm) || url.includes(searchTerm) || searchTerm === '') {
+                bookmark.style.display = 'flex';
+            } else {
+                bookmark.style.display = 'none';
+            }
+        });
+        
+        // Show no results message if needed
+        const visibleBookmarks = Array.from(bookmarks).filter(b => b.style.display !== 'none');
+        const container = document.querySelector('.bookmarks-selection-area');
+        
+        if (visibleBookmarks.length === 0 && container) {
+            // Check if message already exists
+            if (!document.querySelector('.no-search-results')) {
+                const noResults = document.createElement('div');
+                noResults.className = 'empty-state no-search-results';
+                noResults.innerHTML = `
+                    <i class="material-icons">search_off</i>
+                    <h3>No Results</h3>
+                    <p>No bookmarks match your search for "${searchTerm}"</p>
+                `;
+                container.appendChild(noResults);
+            }
+        } else {
+            // Remove message if it exists
+            const noResults = document.querySelector('.no-search-results');
+            if (noResults) {
+                noResults.remove();
+            }
+        }
+    }
+    
+    // Function to apply filter (all, recent, popular)
+    function applyBookmarkFilter(filter) {
+        const bookmarks = document.querySelectorAll('.bookmark-selector');
+        const now = new Date();
+        
+        switch(filter) {
+            case 'recent':
+                // Show only bookmarks added in the last 7 days
+                // This is a simplified example - you would need to have date data in your bookmarks
+                bookmarks.forEach(bookmark => {
+                    // Example: Assuming you have a data-date attribute with ISO date string
+                    const dateStr = bookmark.dataset.date;
+                    if (dateStr) {
+                        const date = new Date(dateStr);
+                        const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+                        bookmark.style.display = diffDays <= 7 ? 'flex' : 'none';
+                    } else {
+                        // If no date info, just show it
+                        bookmark.style.display = 'flex';
+                    }
+                });
+                break;
+                
+            case 'popular':
+                // Show bookmarks sorted by popularity (visits, etc.)
+                // This is a simplified example - you would need visit count data
+                bookmarks.forEach(bookmark => {
+                    // Example: Assuming you have a data-popularity attribute
+                    const popularity = parseInt(bookmark.dataset.popularity || 0);
+                    bookmark.style.display = popularity >= 5 ? 'flex' : 'none';
+                });
+                break;
+                
+            case 'all':
+            default:
+                // Show all bookmarks
+                bookmarks.forEach(bookmark => {
+                    bookmark.style.display = 'flex';
+                });
+                break;
+        }
+    }
+}
+
+// Helper function for debouncing
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+} 

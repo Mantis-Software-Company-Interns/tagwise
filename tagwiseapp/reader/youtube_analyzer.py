@@ -370,12 +370,13 @@ def get_youtube_video_info(url):
             print(f"PyTube ile video bilgileri alınırken hata: {pytube_err}")
             return None
 
-def analyze_youtube_video(url):
+def analyze_youtube_video(url, user=None):
     """
     YouTube videosunu analiz eder ve kategorize eder.
     
     Args:
         url (str): YouTube video URL'si
+        user: Kullanıcı objesi, kişiselleştirilmiş kategoriler için kullanılır. Defaults to None.
         
     Returns:
         dict: Analiz sonuçları
@@ -414,9 +415,9 @@ def analyze_youtube_video(url):
             # Eğer thumbnail URL'i yoksa, doğrudan YouTube thumbnail URL'i oluştur
             video_info['thumbnail_url'] = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
         
-        # Mevcut kategorileri ve etiketleri al
-        existing_categories = get_existing_categories()
-        existing_tags = get_existing_tags()
+        # Mevcut kategorileri ve etiketleri al - kullanıcı bazlı
+        existing_categories = get_existing_categories(user)
+        existing_tags = get_existing_tags(user)
         
         # Kategorileri main ve sub olarak ayır
         main_categories = [cat.get('name') for cat in existing_categories if cat.get('is_main', False)]

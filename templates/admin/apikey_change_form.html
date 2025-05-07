@@ -1,0 +1,71 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  .api-key-display {
+    font-family: monospace;
+    padding: 15px;
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    position: relative;
+  }
+  
+  .api-key-actions {
+    margin-top: 10px;
+  }
+  
+  .copy-button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+</style>
+{% endblock %}
+
+{% block object-tools %}
+{{ block.super }}
+<div class="api-key-info">
+  <h3>{% trans "API Key Information" %}</h3>
+  <p>{% trans "The API key is not displayed in full for security reasons. Use the regenerate action if you need a new key." %}</p>
+</div>
+{% endblock %}
+
+{% block after_field_sets %}
+<script type="text/javascript">
+  document.addEventListener("DOMContentLoaded", function() {
+    // Add copy functionality to API key field if it exists
+    const apiKeyField = document.getElementById("api-key-value");
+    if (apiKeyField) {
+      const copyBtn = document.createElement("button");
+      copyBtn.className = "copy-button";
+      copyBtn.innerText = "{% trans 'Copy' %}";
+      copyBtn.onclick = function(e) {
+        e.preventDefault();
+        navigator.clipboard.writeText(apiKeyField.textContent)
+          .then(() => {
+            copyBtn.innerText = "{% trans 'Copied!' %}";
+            setTimeout(() => {
+              copyBtn.innerText = "{% trans 'Copy' %}";
+            }, 2000);
+          })
+          .catch(err => {
+            console.error('Could not copy text: ', err);
+          });
+      };
+      apiKeyField.parentNode.appendChild(copyBtn);
+    }
+  });
+</script>
+{% endblock %} 

@@ -1,0 +1,49 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# TagWise Project Structure
+
+This rule outlines the directory structure and organization of the TagWise project.
+
+## Main Directories
+
+- **tagwiseapp/**: Core application directory
+  - Contains models, views, business logic
+  - Houses the AI components and content processing
+
+- **tagwisebackend/**: Django project settings
+  - Configuration for the entire project
+  - Main URL routing
+
+- **templates/**: HTML templates
+  - Frontend views and components
+
+- **static/**: Static files
+  - CSS, JavaScript, images
+  - Frontend assets
+
+- **media/**: User-uploaded content
+  - Screenshots
+  - Profile photos
+
+- **docs/**: Documentation
+
+## Key Configuration Files
+
+- [requirements.txt](mdc:requirements.txt): Python dependencies
+- [manage.py](mdc:manage.py): Django management script
+- [gemini_config.json](mdc:gemini_config.json): AI configuration
+
+## Testing
+
+- Test files at the root level:
+  - [test_all.py](mdc:test_all.py)
+  - [test_analyzer.py](mdc:test_analyzer.py)
+  - [test_reader.py](mdc:test_reader.py)
+  - [test_structured_output.py](mdc:test_structured_output.py)
+
+- App-specific tests:
+  - [tagwiseapp/tests.py](mdc:tagwiseapp/tests.py)
+  - [tagwiseapp/tests_chatbot.py](mdc:tagwiseapp/tests_chatbot.py)

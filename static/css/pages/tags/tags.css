@@ -31,12 +31,12 @@
 .filter-btn {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    background: var(--secondary-bg, #f5f7fa);
-    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
-    border-radius: 8px;
-    color: var(--text-secondary, #64748b);
+    gap: 8px;
+    padding: 10px 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    color: #64748b;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -47,13 +47,15 @@
 }
 
 .filter-btn:hover {
-    background: var(--hover-bg, #e9ecef);
+    background: #f1f5f9;
+    color: #475569;
 }
 
 .filter-btn.active {
-    background: var(--primary-color, #2196F3);
+    background: #2196F3;
     color: white;
-    border-color: var(--primary-color, #2196F3);
+    border-color: #2196F3;
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
 }
 
 /* Add URL Button */
@@ -112,13 +114,39 @@
 /* Tag Group */
 .tag-group {
     margin-bottom: 30px;
+    animation: fadeIn 0.5s ease-out;
 }
 
 .tag-group h3 {
     color: #334155;
-    font-size: 1.25rem;
+    font-size: 1.5rem;
     font-weight: 600;
     margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    position: relative;
+}
+
+.tag-group h3::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 50px;
+    height: 3px;
+    background-color: #2196F3;
+    border-radius: 3px;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Tag Card */
@@ -127,32 +155,65 @@
     justify-content: space-between;
     align-items: center;
     background: white;
-    padding: 1rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    transition: all 0.2s;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: all 0.3s;
     text-decoration: none;
     color: inherit;
     border: 1px solid #e2e8f0;
+    position: relative;
+    overflow: hidden;
+}
+
+.tag-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: #2196F3;
+    opacity: 0;
+    transition: opacity 0.3s;
 }
 
 .tag-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+    border-color: #cbd5e1;
+}
+
+.tag-card:hover::before {
+    opacity: 1;
 }
 
 .tag-name {
     font-size: 16px;
-    color: var(--primary-color, #2196F3);
+    color: #334155;
     font-weight: 500;
+    transition: color 0.3s;
+}
+
+.tag-card:hover .tag-name {
+    color: #2196F3;
 }
 
 .tag-count {
     background: rgba(33, 150, 243, 0.1);
     color: #1976D2;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.875rem;
+    padding: 6px 10px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    min-width: 28px;
+    text-align: center;
+    transition: all 0.3s;
+}
+
+.tag-card:hover .tag-count {
+    background: rgba(33, 150, 243, 0.2);
+    transform: scale(1.05);
 }
 
 /* Empty States */
@@ -448,6 +509,21 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 20px;
+}
+
+/* No results state */
+.no-results {
+    grid-column: 1 / -1;
+    margin-top: 20px;
+}
+
+.no-results i {
+    color: #94a3b8;
+}
+
+/* Hide search tags by default since we're implementing it in JS */
+.search-tags-overlay {
+    display: none;
 }
 
 /* Responsive Styles */

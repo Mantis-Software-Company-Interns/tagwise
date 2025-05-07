@@ -59,14 +59,15 @@
         </div>
         <div class="modal-body collection-creator">
             {% csrf_token %}
+            <!-- Left sidebar with collection details -->
             <div class="collection-form">
                 <div class="form-group">
                     <label for="collectionName">Collection Name</label>
-                    <input type="text" id="collectionName" required>
+                    <input type="text" id="collectionName" placeholder="My Collection" required>
                 </div>
                 <div class="form-group">
                     <label for="collectionDescription">Description</label>
-                    <textarea id="collectionDescription" rows="3"></textarea>
+                    <textarea id="collectionDescription" rows="3" placeholder="Describe your collection..."></textarea>
                 </div>
                 <div class="form-group">
                     <label for="collectionIcon">Icon</label>
@@ -76,29 +77,68 @@
                         </button>
                         <div class="icon-grid">
                             <i class="material-icons">collections_bookmark</i>
+                            <i class="material-icons">folder</i>
+                            <i class="material-icons">work</i>
+                            <i class="material-icons">school</i>
                             <i class="material-icons">code</i>
                             <i class="material-icons">book</i>
                             <i class="material-icons">article</i>
-                            <i class="material-icons">school</i>
-                            <i class="material-icons">work</i>
+                            <i class="material-icons">science</i>
+                            <i class="material-icons">psychology</i>
+                            <i class="material-icons">public</i>
+                            <i class="material-icons">travel_explore</i>
+                            <i class="material-icons">restaurant</i>
+                            <i class="material-icons">fitness_center</i>
+                            <i class="material-icons">sports_esports</i>
+                            <i class="material-icons">movie</i>
+                            <i class="material-icons">music_note</i>
+                            <i class="material-icons">shopping_cart</i>
+                            <i class="material-icons">attach_money</i>
                             <i class="material-icons">favorite</i>
                             <i class="material-icons">star</i>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="collection-bookmarks">
-                <div class="bookmarks-search">
-                    <i class="material-icons">search</i>
-                    <input type="text" placeholder="Search bookmarks to add...">
+                
+                <!-- Bookmark statistics -->
+                <div class="selection-stats">
+                    <h4>Selected Bookmarks</h4>
+                    <div class="stat-counter">
+                        <span id="selectedCount">0</span> of <span id="totalCount">{{ bookmarks|length }}</span>
+                    </div>
+                    <button id="clearSelection" class="text-button">
+                        <i class="material-icons">clear_all</i>
+                        Clear Selection
+                    </button>
                 </div>
-                <div class="bookmarks-container">
-                    <div class="available-bookmarks">
-                        <h3>Available Bookmarks</h3>
-                        <div class="bookmarks-list" id="availableBookmarks">
-                            {% if bookmarks %}
-                                {% for bookmark in bookmarks %}
-                                <div class="bookmark-item" draggable="true" data-id="{{ bookmark.id }}">
+            </div>
+            
+            <!-- Right section with bookmark selection -->
+            <div class="collection-bookmarks">
+                <!-- Search and filter controls -->
+                <div class="bookmarks-controls">
+                    <div class="bookmarks-search">
+                        <i class="material-icons">search</i>
+                        <input type="text" id="bookmarkSearch" placeholder="Search bookmarks...">
+                    </div>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="recent">Recent</button>
+                        <button class="filter-btn" data-filter="popular">Popular</button>
+                    </div>
+                </div>
+                
+                <!-- Bookmark selection area -->
+                <div class="bookmarks-selection-area">
+                    {% if bookmarks %}
+                        <div class="bookmarks-grid" id="bookmarksGrid">
+                            {% for bookmark in bookmarks %}
+                            <div class="bookmark-selector" data-id="{{ bookmark.id }}" data-title="{{ bookmark.title }}" data-url="{{ bookmark.url }}">
+                                <div class="bookmark-checkbox">
+                                    <input type="checkbox" id="bm-{{ bookmark.id }}" class="bookmark-check">
+                                    <label for="bm-{{ bookmark.id }}"></label>
+                                </div>
+                                <div class="bookmark-preview">
                                     <div class="bookmark-icon">
                                         <i class="material-icons">link</i>
                                     </div>
@@ -107,29 +147,39 @@
                                         <p class="bookmark-url">{{ bookmark.url }}</p>
                                     </div>
                                 </div>
-                                {% endfor %}
-                            {% else %}
-                                <div class="empty-state">
-                                    <p>No bookmarks available</p>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="selected-bookmarks">
-                        <h3>Collection Bookmarks</h3>
-                        <div class="bookmarks-list" id="selectedBookmarks">
-                            <div class="empty-state">
-                                <i class="material-icons">drag_indicator</i>
-                                <p>Drag bookmarks here</p>
                             </div>
+                            {% endfor %}
                         </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="material-icons">bookmark_border</i>
+                            <h3>No Bookmarks</h3>
+                            <p>You don't have any bookmarks to add to a collection.</p>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Selected bookmarks preview (optional) -->
+                <div class="selected-preview" id="selectedPreview">
+                    <div class="preview-header">
+                        <h4>Selected Bookmarks</h4>
+                        <button id="collapsePreview" class="icon-button">
+                            <i class="material-icons">expand_less</i>
+                        </button>
+                    </div>
+                    <div class="preview-content">
+                        <!-- Selected bookmarks will appear here -->
+                        <p class="empty-preview-message">No bookmarks selected</p>
                     </div>
                 </div>
             </div>
         </div>
         <div class="modal-footer">
             <button class="cancel-btn">Cancel</button>
-            <button class="save-collection-btn">Create Collection</button>
+            <button class="save-collection-btn">
+                <i class="material-icons">save</i>
+                Create Collection
+            </button>
         </div>
     </div>
 </div>
@@ -160,11 +210,23 @@
                         </button>
                         <div class="icon-grid">
                             <i class="material-icons">collections_bookmark</i>
+                            <i class="material-icons">folder</i>
+                            <i class="material-icons">work</i>
+                            <i class="material-icons">school</i>
                             <i class="material-icons">code</i>
                             <i class="material-icons">book</i>
                             <i class="material-icons">article</i>
-                            <i class="material-icons">school</i>
-                            <i class="material-icons">work</i>
+                            <i class="material-icons">science</i>
+                            <i class="material-icons">psychology</i>
+                            <i class="material-icons">public</i>
+                            <i class="material-icons">travel_explore</i>
+                            <i class="material-icons">restaurant</i>
+                            <i class="material-icons">fitness_center</i>
+                            <i class="material-icons">sports_esports</i>
+                            <i class="material-icons">movie</i>
+                            <i class="material-icons">music_note</i>
+                            <i class="material-icons">shopping_cart</i>
+                            <i class="material-icons">attach_money</i>
                             <i class="material-icons">favorite</i>
                             <i class="material-icons">star</i>
                         </div>
