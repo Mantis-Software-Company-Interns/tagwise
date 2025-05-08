@@ -14,10 +14,12 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 import yt_dlp
+from bs4 import BeautifulSoup
 
 from .utils import correct_json_format, ensure_correct_json_structure
-from .category_matcher import match_categories_and_tags, get_existing_categories, get_existing_tags
+from .category_matcher import match_categories_and_tags, get_existing_categories, get_existing_tags, find_similar_category, find_similar_tag
 from .content_analyzer import configure_llm
+from .prompts import YOUTUBE_SYSTEM_INSTRUCTION
 
 # YouTube video ID extraction pattern
 YOUTUBE_ID_PATTERN = re.compile(r'((?:https?:)?//)?((?:www|m)\.)?((?:youtube\.com|youtu.be))(/(?:[\w\-]+\?v=|embed/|v/)?)([\w\-]+)(\S+)?')
@@ -370,6 +372,62 @@ def get_youtube_video_info(url):
             print(f"PyTube ile video bilgileri alınırken hata: {pytube_err}")
             return None
 
+def get_youtube_title_from_url(url):
+    """
+    YouTube video başlığını direkt olarak sayfadan çekmeye çalışır.
+    yt-dlp ve PyTube başarısız olduğunda bu yöntem kullanılır.
+    
+    Args:
+        url (str): YouTube video URL'si
+        
+    Returns:
+        str: Video başlığı veya None
+    """
+    try:
+        # User-Agent ekleyerek YouTube'un bot kontrolünü aşmaya çalış
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        
+        # İstek gönder
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code != 200:
+            print(f"YouTube sayfası çekilemedi, durum kodu: {response.status_code}")
+            return None
+            
+        # HTML'yi parse et
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # 1. og:title meta etiketinden başlığı bulmaya çalış
+        og_title = soup.find('meta', property='og:title')
+        if og_title and og_title.get('content'):
+            print(f"og:title'dan başlık alındı: {og_title.get('content')}")
+            return og_title.get('content')
+            
+        # 2. title tag'inden başlığı bulmaya çalış
+        title_tag = soup.find('title')
+        if title_tag and title_tag.text:
+            # "YouTube" kelimesini ve etrafındaki özel karakterleri kaldır
+            title = title_tag.text.replace(" - YouTube", "").strip()
+            print(f"title tag'inden başlık alındı: {title}")
+            return title
+            
+        # 3. meta title etiketinden başlığı bulmaya çalış
+        meta_title = soup.find('meta', {'name': 'title'})
+        if meta_title and meta_title.get('content'):
+            print(f"meta title'dan başlık alındı: {meta_title.get('content')}")
+            return meta_title.get('content')
+            
+        print("YouTube video başlığı bulunamadı.")
+        return None
+        
+    except Exception as e:
+        print(f"YouTube başlık çekme hatası: {e}")
+        import traceback
+        print(traceback.format_exc())
+        return None
+
 def analyze_youtube_video(url, user=None):
     """
     YouTube videosunu analiz eder ve kategorize eder.
@@ -390,14 +448,24 @@ def analyze_youtube_video(url, user=None):
         return None
     
     try:
+        # Video başlığını doğrudan çek (alternatif yöntem)
+        direct_title = get_youtube_title_from_url(url)
+        
         # Video bilgilerini al (başlık, açıklama, meta veriler)
         video_info = get_youtube_video_info(url)
         
-        # Video altyazılarını al (varsa)
-        transcript = get_youtube_transcript(video_id)
-        
+        # Video bilgileri yoksa ve başlık doğrudan çekilmişse, video_info oluştur
+        if not video_info and direct_title:
+            video_info = {
+                'title': direct_title,
+                'description': '',
+                'keywords': [],
+                'channel_name': '',
+                'categories': [],
+                'thumbnail_url': f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg",
+            }
         # Video bilgileri yoksa varsayılan değerleri kullan
-        if not video_info:
+        elif not video_info:
             video_info = {
                 'title': 'YouTube Video',
                 'description': '',
@@ -406,7 +474,13 @@ def analyze_youtube_video(url, user=None):
                 'categories': [],
                 'thumbnail_url': f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg",
             }
-            
+        # Video bilgileri var ama başlık yoksa ve doğrudan çekilmişse, başlığı güncelle
+        elif not video_info.get('title') and direct_title:
+            video_info['title'] = direct_title
+        
+        # Video altyazılarını al (varsa)
+        transcript = get_youtube_transcript(video_id)
+        
         # Thumbnail URL'sini al (yüksek kaliteli)
         thumbnail_url = get_youtube_thumbnail_webp(video_id)
         if thumbnail_url:
@@ -421,157 +495,233 @@ def analyze_youtube_video(url, user=None):
         
         # Kategorileri main ve sub olarak ayır
         main_categories = [cat.get('name') for cat in existing_categories if cat.get('is_main', False)]
-        sub_categories = [cat.get('name') for cat in existing_categories if not cat.get('is_main', True)]
-        tag_names = [tag.get('name') for tag in existing_tags]
+        subcategories = [cat.get('name') for cat in existing_categories if not cat.get('is_main', False)]
         
-        # LangChain kullanarak LLM Chain oluştur
-        from .prompts import YOUTUBE_SYSTEM_INSTRUCTION
+        # LLM için prompt oluştur
+        from .category_prompt_factory import CategoryPromptFactory
+        from .schemas import get_content_analysis_json_schema
         from .llm_factory import LLMChain
         
-        # Özel prompt oluştur
-        prompt = f"""
-YOUTUBE VİDEO ANALİZİ:
-
-Video URL: {url}
-
-VİDEO BAŞLIĞI: "{video_info['title']}"
-
-VİDEO AÇIKLAMASI:
-```
-{video_info['description'][:750]}{"..." if len(video_info['description']) > 750 else ""}
-```
-
-Kanal: {video_info['channel_name']}
-Orijinal Etiketler: {video_info['keywords'][:10] if video_info['keywords'] else 'Belirtilmemiş'}
-YouTube Kategorileri: {video_info.get('categories', [])}
-İzlenme: {video_info.get('views', 'Bilinmiyor')}
-Yayın Tarihi: {video_info.get('publish_date', 'Bilinmiyor')}
-
-MEVCUT ANA KATEGORİLER: {main_categories}
-
-MEVCUT ALT KATEGORİLER: {sub_categories}
-
-MEVCUT ETİKETLER: {tag_names}
-"""
+        # JSON şeması ile yapılandırılmış çıktı için
+        output_schema = get_content_analysis_json_schema()
         
-        # Transcript varsa ekle
-        if transcript:
-            prompt += f"""
-VİDEO ALTYAZISI (TRANSKRİPT):
-```
-{transcript[:1000]}{"..." if len(transcript) > 1000 else ""}
-```
-"""
+        # YouTube için özel prompt oluştur
+        prompt = CategoryPromptFactory.create_youtube_prompt(
+            url=url,
+            title=video_info.get('title', ''),
+            description=video_info.get('description', ''),
+            channel_name=video_info.get('channel_name', ''),
+            transcript=transcript,
+            keywords=video_info.get('keywords', []),
+            existing_categories=existing_categories,
+            existing_tags=existing_tags
+        )
+        
+        # LLM zinciri oluştur
+        llm_chain = LLMChain(
+            system_prompt=YOUTUBE_SYSTEM_INSTRUCTION,
+            output_schema=output_schema,
+            model_type="text"
+        )
+        
+        # Zinciri çalıştır
+        result = llm_chain.run(prompt)
+        
+        # Debug için LLM yanıtını logla
+        print(f"LLM yanıtı: {result}")
+        
+        # Sonuç türüne göre işle
+        if isinstance(result, dict):
+            # Yapılandırılmış çıktı başarıyla alındı
+            json_result = result
+            
+            # URL ekle (yoksa)
+            if 'url' not in json_result:
+                json_result['url'] = url
+            
+            # LLM'nin oluşturduğu başlık yerine gerçek video başlığını kullan
+            if video_info and video_info.get('title') and video_info.get('title') != 'YouTube Video':
+                json_result['title'] = video_info.get('title')
         else:
-            prompt += "Video için altyazı (transcript) bulunamadı."
+            # Metin yanıtını JSON olarak ayrıştır
+            corrected_json_text = correct_json_format(str(result))
             
-        prompt += """
-
-Lütfen yukarıdaki bilgilere göre videoyu analiz et ve uygun kategoriler ve etiketler belirle.
-"""
-        
-        # LLM Chain oluştur
-        chain = LLMChain(system_prompt=YOUTUBE_SYSTEM_INSTRUCTION)
-        
-        # LLM Chain'i çalıştır
-        print(f"YouTube videosu analiz ediliyor: {url} (başlık, açıklama ve transcript verileriyle)")
-        response = chain.run(prompt)
-        
-        # JSON formatını düzelt
-        result = correct_json_format(response)
-        
-        try:
-            # JSON'ı ayrıştır
-            json_result = json.loads(result)
-            
-            # JSON yapısını düzelt
-            json_result = ensure_correct_json_structure(json_result, url)
-            
-            # Kategorileri ve etiketleri eşleştir
-            json_result = match_categories_and_tags(json_result, json_result, existing_categories, existing_tags)
-            
-            # Thumbnail URL'sini ekle
-            json_result['thumbnail_url'] = video_info.get('thumbnail_url')
-            
-            # Kategori sayısını kontrol et - en az 1, en fazla 3 kategori olmalı
-            if 'categories' in json_result and isinstance(json_result['categories'], list):
-                # Eğer 3'ten fazla kategori varsa, sadece ilk 3'ünü al
-                if len(json_result['categories']) > 3:
-                    json_result['categories'] = json_result['categories'][:3]
+            try:
+                json_result = json.loads(corrected_json_text)
+                print(f"JSON ayrıştırma başarılı: {json_result}")
+            except json.JSONDecodeError as e:
+                print(f"JSON ayrıştırma hatası: {str(e)}")
+                # Boş bir dict ile devam et
+                json_result = {}
                 
-                # Eğer hiç kategori yoksa, varsayılan bir kategori ekle
-                if len(json_result['categories']) == 0:
-                    json_result['categories'] = [{
-                        'main_category': 'Medya',
-                        'subcategory': 'Video'
-                    }]
-                    json_result['main_category'] = 'Medya'
-                    json_result['subcategory'] = 'Video'
+            # LLM'nin oluşturduğu başlık yerine gerçek video başlığını kullan
+            if video_info and video_info.get('title') and video_info.get('title') != 'YouTube Video':
+                json_result['title'] = video_info.get('title')
+        
+        # Content Analyzer benzeri kategori eşleştirme mantığını uygula
+        if 'categories' in json_result and isinstance(json_result['categories'], list) and len(json_result['categories']) > 0:
+            print(f"JSON'dan çıkarılan kategoriler: {json_result['categories']}")
+            matched_categories = []
+            for category in json_result['categories']:
+                # Ana ve alt kategori isimlerini çıkar
+                main_category = category.get('main', '') if 'main' in category else category.get('main_category', '')
+                sub_category = category.get('sub', '') if 'sub' in category else category.get('subcategory', '')
+                
+                print(f"İşlenen kategori: main={main_category}, sub={sub_category}")
+                
+                if not main_category:
+                    continue
+                
+                # Ana kategoriyi eşleştir
+                matched_main = find_similar_category(main_category, existing_categories, is_main_category=True, accept_new=True)
+                
+                # Alt kategoriyi eşleştir
+                matched_sub = find_similar_category(sub_category, existing_categories, is_main_category=False, accept_new=True, 
+                                                   parent_category_id=matched_main.get('id') if matched_main else None)
+                
+                # Eşleşen kategoriyi ekle
+                if matched_main and matched_sub:
+                    matched_categories.append({
+                        'main_category': matched_main.get('name'),
+                        'subcategory': matched_sub.get('name'),
+                        'main_id': matched_main.get('id'),
+                        'sub_id': matched_sub.get('id')
+                    })
+                    print(f"Eşleşen kategori eklendi: {matched_main.get('name')} > {matched_sub.get('name')}")
+                else:
+                    # Eşleşmeyen kategori için varsayılan kategori kullan
+                    matched_categories.append({
+                        'main_category': main_category,
+                        'subcategory': sub_category,
+                        'main_id': None,
+                        'sub_id': None
+                    })
+                    print(f"Yeni kategori eklendi: {main_category} > {sub_category}")
             
-            print(f"YouTube video analizi tamamlandı: {json_result}")
-            return json_result
+            # Eşleştirilmiş kategorileri sonuca ekle
+            json_result['categories'] = matched_categories
+        else:
+            print("Kategori bulunamadı veya geçersiz format. Varsayılan kategori oluşturuluyor.")
+            # Video başlığından ve açıklamasından içerik tahmin et
+            title = video_info.get('title', '')
+            description = video_info.get('description', '')
             
-        except json.JSONDecodeError as json_err:
-            print(f"JSON ayrıştırma hatası: {json_err}")
-            print(f"Ham yanıt: {result}")
+            # Dizi/film içeriği için
+            if ("episode" in title.lower() or "season" in title.lower() or 
+                "series" in title.lower() or "movie" in title.lower() or
+                "trailer" in title.lower() or "dizi" in title.lower() or
+                "film" in title.lower() or "fragman" in title.lower()):
+                json_result['categories'] = [{
+                    'main_category': 'Eğlence',
+                    'subcategory': 'Dizi/Film',
+                    'main_id': None,
+                    'sub_id': None
+                }]
+                print("Video içeriği Dizi/Film olarak tespit edildi.")
+            # Müzik içeriği için
+            elif ("music" in title.lower() or "song" in title.lower() or 
+                 "official video" in title.lower() or "müzik" in title.lower() or
+                 "şarkı" in title.lower() or "klip" in title.lower()):
+                json_result['categories'] = [{
+                    'main_category': 'Eğlence',
+                    'subcategory': 'Müzik',
+                    'main_id': None,
+                    'sub_id': None
+                }]
+                print("Video içeriği Müzik olarak tespit edildi.")
+            # Oyun içeriği için
+            elif ("gameplay" in title.lower() or "gaming" in title.lower() or 
+                 "game" in title.lower() or "oyun" in title.lower()):
+                json_result['categories'] = [{
+                    'main_category': 'Eğlence',
+                    'subcategory': 'Oyun',
+                    'main_id': None,
+                    'sub_id': None
+                }]
+                print("Video içeriği Oyun olarak tespit edildi.")
+            else:
+                # Varsayılan olarak Medya > Video kategorisi kullan
+                json_result['categories'] = [{
+                    'main_category': 'Medya',
+                    'subcategory': 'Video',
+                    'main_id': None,
+                    'sub_id': None
+                }]
+        
+        # Etiketleri daha doğru şekilde eşleştir
+        if 'tags' in json_result and isinstance(json_result['tags'], list):
+            matched_tags = []
             
-            # Manuel JSON oluşturma girişimi - video bilgilerini kullan
-            manual_json = {
-                "title": video_info['title'],
-                "description": video_info['description'][:150] + "..." if len(video_info['description']) > 150 else video_info['description'],
-                "main_category": "Medya",
-                "subcategory": "Video",
-                "tags": video_info['keywords'][:5] if video_info['keywords'] else ["youtube", "video"],
-                "thumbnail_url": video_info.get('thumbnail_url'),
-            }
+            for tag_item in json_result['tags']:
+                # Etiket formatını kontrol et - string veya dict olabilir
+                if isinstance(tag_item, dict) and 'name' in tag_item:
+                    tag_name = tag_item.get('name')
+                elif isinstance(tag_item, str):
+                    tag_name = tag_item
+                else:
+                    continue  # Geçersiz format
+                
+                if tag_name:
+                    # Mevcut etiketlerle eşleştir veya yeni oluştur
+                    matched_tag = find_similar_tag(tag_name, existing_tags, accept_new=True)
+                    if matched_tag:
+                        matched_tags.append({
+                            'name': matched_tag.get('name'),
+                            'id': matched_tag.get('id')
+                        })
             
-            # Başlık için regex
-            title_match = re.search(r'"title"\s*:\s*"([^"]+)"', result)
-            if title_match:
-                manual_json['title'] = title_match.group(1)
+            # Eşleştirilmiş etiketleri sonuca ekle (en az 2 etiket olmalı)
+            if len(matched_tags) < 2:
+                matched_tags.append({'name': 'youtube', 'id': None})
+                matched_tags.append({'name': 'video', 'id': None})
             
-            # Açıklama için regex
-            desc_match = re.search(r'"description"\s*:\s*"([^"]+)"', result)
-            if desc_match:
-                manual_json['description'] = desc_match.group(1)
-            
-            # Ana kategori için regex
-            main_cat_match = re.search(r'"main_category"\s*:\s*"([^"]+)"', result)
-            if main_cat_match:
-                manual_json['main_category'] = main_cat_match.group(1)
-            
-            # Alt kategori için regex
-            sub_cat_match = re.search(r'"subcategory"\s*:\s*"([^"]+)"', result)
-            if sub_cat_match:
-                manual_json['subcategory'] = sub_cat_match.group(1)
-            
-            # Etiketler için regex
-            tags_match = re.search(r'"tags"\s*:\s*\[\s*([^\]]+)\s*\]', result)
-            if tags_match:
-                tags_text = tags_match.group(1)
-                # Etiketleri virgülle ayır ve her bir etiketi tırnak işaretlerinden temizle
-                tags = [tag.strip().strip('"').strip("'") for tag in tags_text.split(',')]
-                manual_json['tags'] = [tag for tag in tags if tag]  # Boş etiketleri filtrele
-            
-            # Manuel JSON için kategorileri ayarla
-            manual_json['categories'] = [{
-                'main_category': manual_json.get('main_category', 'Medya'),
-                'subcategory': manual_json.get('subcategory', 'Video')
+            json_result['tags'] = matched_tags
+        else:
+            # Etiketleri varsayılan değerlerle oluştur
+            json_result['tags'] = [
+                {'name': 'youtube', 'id': None},
+                {'name': 'video', 'id': None}
+            ]
+        
+        # Başlığı son kez kontrol et
+        if video_info and video_info.get('title') and video_info.get('title') != 'YouTube Video':
+            json_result['title'] = video_info.get('title')
+        
+        # Thumbnail URL'sini ekle
+        json_result['thumbnail_url'] = video_info.get('thumbnail_url')
+        
+        # Kategori sayısını kontrol et - en az 1, en fazla 3 kategori olmalı
+        if len(json_result['categories']) > 3:
+            json_result['categories'] = json_result['categories'][:3]
+        
+        # Eğer hiç kategori yoksa, varsayılan bir kategori ekle
+        if len(json_result['categories']) == 0:
+            json_result['categories'] = [{
+                'main_category': 'Medya',
+                'subcategory': 'Video',
+                'main_id': None,
+                'sub_id': None
             }]
-            
-            # Etiketleri match_categories_and_tags fonksiyonu ile eşleştir
-            matched_result = match_categories_and_tags(manual_json, manual_json, existing_categories, existing_tags)
-            
-            return matched_result
+        
+        # Ana kategori ve alt kategori bilgilerini üst seviyeye de ekle
+        json_result['main_category'] = json_result['categories'][0]['main_category']
+        json_result['subcategory'] = json_result['categories'][0]['subcategory']
+        
+        print(f"YouTube video analizi tamamlandı: {json_result}")
+        return json_result
             
     except Exception as e:
         print(f"YouTube video analizi sırasında hata: {e}")
         import traceback
         print(traceback.format_exc())
         
+        # Hata durumunda başlığı alternatif yöntemle almayı dene
+        alt_title = direct_title if 'direct_title' in locals() else None
+        alt_title = alt_title or get_youtube_title_from_url(url)
+        
         # Hata durumunda varsayılan değerleri döndür
         default_json = {
-            "title": "YouTube Video",
+            "title": alt_title or (video_info.get('title') if video_info and video_info.get('title') else "YouTube Video"),
             "description": "Video analiz edilirken bir hata oluştu.",
             "main_category": "Medya",
             "subcategory": "Video",
@@ -729,4 +879,8 @@ def fetch_youtube_thumbnail(video_id, prefer_webp=True, prefer_high_quality=True
     except requests.RequestException as e:
         print(f"Thumbnail indirme sırasında hata: {e}")
     
-    return None 
+    return None
+
+# For backwards compatibility
+analyze_youtube_video_with_gemini = analyze_youtube_video
+analyze_youtube_video_with_llm = analyze_youtube_video 

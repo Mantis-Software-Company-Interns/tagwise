@@ -586,4 +586,7 @@ def analyze_screenshot(screenshot_base64: str, url: str, existing_title: Optiona
 
 # For backwards compatibility
 analyze_screenshot_with_gemini = analyze_screenshot
-categorize_with_gemini = categorize_content 
+categorize_with_gemini = categorize_content
+
+# For backwards compatibility with LLM
+analyze_screenshot_with_llm = analyze_screenshot 

@@ -108,7 +108,7 @@ def correct_json_format(text):
             logger.error(f"Problematic JSON: {text}")
             return "{}"
 
-def ensure_correct_json_structure(json_data, url, existing_title=None, existing_description=None):
+def ensure_correct_json_structure(json_data, url, existing_title=None, existing_description=None, video_info=None):
     """
     Gemini AI'dan dönen JSON yapısının doğru formatta olmasını sağlar.
     
@@ -117,6 +117,7 @@ def ensure_correct_json_structure(json_data, url, existing_title=None, existing_
         url (str): URL bilgisi
         existing_title (str, optional): Mevcut başlık
         existing_description (str, optional): Mevcut açıklama
+        video_info (dict, optional): Video meta verileri (YouTube videolar için)
         
     Returns:
         dict: Düzeltilmiş JSON verisi
@@ -125,10 +126,15 @@ def ensure_correct_json_structure(json_data, url, existing_title=None, existing_
     if not json_data or not isinstance(json_data, dict):
         json_data = {}
     
+    # YouTube video bilgilerinden başlık alınması
+    video_title = None
+    if video_info and isinstance(video_info, dict) and video_info.get('title'):
+        video_title = video_info.get('title')
+    
     # Temel alanların varlığını kontrol et
     corrected_json = {
         "url": url,
-        "title": json_data.get("title", existing_title or ""),
+        "title": json_data.get("title") or video_title or existing_title or "",
         "description": json_data.get("description", existing_description or ""),
         "categories": [],
         "tags": []

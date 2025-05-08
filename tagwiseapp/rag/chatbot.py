@@ -2,11 +2,12 @@ import os
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
 from langchain.prompts.chat import (
     ChatPromptTemplate,
     SystemMessagePromptTemplate,
-    HumanMessagePromptTemplate
+    HumanMessagePromptTemplate,
+    MessagesPlaceholder
 )
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.retrievers import BaseRetriever
@@ -100,6 +101,10 @@ class BookmarkChatbot:
         When discussing bookmarks, remember to include the title and URL when relevant.
         If multiple bookmarks are relevant, list them in a clear and organized way.
         
+        You must focus on maintaining context throughout the conversation. When the user asks 
+        follow-up questions, connect them to previous questions and answers. References to "it", 
+        "that", "this", or similar pronouns should be resolved to what they refer to in prior exchanges.
+        
         Context: {context}
         
         Chat History: {chat_history}
@@ -175,13 +180,81 @@ class BookmarkChatbot:
                 }
             )
             
-            # Basitleştirilmiş zincir oluşturma
+            # Define a proper chat history formatter that turns message objects into a string
+            def format_chat_history(chat_messages):
+                return "\n".join([
+                    f"Human: {message.content}" if isinstance(message, HumanMessage) 
+                    else f"AI: {message.content}" 
+                    for message in chat_messages
+                ])
+            
+            # Create condense question prompt
+            condense_question_prompt = PromptTemplate.from_template(
+                """Given the following conversation and a follow up question, rephrase the follow up question 
+                to be a standalone question that captures all relevant context from the chat history.
+                
+                Chat History:
+                {chat_history}
+                
+                Follow Up Question: {question}
+                
+                Standalone Question:"""
+            )
+            
+            # Define a modern message-based condense question prompt as an alternative approach
+            # This could be used instead of the string-based approach above
+            condense_question_prompt_messages = ChatPromptTemplate.from_messages([
+                SystemMessagePromptTemplate.from_template(
+                    """Given the conversation history and a follow up question, rephrase the follow up question 
+                    to be a standalone question that captures all relevant context from the chat history."""
+                ),
+                MessagesPlaceholder(variable_name="chat_history"),
+                HumanMessagePromptTemplate.from_template("{question}")
+            ])
+            
+            # Define a QA prompt with message placeholders for proper context integration
+            qa_prompt_messages = ChatPromptTemplate.from_messages([
+                SystemMessagePromptTemplate.from_template(
+                    """You are a helpful AI assistant for a bookmark management system called TagWise.
+                    Use the following pieces of context to answer the user's question.
+                    If you don't know the answer, just say that you don't know.
+                    When discussing bookmarks, include titles and URLs when relevant."""
+                ),
+                SystemMessagePromptTemplate.from_template(
+                    "Context information: {context}"
+                ),
+                MessagesPlaceholder(variable_name="chat_history"),
+                HumanMessagePromptTemplate.from_template("{question}")
+            ])
+            
+            # NOTE: To switch to the modern message-based approach, you would uncomment the code below
+            # and comment out the current chain creation. This requires more changes to the LangChain
+            # configuration so we're providing it as an alternative implementation.
+            
+            """
+            # Modern approach using create_from_llm_and_messages
+            from langchain.chains.conversational_retrieval.base import create_from_llm_and_messages
+            
+            chain = create_from_llm_and_messages(
+                llm=self.llm,
+                retriever=retriever,
+                condense_question_prompt=condense_question_prompt_messages,
+                qa_prompt=qa_prompt_messages,
+                memory=self.memory,
+                return_source_documents=True,
+                verbose=True,
+            )
+            return chain
+            """
+            
+            # Basitleştirilmiş zincir oluşturma - using the string-based approach for compatibility
             return ConversationalRetrievalChain.from_llm(
                 llm=self.llm,
                 retriever=retriever,
                 memory=self.memory,
                 chain_type="stuff",  # En basit chain türü
-                get_chat_history=lambda h: h,  # chat history'yi olduğu gibi kullan
+                get_chat_history=format_chat_history,  # Convert message objects to formatted string
+                condense_question_prompt=condense_question_prompt,  # Custom prompt for question condensation
                 return_source_documents=True,
                 verbose=True,
             )
@@ -415,5 +488,36 @@ class BookmarkChatbot:
             logger.error(f"Error resetting filter: {str(e)}")
             
     def clear_memory(self):
-        """Clear conversation memory"""
-        self.memory.clear() 
+        """Clear the conversation memory"""
+        try:
+            logger.info(f"Clearing conversation memory for user {self.user_id}")
+            self.memory.clear()
+            return True
+        except Exception as e:
+            logger.error(f"Error clearing memory: {str(e)}")
+            return False
+            
+    def trim_memory(self, max_turns=5):
+        """
+        Trim conversation memory to the latest X turns
+        
+        Args:
+            max_turns: Maximum number of conversation turns to keep
+        
+        Returns:
+            bool: Success or failure
+        """
+        try:
+            logger.info(f"Trimming conversation memory for user {self.user_id} to {max_turns} turns")
+            messages = self.memory.chat_memory.messages
+            
+            # If we don't have enough messages to trim, return
+            if len(messages) <= max_turns * 2:  # Each turn is 2 messages (human + ai)
+                return True
+                
+            # Keep only the most recent X turns
+            self.memory.chat_memory.messages = messages[-(max_turns * 2):]
+            return True
+        except Exception as e:
+            logger.error(f"Error trimming memory: {str(e)}")
+            return False 

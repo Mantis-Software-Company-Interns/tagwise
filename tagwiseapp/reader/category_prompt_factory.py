@@ -189,4 +189,120 @@ class CategoryPromptFactory:
         """
         
         logger.info(f"Created screenshot category prompt for URL: {url}")
-        return prompt 
+        return prompt
+    
+    @staticmethod
+    def create_youtube_prompt(url: str, 
+                              title: Optional[str] = None,
+                              description: Optional[str] = None,
+                              channel_name: Optional[str] = None,
+                              transcript: Optional[str] = None,
+                              keywords: Optional[List[str]] = None,
+                              existing_categories: Optional[List[Dict[str, Any]]] = None,
+                              existing_tags: Optional[List[Dict[str, Any]]] = None) -> str:
+        """
+        YouTube video kategorilendirme için LLM promptu oluşturur.
+        
+        Args:
+            url (str): YouTube video URL'si
+            title (str, optional): Video başlığı
+            description (str, optional): Video açıklaması
+            channel_name (str, optional): Kanal adı
+            transcript (str, optional): Video altyazısı/transkripsiyonu
+            keywords (List[str], optional): Video anahtar kelimeleri
+            existing_categories (List[Dict], optional): Mevcut kategoriler
+            existing_tags (List[Dict], optional): Mevcut etiketler
+            
+        Returns:
+            str: LLM promptu
+        """
+        logger.info(f"Created YouTube category prompt for URL: {url}")
+        
+        # Format kategori listesini (main ve sub olarak)
+        categories_list = []
+        if existing_categories:
+            main_categories = [cat.get('name') for cat in existing_categories if cat.get('is_main', False)]
+            subcategories = [cat.get('name') for cat in existing_categories if not cat.get('is_main', False)]
+            
+            categories_list.append("Mevcut kategori listesi:")
+            for main_cat in main_categories:
+                sub_cats = [sub for sub in subcategories if any(
+                    s.get('parent_id') == m.get('id') 
+                    for m in existing_categories if m.get('name') == main_cat and m.get('is_main', False)
+                    for s in existing_categories if s.get('name') == sub and not s.get('is_main', False)
+                )]
+                
+                if sub_cats:
+                    categories_list.append(f"- {main_cat} > {', '.join(sub_cats)}")
+            
+        # Format etiket listesini
+        tags_list = []
+        if existing_tags:
+            tags_list = [tag.get('name') for tag in existing_tags]
+            
+        
+        # Prompt oluştur
+        prompt_parts = []
+        
+        prompt_parts.append(f"Lütfen aşağıdaki YouTube videosunu analiz et ve içeriğine uygun kategoriler ve etiketler belirle:")
+        prompt_parts.append(f"Video URL: {url}")
+        
+        if title:
+            prompt_parts.append(f"Video Başlığı: {title}")
+        
+        if channel_name:
+            prompt_parts.append(f"Kanal Adı: {channel_name}")
+            
+        if description:
+            prompt_parts.append(f"Video Açıklaması: {description}")
+            
+        if keywords and len(keywords) > 0:
+            prompt_parts.append(f"Video Etiketleri: {', '.join(keywords)}")
+            
+        if transcript:
+            # Transcript'i kısalt (çok uzun olabilir)
+            if len(transcript) > 2000:
+                shortened_transcript = transcript[:2000] + "... (kısaltıldı)"
+            else:
+                shortened_transcript = transcript
+                
+            prompt_parts.append(f"Video Altyazısı/Transkripsiyonu: {shortened_transcript}")
+
+        # Örnek kategoriler ekle (yardımcı olmak için)
+        prompt_parts.append("\nPopüler kategorilere örnekler:")
+        prompt_parts.append("- Eğlence > Dizi/Film")
+        prompt_parts.append("- Eğlence > Müzik")
+        prompt_parts.append("- Eğlence > Oyun")
+        prompt_parts.append("- Eğitim > Programlama")
+        prompt_parts.append("- Eğitim > Bilim")
+        prompt_parts.append("- Yaşam > Seyahat")
+        prompt_parts.append("- Yaşam > Yemek")
+        prompt_parts.append("- Spor > Futbol")
+        prompt_parts.append("- Sağlık > Fitness")
+        
+        # Kategori eşleştirme talimatı ekle
+        if categories_list:
+            prompt_parts.append("\n".join(categories_list))
+        
+        # Video içeriğine uygun en az 1, en fazla 3 kategori belirle
+        prompt_parts.append("\nÖnemli: Lütfen bu video içeriğine uygun en az 1, en fazla 3 kategori belirle.")
+        prompt_parts.append("Her kategori bir ana kategori (main) ve bir alt kategori (sub) içermeli.")
+        
+        # Etiket belirle
+        prompt_parts.append("\nAyrıca video içeriğine uygun en az 5, en fazla 10 etiket belirle.")
+        
+        # Tüm bilgileri JSON formatında döndür
+        prompt_parts.append("\nYanıtını şu formatta ver:")
+        prompt_parts.append('''
+{
+  "title": "Video başlığı",
+  "description": "Video açıklaması",
+  "categories": [
+    {"main": "Ana Kategori 1", "sub": "Alt Kategori 1"},
+    {"main": "Ana Kategori 2", "sub": "Alt Kategori 2"}
+  ],
+  "tags": ["etiket1", "etiket2", "etiket3", "etiket4", "etiket5"]
+}
+        ''')
+        
+        return "\n\n".join(prompt_parts) 
