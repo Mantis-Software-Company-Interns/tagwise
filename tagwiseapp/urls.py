@@ -20,6 +20,7 @@ urlpatterns = [
     path('settings/profile/photo/update/', views.update_profile_photo, name='update_profile_photo'),
     path('settings/password/change/', views.change_password, name='change_password'),
     path('settings/notifications/update/', views.update_notifications, name='update_notifications'),
+    path('settings/update-language/', views.update_language, name='update_language'),
     
     path('categories/', views.categories, name="categories"),
     path('collections/', views.collections, name='collections'),

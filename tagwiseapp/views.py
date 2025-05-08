@@ -24,6 +24,8 @@ import traceback
 from django.db.models import Q, Count
 from django.utils import timezone
 from .reader.youtube_analyzer import is_youtube_url, analyze_youtube_video, extract_youtube_video_id, fetch_youtube_thumbnail
+from django.views.decorators.http import require_POST
+from django.utils import translation
 
 # Create your views here.
 
@@ -1534,8 +1536,16 @@ def update_notifications(request):
     """Kullanıcı bildirim tercihlerini günceller."""
     if request.method == 'POST':
         try:
-            email_notifications = 'email_notifications' in request.POST
-            new_features = 'new_features' in request.POST
+            # Check if the request is JSON (AJAX) or form data
+            if request.content_type == 'application/json':
+                # Parse JSON data
+                data = json.loads(request.body)
+                email_notifications = data.get('email_notifications', False)
+                new_features = data.get('new_features', False)
+            else:
+                # Process form data
+                email_notifications = 'email_notifications' in request.POST
+                new_features = 'new_features' in request.POST
             
             # Kullanıcının profil modeli yoksa oluştur
             if not hasattr(request.user, 'profile'):
@@ -1546,9 +1556,17 @@ def update_notifications(request):
             request.user.profile.new_features = new_features
             request.user.profile.save()
             
+            # Return JSON response for AJAX requests
+            if request.content_type == 'application/json':
+                return JsonResponse({'status': 'success'})
+            
+            # Return redirect for form submissions
             request.session['success_message'] = 'Bildirim tercihleriniz başarıyla güncellendi.'
             return redirect('tagwiseapp:profile_settings')
         except Exception as e:
+            if request.content_type == 'application/json':
+                return JsonResponse({'status': 'error', 'message': str(e)})
+            
             request.session['error_message'] = f'Bildirim tercihleri güncellenirken bir hata oluştu: {str(e)}'
             return redirect('tagwiseapp:profile_settings')
     
@@ -1687,9 +1705,18 @@ def normalize_thumbnail_path(screenshot_data):
     """
     Standardize thumbnail path handling.
     Returns path relative to MEDIA_ROOT, starting with 'thumbnails/'
+    For external URLs (starting with http), returns the original URL.
     """
     if not screenshot_data:
         return None
+    
+    # Direct external URL case (starting with http or https)
+    if screenshot_data.startswith(('http://', 'https://')):
+        return screenshot_data
+    
+    # Backward compatibility for external: prefix
+    if screenshot_data.startswith('external:'):
+        return screenshot_data[9:]  # Remove "external:" prefix
         
     # If already starts with thumbnails/, use as is
     if screenshot_data.startswith('thumbnails/'):
@@ -1766,3 +1793,57 @@ def get_bookmark_details(request):
             return JsonResponse({'success': False, 'error': str(e)})
     
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+@require_POST
+@login_required
+def update_language(request):
+    """Update the language preference for a user"""
+    try:
+        # Check content type
+        if request.content_type != 'application/json':
+            return JsonResponse({
+                'status': 'error', 
+                'message': 'Invalid content type. Expected application/json'
+            }, status=400)
+            
+        # Parse the JSON body
+        data = json.loads(request.body)
+        language = data.get('language')
+        
+        # Check if language is provided
+        if not language:
+            return JsonResponse({
+                'status': 'error', 
+                'message': 'Language parameter is required'
+            }, status=400)
+            
+        # Validate language
+        valid_languages = [lang[0] for lang in settings.LANGUAGES]
+        if language not in valid_languages:
+            return JsonResponse({
+                'status': 'error', 
+                'message': f'Invalid language selection. Valid options are: {", ".join(valid_languages)}'
+            }, status=400)
+            
+        # Update user's profile with new language preference
+        request.user.profile.language = language
+        request.user.profile.save()
+        
+        # Update the session language
+        translation.activate(language)
+        request.session[translation.LANGUAGE_SESSION_KEY] = language
+        
+        return JsonResponse({'status': 'success'})
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'status': 'error', 
+            'message': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        import traceback
+        print(f"Error updating language: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({
+            'status': 'error', 
+            'message': 'An unexpected error occurred while updating language setting'
+        }, status=500)

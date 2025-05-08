@@ -330,6 +330,7 @@ class BookmarkAPI(APIView):
             title = serializer.validated_data.get('title')
             content = serializer.validated_data.get('content')
             description = serializer.validated_data.get('description', '')
+            image_url = serializer.validated_data.get('image_url', '')
             external_categories = serializer.validated_data.get('external_categories', [])
             external_tags = serializer.validated_data.get('external_tags', [])
             
@@ -348,12 +349,21 @@ class BookmarkAPI(APIView):
                     user=request.user
                 )
                 
+                # Prepare screenshot_data from image_url if provided
+                screenshot_data = None
+                if image_url:
+                    # Store the full URL directly without any prefix
+                    # Just set the URL as screenshot_data, it will be recognized
+                    # as an external URL in the template
+                    screenshot_data = image_url
+                
                 # Create the bookmark
                 bookmark = Bookmark.objects.create(
                     url=url,
                     title=title,
                     description=description,
-                    user=request.user
+                    user=request.user,
+                    screenshot_data=screenshot_data
                 )
                 
                 # Process analyzed categories
@@ -460,6 +470,7 @@ class BookmarkAPI(APIView):
                     'url': bookmark.url,
                     'title': bookmark.title,
                     'description': bookmark.description,
+                    'image_url': image_url if image_url else None,
                     'analysis_result': analysis_result  # Return the original analysis result from content_analyzer
                 }, status=status.HTTP_201_CREATED)
                 

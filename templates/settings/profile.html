@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Profil Ayarları - TagWise{% endblock %}
+{% block title %}{% translate "Profile Settings" %} - TagWise{% endblock %}
 
 {% block extra_css %}
 <!-- Cropper.js CSS -->
@@ -393,21 +394,203 @@
         color: var(--primary-color);
         font-size: 24px;
     }
+    
+    /* Language Selection Styles */
+    .language-container {
+        margin-top: 10px;
+    }
+    
+    .form-select {
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        font-size: 16px;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        transition: border-color 0.3s;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a0aec0'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 20px;
+    }
+    
+    .form-select:focus {
+        border-color: var(--primary-color);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    }
+    
+    .language-description {
+        font-size: 14px;
+        color: var(--text-secondary);
+        margin-top: 8px;
+        display: block;
+    }
+    
+    /* Notification switch styles */
+    .notification-option {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 34px;
+        margin-right: 15px;
+    }
+    
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+    }
+    
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 26px;
+        width: 26px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+    }
+    
+    input:checked + .slider {
+        background-color: var(--primary-color);
+    }
+    
+    input:focus + .slider {
+        box-shadow: 0 0 1px var(--primary-color);
+    }
+    
+    input:checked + .slider:before {
+        transform: translateX(26px);
+    }
+    
+    .slider.round {
+        border-radius: 34px;
+    }
+    
+    .slider.round:before {
+        border-radius: 50%;
+    }
+    
+    .notification-text {
+        flex: 1;
+    }
+    
+    .notification-title {
+        display: block;
+        font-weight: 500;
+        margin-bottom: 3px;
+        color: var(--text-color);
+    }
+    
+    .notification-description {
+        display: block;
+        font-size: 14px;
+        color: var(--text-secondary);
+    }
+    
+    /* Notification system styles */
+    .notification-popup {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: var(--bg-color);
+        border-left: 4px solid #4CAF50;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+        padding: 16px 20px;
+        max-width: 320px;
+        z-index: 9999;
+        opacity: 0;
+        transform: translateY(-20px);
+        transition: opacity 0.3s, transform 0.3s;
+    }
+    
+    .notification-popup.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    
+    .notification-popup.success {
+        border-left-color: #4CAF50;
+    }
+    
+    .notification-popup.error {
+        border-left-color: #F44336;
+    }
+    
+    .notification-popup.info {
+        border-left-color: #2196F3;
+    }
+    
+    .notification-popup.warning {
+        border-left-color: #FF9800;
+    }
+    
+    .notification-content {
+        display: flex;
+        align-items: flex-start;
+    }
+    
+    .notification-icon {
+        margin-right: 12px;
+    }
+    
+    .notification-message {
+        flex: 1;
+        color: var(--text-color);
+    }
+    
+    .notification-close {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        cursor: pointer;
+        color: var(--text-muted);
+        font-size: 18px;
+    }
+    
+    .notification-close:hover {
+        color: var(--text-color);
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="settings-container">
     <div class="settings-header">
-        <h1>Profil Ayarları</h1>
-        <p class="settings-description">Kişisel bilgilerinizi ve hesap ayarlarınızı yönetin.</p>
+        <h1>{% translate "Profile Settings" %}</h1>
+        <p class="settings-description">{% translate "Manage your profile information, preferences, and account settings." %}</p>
     </div>
 
     <div class="settings-tabs">
-        <div class="settings-tab active" data-tab="profile">Profil</div>
-        <div class="settings-tab" data-tab="password">Şifre</div>
-        <div class="settings-tab" data-tab="notifications">Bildirimler</div>
-        <div class="settings-tab" data-tab="api">API</div>
+        <div class="settings-tab active" data-tab="profile">{% translate "Profile" %}</div>
+        <div class="settings-tab" data-tab="password">{% translate "Password" %}</div>
+        <div class="settings-tab" data-tab="notifications">{% translate "Notifications" %}</div>
+        <div class="settings-tab" data-tab="preferences">{% translate "Preferences" %}</div>
+        <div class="settings-tab" data-tab="api">{% translate "API" %}</div>
     </div>
 
     {% if success_message %}
@@ -426,7 +609,7 @@
     <div class="tab-content active" id="profile-tab">
         <div class="settings-card">
             <div class="settings-card-header">
-                <h2 class="settings-card-title">Profil Fotoğrafı</h2>
+                <h2 class="settings-card-title">{% translate "Profile Photo" %}</h2>
             </div>
 
             <form method="post" action="{% url 'tagwiseapp:update_profile_photo' %}" enctype="multipart/form-data" id="profile-photo-form">
@@ -435,33 +618,33 @@
                     <img src="{% if user.profile.profile_photo %}{{ user.profile.profile_photo.url }}{% else %}{% static 'images/profile.jpg' %}{% endif %}" alt="Profile Photo" class="current-photo" id="current-photo">
                     <div class="photo-upload-container">
                         <div class="upload-btn-wrapper">
-                            <button type="button" class="btn-upload"><i class="material-icons" style="vertical-align: middle; margin-right: 5px;">file_upload</i> Fotoğraf Seç</button>
+                            <button type="button" class="btn-upload"><i class="material-icons" style="vertical-align: middle; margin-right: 5px;">file_upload</i> {% translate "Select Photo" %}</button>
                             <input type="file" name="profile_photo_input" id="profile-photo-input" accept="image/*">
                             <input type="hidden" name="profile_photo" id="cropped-image-input">
                         </div>
-                        <p class="photo-guidelines">En az 200x200 piksel çözünürlükte .jpg, .png veya .gif formatında bir dosya yükleyin. Yükleme sonrasında fotoğrafı istediğiniz şekilde kırpabilirsiniz.</p>
+                        <p class="photo-guidelines">{% translate "Please upload an image with at least 200x200 resolution in .jpg, .png, or .gif format. You can crop the image afterwards." %}</p>
                     </div>
                 </div>
                 
                 <!-- Fotoğraf Karşılaştırma Bölümü -->
                 <div class="photo-comparison" id="photo-comparison">
-                    <h3 class="photo-comparison-title">Profil Fotoğrafı Değişikliği</h3>
+                    <h3 class="photo-comparison-title">{% translate "Profile Photo Change" %}</h3>
                     <div class="photos-container">
                         <div class="photo-item">
-                            <p class="photo-label">Mevcut Fotoğraf</p>
+                            <p class="photo-label">{% translate "Current Photo" %}</p>
                             <img id="old-photo-preview" class="photo-preview" src="{% if user.profile.profile_photo %}{{ user.profile.profile_photo.url }}{% else %}{% static 'images/profile.jpg' %}{% endif %}" alt="Mevcut Fotoğraf">
                         </div>
                         <div class="photo-arrows">
                             <i class="material-icons">arrow_forward</i>
                         </div>
                         <div class="photo-item">
-                            <p class="photo-label">Yeni Fotoğraf</p>
+                            <p class="photo-label">{% translate "New Photo" %}</p>
                             <img id="new-photo-preview" class="photo-preview" src="" alt="Yeni Fotoğraf">
                         </div>
                     </div>
                     <div class="buttons-container">
-                        <button type="button" id="cancel-photo-btn" class="cancel-btn">Vazgeç</button>
-                        <button type="submit" class="save-btn">Fotoğrafı Güncelle</button>
+                        <button type="button" id="cancel-photo-btn" class="cancel-btn">{% translate "Cancel" %}</button>
+                        <button type="submit" class="save-btn">{% translate "Update Photo" %}</button>
                     </div>
                 </div>
             </form>
@@ -470,7 +653,7 @@
             <div id="cropModal" class="crop-modal">
                 <div class="crop-modal-content">
                     <div class="crop-modal-header">
-                        <h3 class="crop-modal-title">Profil Fotoğrafını Düzenle</h3>
+                        <h3 class="crop-modal-title">{% translate "Edit Profile Photo" %}</h3>
                         <span class="crop-close">&times;</span>
                     </div>
                     <div class="crop-container">
@@ -480,8 +663,8 @@
                         <div id="preview"></div>
                     </div>
                     <div class="crop-buttons">
-                        <button class="crop-btn crop-cancel-btn">İptal</button>
-                        <button class="crop-btn crop-apply-btn">Uygula</button>
+                        <button class="crop-btn crop-cancel-btn">{% translate "Cancel" %}</button>
+                        <button class="crop-btn crop-apply-btn">{% translate "Apply" %}</button>
                     </div>
                 </div>
             </div>
@@ -489,24 +672,24 @@
 
         <div class="settings-card">
             <div class="settings-card-header">
-                <h2 class="settings-card-title">Kişisel Bilgiler</h2>
+                <h2 class="settings-card-title">{% translate "Personal Information" %}</h2>
             </div>
 
             <form method="post" action="{% url 'tagwiseapp:update_profile' %}">
                 {% csrf_token %}
                 <div class="form-group">
-                    <label for="username">Kullanıcı Adı</label>
+                    <label for="username">{% translate "Username" %}</label>
                     <input type="text" id="username" name="username" value="{{ user.username }}" disabled>
                 </div>
                 <div class="form-group">
-                    <label for="email">E-posta Adresi</label>
+                    <label for="email">{% translate "Email Address" %}</label>
                     <input type="email" id="email" name="email" value="{{ user.email }}" required>
                 </div>
                 <div class="form-group">
-                    <label for="name">Ad Soyad</label>
+                    <label for="name">{% translate "Name" %}</label>
                     <input type="text" id="name" name="name" value="{{ user.first_name }} {{ user.last_name }}">
                 </div>
-                <button type="submit" class="save-btn">Bilgileri Kaydet</button>
+                <button type="submit" class="save-btn">{% translate "Save Changes" %}</button>
             </form>
         </div>
     </div>
@@ -515,28 +698,28 @@
     <div class="tab-content" id="password-tab">
         <div class="settings-card">
             <div class="settings-card-header">
-                <h2 class="settings-card-title">Şifre Değiştir</h2>
+                <h2 class="settings-card-title">{% translate "Change Password" %}</h2>
             </div>
 
             <form method="post" action="{% url 'tagwiseapp:change_password' %}" id="password-form">
                 {% csrf_token %}
                 <div class="form-group">
-                    <label for="current-password">Mevcut Şifre</label>
+                    <label for="current-password">{% translate "Current Password" %}</label>
                     <input type="password" id="current-password" name="current_password" required>
                 </div>
                 <div class="form-group">
-                    <label for="new-password">Yeni Şifre</label>
+                    <label for="new-password">{% translate "New Password" %}</label>
                     <input type="password" id="new-password" name="new_password" required>
                     <div class="password-strength">
                         <div class="password-strength-meter"></div>
                     </div>
-                    <div class="password-strength-text">Şifre gücü: Zayıf</div>
+                    <div class="password-strength-text">{% translate "Password Strength" %}: Zayıf</div>
                 </div>
                 <div class="form-group">
-                    <label for="confirm-password">Yeni Şifre (Tekrar)</label>
+                    <label for="confirm-password">{% translate "New Password (Repeat)" %}</label>
                     <input type="password" id="confirm-password" name="confirm_password" required>
                 </div>
-                <button type="submit" class="save-btn">Şifreyi Değiştir</button>
+                <button type="submit" class="save-btn">{% translate "Change Password" %}</button>
             </form>
         </div>
     </div>
@@ -545,20 +728,20 @@
     <div class="tab-content" id="notifications-tab">
         <div class="settings-card">
             <div class="settings-card-header">
-                <h2 class="settings-card-title">Bildirim Tercihleri</h2>
+                <h2 class="settings-card-title">{% translate "Notification Preferences" %}</h2>
             </div>
 
             <form method="post" action="{% url 'tagwiseapp:update_notifications' %}">
                 {% csrf_token %}
                 <div class="form-group" style="display: flex; align-items: center;">
                     <input type="checkbox" id="email-notifications" name="email_notifications" {% if user.profile.email_notifications %}checked{% endif %} style="width: auto; margin-right: 10px;">
-                    <label for="email-notifications" style="margin-bottom: 0;">E-posta bildirimleri al</label>
+                    <label for="email-notifications" style="margin-bottom: 0;">{% translate "Receive email notifications" %}</label>
                 </div>
                 <div class="form-group" style="display: flex; align-items: center;">
                     <input type="checkbox" id="new-features" name="new_features" {% if user.profile.new_features %}checked{% endif %} style="width: auto; margin-right: 10px;">
-                    <label for="new-features" style="margin-bottom: 0;">Yeni özellikler hakkında bilgilendir</label>
+                    <label for="new-features" style="margin-bottom: 0;">{% translate "Receive notifications about new features" %}</label>
                 </div>
-                <button type="submit" class="save-btn">Bildirimleri Güncelle</button>
+                <button type="submit" class="save-btn">{% translate "Update Notifications" %}</button>
             </form>
         </div>
     </div>
@@ -567,26 +750,26 @@
     <div class="tab-content" id="api-tab">
         <div class="settings-card">
             <div class="settings-card-header">
-                <h2 class="settings-card-title">API Anahtarları</h2>
-                <p class="settings-description">API anahtarlarını kullanarak TagWise'a dışarıdan içerik ekleyebilirsiniz.</p>
+                <h2 class="settings-card-title">{% translate "API Keys" %}</h2>
+                <p class="settings-description">{% translate "Use API keys to add content to TagWise from outside." %}</p>
             </div>
 
             <div id="api-keys-container">
                 <div class="loading-indicator" id="api-keys-loading">
                     <div class="spinner"></div>
-                    <p>API anahtarları yükleniyor...</p>
+                    <p>{% translate "Loading API keys..." %}</p>
                 </div>
                 <div id="api-keys-list" style="display: none;">
                     <!-- API anahtarları buraya JavaScript ile eklenecek -->
                 </div>
                 <div id="no-api-keys" style="display: none;">
-                    <p>Henüz bir API anahtarınız bulunmuyor.</p>
+                    <p>{% translate "You don't have any API key yet." %}</p>
                 </div>
             </div>
 
             <div class="api-key-form" style="margin-top: 30px;">
                 <button id="create-api-key-btn" class="save-btn" style="background-color: var(--primary-color); display: inline-flex; align-items: center;">
-                    <i class="material-icons" style="margin-right: 8px;">vpn_key</i> Yeni API Anahtarı Oluştur
+                    <i class="material-icons" style="margin-right: 8px;">vpn_key</i> {% translate "Create New API Key" %}
                 </button>
             </div>
             
@@ -594,27 +777,27 @@
             <div id="api-key-modal" class="crop-modal">
                 <div class="crop-modal-content" style="max-width: 600px;">
                     <div class="crop-modal-header">
-                        <h3 class="crop-modal-title">API Anahtarı Oluştur</h3>
+                        <h3 class="crop-modal-title">{% translate "Create API Key" %}</h3>
                         <span class="api-key-modal-close">&times;</span>
                     </div>
                     <form id="create-api-key-form">
                         <div class="form-group">
-                            <label for="api-key-description">Açıklama</label>
-                            <input type="text" id="api-key-description" name="description" placeholder="API anahtarınız için açıklayıcı bir ad" required>
-                            <small style="color: var(--text-secondary); display: block; margin-top: 5px;">Bu açıklama, anahtarı daha sonra tanımlamanıza yardımcı olacaktır.</small>
+                            <label for="api-key-description">{% translate "Description" %}</label>
+                            <input type="text" id="api-key-description" name="description" placeholder="{% translate "Descriptive name for your key" %}" required>
+                            <small style="color: var(--text-secondary); display: block; margin-top: 5px;">{% translate "This description will help you remember the key later." %}</small>
                         </div>
                         <div class="form-group">
-                            <label for="api-key-expires">Sona Erme Tarihi (İsteğe Bağlı)</label>
+                            <label for="api-key-expires">{% translate "Expiration Date" %} ({% translate "Optional" %})</label>
                             <input type="date" id="api-key-expires" name="expires_at">
-                            <small style="color: var(--text-secondary); display: block; margin-top: 5px;">Boş bırakırsanız, anahtar süresiz olarak geçerli olacaktır.</small>
+                            <small style="color: var(--text-secondary); display: block; margin-top: 5px;">{% translate "If left blank, the key will be valid indefinitely." %}</small>
                         </div>
                         <div class="form-group" style="display: flex; align-items: center;">
                             <input type="checkbox" id="api-key-active" name="is_active" checked style="width: auto; margin-right: 10px;">
-                            <label for="api-key-active" style="margin-bottom: 0;">Aktif</label>
+                            <label for="api-key-active" style="margin-bottom: 0;">{% translate "Active" %}</label>
                         </div>
                         <div class="crop-buttons">
-                            <button type="button" class="crop-btn crop-cancel-btn api-key-modal-close">İptal</button>
-                            <button type="submit" class="crop-btn crop-apply-btn">Oluştur</button>
+                            <button type="button" class="crop-btn crop-cancel-btn api-key-modal-close">{% translate "Cancel" %}</button>
+                            <button type="submit" class="crop-btn crop-apply-btn">{% translate "Create" %}</button>
                         </div>
                     </form>
                 </div>
@@ -624,16 +807,16 @@
             <div id="new-api-key-modal" class="crop-modal">
                 <div class="crop-modal-content" style="max-width: 600px;">
                     <div class="crop-modal-header">
-                        <h3 class="crop-modal-title">API Anahtarınız Oluşturuldu</h3>
+                        <h3 class="crop-modal-title">{% translate "API Key Created" %}</h3>
                         <span class="new-api-key-modal-close">&times;</span>
                     </div>
                     <div style="padding: 20px 0;">
                         <div class="alert-box" style="background-color: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3); color: #856404; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                            <p style="margin: 0; font-weight: 500;"><i class="material-icons" style="vertical-align: middle; margin-right: 8px;">warning</i> ÖNEMLİ: Bu anahtarı güvenli bir yerde saklayın!</p>
-                            <p style="margin-top: 10px; margin-bottom: 0;">Bu ekrandan ayrıldıktan sonra anahtarın tamamını bir daha göremeyeceksiniz.</p>
+                            <p style="margin: 0; font-weight: 500;"><i class="material-icons" style="vertical-align: middle; margin-right: 8px;">warning</i> {% translate "IMPORTANT" %}: {% translate "Please keep this key safe!" %}</p>
+                            <p style="margin-top: 10px; margin-bottom: 0;">{% translate "You will not be able to view the full key again after leaving this screen." %}</p>
                         </div>
                         <div class="form-group">
-                            <label for="new-api-key-value">API Anahtarınız</label>
+                            <label for="new-api-key-value">{% translate "Your API Key" %}</label>
                             <div style="position: relative;">
                                 <input type="text" id="new-api-key-value" readonly style="font-family: monospace; padding-right: 50px;">
                                 <button type="button" id="copy-api-key" style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--primary-color); cursor: pointer; padding: 8px; border-radius: 4px;">
@@ -643,8 +826,60 @@
                         </div>
                     </div>
                     <div class="crop-buttons">
-                        <button type="button" class="crop-btn crop-apply-btn new-api-key-modal-close">Tamam</button>
+                        <button type="button" class="crop-btn crop-apply-btn new-api-key-modal-close">{% translate "OK" %}</button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preferences Tab -->
+    <div class="tab-content" id="preferences-tab">
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <h2 class="settings-card-title">{% translate "Email Notifications" %}</h2>
+            </div>
+            <div class="notification-option">
+                <label class="switch">
+                    <input type="checkbox" id="emailNotifications" {% if user.profile.email_notifications %}checked{% endif %}>
+                    <span class="slider round"></span>
+                </label>
+                <div class="notification-text">
+                    <span class="notification-title">{% translate "Enable" %}</span>
+                    <span class="notification-description">{% translate "Receive emails about new features, updates, and other important notifications." %}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <h2 class="settings-card-title">{% translate "New Features" %}</h2>
+            </div>
+            <div class="notification-option">
+                <label class="switch">
+                    <input type="checkbox" id="newFeatures" {% if user.profile.new_features %}checked{% endif %}>
+                    <span class="slider round"></span>
+                </label>
+                <div class="notification-text">
+                    <span class="notification-title">{% translate "Enable" %}</span>
+                    <span class="notification-description">{% translate "Join the beta program to test new features." %}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Language Settings Card -->
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <h2 class="settings-card-title">{% translate "Language Settings" %}</h2>
+            </div>
+            <div class="language-container">
+                <div class="form-group">
+                    <label for="languageSelect">{% translate "Site Language" %}</label>
+                    <select id="languageSelect" class="form-select">
+                        <option value="en" {% if user.profile.language == 'en' %}selected{% endif %}>English</option>
+                        <option value="tr" {% if user.profile.language == 'tr' %}selected{% endif %}>Türkçe</option>
+                    </select>
+                    <span class="language-description">{% translate "Set your preferred language option. This will refresh the page." %}</span>
                 </div>
             </div>
         </div>
@@ -956,23 +1191,69 @@
         }
         
         // Bildirim göster
-        function showNotification(message, type) {
-            // Sayfadaki mevcut bildirim alanlarını kullan
-            const notificationClass = type === 'success' ? '.success-message' : '.error-message';
-            const notificationElement = document.querySelector(notificationClass);
-            
-            if (notificationElement) {
-                notificationElement.textContent = message;
-                notificationElement.style.display = 'block';
-                
-                // 5 saniye sonra gizle
-                setTimeout(() => {
-                    notificationElement.style.display = 'none';
-                }, 5000);
-            } else {
-                // Bildirim elementi yoksa alert göster
-                alert(message);
+        function showNotification(message, type = 'success', duration = 5000) {
+            // Remove any existing notifications
+            const existingNotification = document.querySelector('.notification-popup');
+            if (existingNotification) {
+                existingNotification.remove();
             }
+            
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `notification-popup ${type}`;
+            
+            // Set icon based on type
+            let icon = '';
+            switch(type) {
+                case 'success':
+                    icon = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+                    break;
+                case 'error':
+                    icon = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F44336" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
+                    break;
+                case 'info':
+                    icon = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2196F3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+                    break;
+                case 'warning':
+                    icon = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF9800" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+                    break;
+            }
+            
+            // Build notification content
+            notification.innerHTML = `
+                <div class="notification-content">
+                    <div class="notification-icon">${icon}</div>
+                    <div class="notification-message">${message}</div>
+                </div>
+                <div class="notification-close">&times;</div>
+            `;
+            
+            // Add to DOM
+            document.body.appendChild(notification);
+            
+            // Show animation
+            setTimeout(() => notification.classList.add('show'), 10);
+            
+            // Handle close button
+            const closeBtn = notification.querySelector('.notification-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    notification.classList.remove('show');
+                    setTimeout(() => notification.remove(), 300);
+                });
+            }
+            
+            // Auto-dismiss after duration
+            if (duration > 0) {
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.classList.remove('show');
+                        setTimeout(() => notification.remove(), 300);
+                    }
+                }, duration);
+            }
+            
+            return notification;
         }
         
         // CSRF token'ı al
@@ -986,77 +1267,6 @@
             }
             return null;
         }
-        
-        // CSS stilleri ekle
-        const style = document.createElement('style');
-        style.textContent = `
-            .status-badge {
-                color: white;
-            }
-            .status-active {
-                background-color: #28a745;
-            }
-            .status-inactive {
-                background-color: #6c757d;
-            }
-            .status-expired {
-                background-color: #dc3545;
-            }
-            .loading-indicator {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                padding: 30px;
-            }
-            .spinner {
-                border: 4px solid rgba(0, 0, 0, 0.1);
-                border-radius: 50%;
-                border-top: 4px solid var(--primary-color);
-                width: 30px;
-                height: 30px;
-                animation: spin 1s linear infinite;
-                margin-bottom: 10px;
-            }
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-            .api-keys-table {
-                width: 100%;
-                margin-top: 20px;
-                border-collapse: collapse;
-            }
-            .action-buttons {
-                display: flex;
-                justify-content: flex-end;
-                gap: 8px;
-            }
-            .action-btn {
-                background: none;
-                border: none;
-                cursor: pointer;
-                padding: 5px;
-                border-radius: 4px;
-                transition: background-color 0.2s;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-            .action-btn:hover {
-                background-color: rgba(0, 0, 0, 0.05);
-            }
-            .deactivate-btn {
-                color: #6c757d;
-            }
-            .activate-btn {
-                color: #28a745;
-            }
-            .delete-btn {
-                color: #dc3545;
-            }
-        `;
-        document.head.appendChild(style);
         
         // Cropper.js ile fotoğraf düzenleme
         const photoInput = document.getElementById('profile-photo-input');
@@ -1220,6 +1430,90 @@
                 alert('Yeni şifreler eşleşmiyor!');
             }
         });
+
+        // Language selection handling
+        document.getElementById('languageSelect').addEventListener('change', function() {
+            const selectedLanguage = this.value;
+            
+            // Show loading indicator or disable dropdown during request
+            const languageSelect = document.getElementById('languageSelect');
+            languageSelect.disabled = true;
+            
+            // Save language preference
+            fetch('{% url "tagwiseapp:update_language" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    language: selectedLanguage
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Server responded with an error');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    // Don't show error alerts - just reload page to apply language change
+                    window.location.reload();
+                } else {
+                    // Re-enable select in case of error
+                    languageSelect.disabled = false;
+                    // Show quiet notification instead of alert
+                    showNotification('{% translate "An error occurred while updating language setting." %}', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Re-enable select in case of error
+                languageSelect.disabled = false;
+                // Show quiet notification instead of alert
+                showNotification('{% translate "An error occurred. Please try again." %}', 'error');
+            });
+        });
+
+        // Handle notification toggles in preferences tab
+        const emailNotificationsToggle = document.getElementById('emailNotifications');
+        const newFeaturesToggle = document.getElementById('newFeatures');
+
+        // Update notification preferences when toggled
+        emailNotificationsToggle.addEventListener('change', function() {
+            updateNotificationSettings();
+        });
+
+        newFeaturesToggle.addEventListener('change', function() {
+            updateNotificationSettings();
+        });
+
+        function updateNotificationSettings() {
+            fetch('{% url "tagwiseapp:update_notifications" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    email_notifications: emailNotificationsToggle.checked,
+                    new_features: newFeaturesToggle.checked
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showNotification('{% translate "Notification settings updated successfully." %}', 'success');
+                } else {
+                    showNotification('{% translate "An error occurred while updating notification settings." %}', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('{% translate "An error occurred. Please try again." %}', 'error');
+            });
+        }
     });
 </script>
 {% endblock %} 

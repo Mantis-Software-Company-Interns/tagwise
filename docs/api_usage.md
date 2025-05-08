@@ -64,6 +64,7 @@ Harici bir sistemden gelen içeriği analiz ederek kategori ve etiket önerileri
   "title": "Blog Post Başlığı",
   "content": "İçerik metni burada olacak...",
   "description": "İçerik açıklaması (opsiyonel)",
+  "image_url": "https://example.com/images/blog-thumbnail.jpg",
   "external_categories": ["Kategori1", "Kategori2"],
   "external_tags": ["etiket1", "etiket2"]
 }
@@ -78,6 +79,7 @@ Harici bir sistemden gelen içeriği analiz ederek kategori ve etiket önerileri
   "url": "https://example.com/blog-post",
   "title": "Blog Post Başlığı",
   "description": "İçerik açıklaması",
+  "image_url": "https://example.com/images/blog-thumbnail.jpg",
   "analysis_result": {
     "categories": [
       {
@@ -170,6 +172,7 @@ curl -X POST \
     "title": "Python ile Web Geliştirme",
     "content": "Python programlama dili ile web uygulamaları geliştirme hakkında bir blog yazısı...",
     "description": "Django ve Flask kullanarak web uygulamaları geliştirme",
+    "image_url": "https://example.com/images/python-thumbnail.jpg",
     "external_tags": ["python", "web", "django"]
   }'
 ```

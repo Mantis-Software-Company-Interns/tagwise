@@ -1,6 +1,7 @@
 {% load static %}
+{% load i18n %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ request.LANGUAGE_CODE }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -28,25 +29,25 @@
                     <li {% if request.resolver_match.url_name == 'index' %}class="active"{% endif %}>
                         <a href="{% url 'tagwiseapp:index' %}">
                             <i class="material-icons">home</i>
-                            Home
+                            {% translate "Home" %}
                         </a>
                     </li>
                     <li {% if request.resolver_match.url_name == 'categories' or request.resolver_match.url_name == 'subcategories' or request.resolver_match.url_name == 'topics' %}class="active"{% endif %}>
                         <a href="{% url 'tagwiseapp:categories' %}">
                             <i class="material-icons">category</i>
-                            Categories
+                            {% translate "Categories" %}
                         </a>
                     </li>
                     <li {% if request.resolver_match.url_name == 'tags' or request.resolver_match.url_name == 'tagged_bookmarks' %}class="active"{% endif %}>
                         <a href="{% url 'tagwiseapp:tags' %}">
                             <i class="material-icons">local_offer</i>
-                            Tags
+                            {% translate "Tags" %}
                         </a>
                     </li>
                     <li {% if request.resolver_match.url_name == 'collections' %}class="active"{% endif %}>
                         <a href="{% url 'tagwiseapp:collections' %}">
                             <i class="material-icons">collections_bookmark</i>
-                            Collections
+                            {% translate "Collections" %}
                         </a>
                     </li>
                 </ul>
@@ -61,7 +62,7 @@
                         <form method="GET" action="{% if request.path == '/' %}{% url 'tagwiseapp:search_bookmarks' %}{% elif '/categories/' in request.path %}{% url 'tagwiseapp:search_categories' %}{% elif '/tags/' in request.path %}{% url 'tagwiseapp:search_tags' %}{% else %}{% url 'tagwiseapp:search_bookmarks' %}{% endif %}">
                             <div class="search-input-wrapper">
                                 <i class="material-icons">search</i>
-                                <input type="text" name="query" placeholder="{% if '/categories/' in request.path %}Kategorilerde ara...{% elif '/tags/' in request.path %}Etiketlerde ara...{% else %}Ara...{% endif %}" class="search-input">
+                                <input type="text" name="query" placeholder="{% if '/categories/' in request.path %}{% translate 'Search in categories...' %}{% elif '/tags/' in request.path %}{% translate 'Search in tags...' %}{% else %}{% translate 'Search...' %}{% endif %}" class="search-input">
                                 <button type="submit" class="search-submit-btn">
                                     <i class="material-icons">arrow_forward</i>
                                 </button>
@@ -71,24 +72,24 @@
                                     <i class="material-icons">filter_list</i>
                                 </button>
                                 <div class="filter-options">
-                                    <div class="filter-header">Arama Filtresi</div>
+                                    <div class="filter-header">{% translate "Search Filter" %}</div>
                                     <div class="filter-items">
                                         {% if '/categories/' not in request.path and '/tags/' not in request.path %}
                                         <label class="filter-item">
                                             <input type="checkbox" name="filter_title" checked>
-                                            <span>Başlık</span>
+                                            <span>{% translate "Title" %}</span>
                                         </label>
                                         <label class="filter-item">
                                             <input type="checkbox" name="filter_url" checked>
-                                            <span>URL</span>
+                                            <span>{% translate "URL" %}</span>
                                         </label>
                                         <label class="filter-item">
                                             <input type="checkbox" name="filter_tags" checked>
-                                            <span>Etiketler</span>
+                                            <span>{% translate "Tags" %}</span>
                                         </label>
                                         {% endif %}
                                     </div>
-                                    <button type="submit" class="apply-filter-btn">Filtrele</button>
+                                    <button type="submit" class="apply-filter-btn">{% translate "Filter" %}</button>
                                 </div>
                             </div>
                         </form>
@@ -106,15 +107,15 @@
                         <div class="profile-menu">
                             <a href="{% url 'tagwiseapp:profile_settings' %}" class="profile-menu-item">
                                 <i class="material-icons">person</i>
-                                <span>Profil</span>
+                                <span>{% translate "Profile" %}</span>
                             </a>
                             <a href="{% url 'tagwiseapp:profile_settings' %}" class="profile-menu-item">
                                 <i class="material-icons">settings</i>
-                                <span>Ayarlar</span>
+                                <span>{% translate "Settings" %}</span>
                             </a>
                             <a href="{% url 'tagwiseapp:logout' %}" class="profile-menu-item logout">
                                 <i class="material-icons">logout</i>
-                                <span>Çıkış Yap</span>
+                                <span>{% translate "Logout" %}</span>
                             </a>
                         </div>
                     </div>

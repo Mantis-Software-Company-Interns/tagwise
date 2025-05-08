@@ -106,7 +106,9 @@ function loadBookmarks(tag) {
                         <a href="${bookmark.url}" target="_blank" class="thumbnail-link">
                             <div class="thumbnail-container">
                                 ${bookmark.has_screenshot 
-                                    ? `<img src="/media/${bookmark.screenshot_path}" alt="${bookmark.title}" class="thumbnail">` 
+                                    ? (bookmark.screenshot_path && bookmark.screenshot_path.startsWith('http')
+                                        ? `<img src="${bookmark.screenshot_path}" alt="${bookmark.title}" class="thumbnail">`
+                                        : `<img src="/media/${bookmark.screenshot_path}" alt="${bookmark.title}" class="thumbnail">`)
                                     : `<img src="/static/images/default-thumbnail.png" alt="${bookmark.title}" class="thumbnail">`
                                 }
                             </div>

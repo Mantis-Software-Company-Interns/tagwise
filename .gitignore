@@ -220,3 +220,31 @@ local_settings.py
 
 # Chatbot Data
 data/
+
+# Cursor editor files
+.cursor/
+
+# API keys and secrets
+gemini_config.json
+*_config.json
+
+# Django migrations backups
+**/migrations/*.py.bak
+
+# Test results and logs
+test-results/
+logs/
+
+# Frontend build output if any
+node_modules/
+frontend/build/
+frontend/node_modules/
+frontend/dist/
+
+# Virtual environment in unexpected locations
+.virtualenv/
+*.virtualenv/
+
+# OS specific files
+.DS_Store
+Thumbs.db

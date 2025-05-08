@@ -96,6 +96,7 @@ class BookmarkCreateSerializer(serializers.Serializer):
     title = serializers.CharField(required=True)
     content = serializers.CharField(required=True)
     description = serializers.CharField(required=False, allow_blank=True)
+    image_url = serializers.URLField(required=False, allow_blank=True, help_text="URL for bookmark thumbnail image")
     external_categories = serializers.ListField(
         child=serializers.CharField(),
         required=False,

@@ -73,6 +73,13 @@ class Profile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    # Language preference field
+    LANGUAGE_CHOICES = [
+        ('en', 'English'),
+        ('tr', 'Türkçe'),
+    ]
+    language = models.CharField(max_length=2, choices=LANGUAGE_CHOICES, default='en')
+    
     def __str__(self):
         return f"{self.user.username}'s Profile"
 

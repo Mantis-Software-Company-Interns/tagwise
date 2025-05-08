@@ -1,0 +1,270 @@
+# Turkish translation for TagWise.
+# Copyright (C) 2023 TagWise
+# This file is distributed under the same license as the TagWise package.
+msgid ""
+msgstr ""
+"Project-Id-Version: TagWise 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-10-20 12:00+0300\n"
+"PO-Revision-Date: 2023-10-20 12:00+0300\n"
+"Last-Translator: TagWise Team\n"
+"Language-Team: Turkish <tr@li.org>\n"
+"Language: tr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# Navigation
+msgid "Home"
+msgstr "Ana Sayfa"
+
+msgid "Categories"
+msgstr "Kategoriler"
+
+msgid "Tags"
+msgstr "Etiketler"
+
+msgid "Collections"
+msgstr "Koleksiyonlar"
+
+msgid "Profile"
+msgstr "Profil"
+
+msgid "Settings"
+msgstr "Ayarlar"
+
+msgid "Logout"
+msgstr "Çıkış Yap"
+
+# Search
+msgid "Search..."
+msgstr "Ara..."
+
+msgid "Search in categories..."
+msgstr "Kategorilerde ara..."
+
+msgid "Search in tags..."
+msgstr "Etiketlerde ara..."
+
+msgid "Search Filter"
+msgstr "Arama Filtresi"
+
+msgid "Title"
+msgstr "Başlık"
+
+msgid "URL"
+msgstr "URL"
+
+msgid "Filter"
+msgstr "Filtrele"
+
+# Profile Settings
+msgid "Profile Settings"
+msgstr "Profil Ayarları"
+
+msgid "Manage your profile information, preferences, and account settings."
+msgstr "Kişisel bilgilerinizi ve hesap ayarlarınızı yönetin."
+
+msgid "Password"
+msgstr "Şifre"
+
+msgid "Notifications"
+msgstr "Bildirimler"
+
+msgid "API"
+msgstr "API"
+
+msgid "Profile Photo"
+msgstr "Profil Fotoğrafı"
+
+msgid "Select Photo"
+msgstr "Fotoğraf Seç"
+
+msgid "Please upload an image with at least 200x200 resolution in .jpg, .png, or .gif format. You can crop the image afterwards."
+msgstr "En az 200x200 piksel çözünürlükte .jpg, .png veya .gif formatında bir dosya yükleyin. Yükleme sonrasında fotoğrafı istediğiniz şekilde kırpabilirsiniz."
+
+msgid "Profile Photo Change"
+msgstr "Profil Fotoğrafı Değişikliği"
+
+msgid "Current Photo"
+msgstr "Mevcut Fotoğraf"
+
+msgid "New Photo"
+msgstr "Yeni Fotoğraf"
+
+msgid "Cancel"
+msgstr "Vazgeç"
+
+msgid "Update Photo"
+msgstr "Fotoğrafı Güncelle"
+
+msgid "Edit Profile Photo"
+msgstr "Profil Fotoğrafını Düzenle"
+
+msgid "Apply"
+msgstr "Uygula"
+
+msgid "Personal Information"
+msgstr "Kişisel Bilgiler"
+
+msgid "Username"
+msgstr "Kullanıcı Adı"
+
+msgid "Email Address"
+msgstr "E-posta Adresi"
+
+msgid "Name"
+msgstr "Ad Soyad"
+
+msgid "Save Changes"
+msgstr "Bilgileri Kaydet"
+
+msgid "Change Password"
+msgstr "Şifre Değiştir"
+
+msgid "Current Password"
+msgstr "Mevcut Şifre"
+
+msgid "New Password"
+msgstr "Yeni Şifre"
+
+msgid "Password Strength"
+msgstr "Şifre Gücü"
+
+msgid "New Password (Repeat)"
+msgstr "Yeni Şifre (Tekrar)"
+
+msgid "Notification Preferences"
+msgstr "Bildirim Tercihleri"
+
+msgid "Receive email notifications"
+msgstr "E-posta bildirimleri al"
+
+msgid "Receive notifications about new features"
+msgstr "Yeni özellikler hakkında bilgilendir"
+
+msgid "Update Notifications"
+msgstr "Bildirimleri Güncelle"
+
+msgid "API Keys"
+msgstr "API Anahtarları"
+
+msgid "Use API keys to add content to TagWise from outside."
+msgstr "API anahtarlarını kullanarak TagWise'a dışarıdan içerik ekleyebilirsiniz."
+
+msgid "Loading API keys..."
+msgstr "API anahtarları yükleniyor..."
+
+msgid "You don't have any API key yet."
+msgstr "Henüz bir API anahtarınız bulunmuyor."
+
+msgid "Create New API Key"
+msgstr "Yeni API Anahtarı Oluştur"
+
+msgid "Create API Key"
+msgstr "API Anahtarı Oluştur"
+
+msgid "Description"
+msgstr "Açıklama"
+
+msgid "Descriptive name for your key"
+msgstr "API anahtarınız için açıklayıcı bir ad"
+
+msgid "This description will help you remember the key later."
+msgstr "Bu açıklama, anahtarı daha sonra tanımlamanıza yardımcı olacaktır."
+
+msgid "Expiration Date"
+msgstr "Sona Erme Tarihi"
+
+msgid "Optional"
+msgstr "İsteğe Bağlı"
+
+msgid "If left blank, the key will be valid indefinitely."
+msgstr "Boş bırakırsanız, anahtar süresiz olarak geçerli olacaktır."
+
+msgid "Active"
+msgstr "Aktif"
+
+msgid "Create"
+msgstr "Oluştur"
+
+msgid "API Key Created"
+msgstr "API Anahtarınız Oluşturuldu"
+
+msgid "IMPORTANT"
+msgstr "ÖNEMLİ"
+
+msgid "Please keep this key safe!"
+msgstr "Bu anahtarı güvenli bir yerde saklayın!"
+
+msgid "You will not be able to view the full key again after leaving this screen."
+msgstr "Bu ekrandan ayrıldıktan sonra anahtarın tamamını bir daha göremeyeceksiniz."
+
+msgid "Your API Key"
+msgstr "API Anahtarınız"
+
+msgid "OK"
+msgstr "Tamam"
+
+msgid "Email Notifications"
+msgstr "E-posta Bildirimleri"
+
+msgid "Enable"
+msgstr "Etkinleştir"
+
+msgid "Receive emails about new features, updates, and other important notifications."
+msgstr "Yeni özellikler, güncellemeler ve diğer önemli bildirimler hakkında e-posta alın."
+
+msgid "New Features"
+msgstr "Yeni Özellikler"
+
+msgid "Join the beta program to test new features."
+msgstr "Yeni özellikleri test etmek için beta programına katılın."
+
+msgid "Language Settings"
+msgstr "Dil Ayarları"
+
+msgid "Site Language"
+msgstr "Site Dili"
+
+msgid "Set your preferred language option. This will refresh the page."
+msgstr "Tercih ettiğiniz dil seçeneğini ayarlayın. Bu işlem sayfayı yenileyecektir."
+
+msgid "An error occurred while updating language setting."
+msgstr "Dil ayarı güncellenirken bir hata oluştu."
+
+msgid "An error occurred. Please try again."
+msgstr "Bir hata oluştu. Lütfen tekrar deneyin."
+
+# Additional general phrases
+msgid "Save"
+msgstr "Kaydet"
+
+msgid "Delete"
+msgstr "Sil"
+
+msgid "Edit"
+msgstr "Düzenle"
+
+msgid "Add"
+msgstr "Ekle"
+
+msgid "Remove"
+msgstr "Kaldır"
+
+msgid "Yes"
+msgstr "Evet"
+
+msgid "No"
+msgstr "Hayır"
+
+msgid "Preferences"
+msgstr "Tercihler"
+
+# Notification messages
+msgid "Notification settings updated successfully."
+msgstr "Bildirim ayarları başarıyla güncellendi."
+
+msgid "An error occurred while updating notification settings."
+msgstr "Bildirim ayarları güncellenirken bir hata oluştu."
