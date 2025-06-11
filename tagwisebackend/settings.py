@@ -74,7 +74,10 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 ROOT_URLCONF = 'tagwisebackend.urls'
 
-CSRF_TRUSTED_ORIGINS = ['https://tagwise-production.up.railway.app']
+CSRF_TRUSTED_ORIGINS = [
+    'https://tagwise-production.up.railway.app',
+    'https://*.up.railway.app'
+]
 
 
 TEMPLATES = [
