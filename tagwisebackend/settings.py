@@ -39,9 +39,9 @@ else:
 SECRET_KEY = 'django-insecure-1n4xon(-&tt0=+37e&3*sns5%_!6xojx_9=vo45_3)t*%t*8@#'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['tagwise-production.up.railway.app', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -75,8 +75,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 ROOT_URLCONF = 'tagwisebackend.urls'
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://tagwise-production.up.railway.app',
-    'https://*.up.railway.app'
+    'https://tagwise-production.up.railway.app'
 ]
 
 
@@ -185,3 +184,8 @@ REST_FRAMEWORK = {
         'tagwiseapp.api.authentication.ApiKeyAuthentication',
     ],
 }
+
+# Security settings for production
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
